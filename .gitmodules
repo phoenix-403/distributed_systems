@@ -1,0 +1,6 @@
+[submodule "EchoClient"]
+	path = EchoClient
+	url = https://github.com/Amoh3/EchoClient.git
+[submodule "EchoServer"]
+	path = EchoServer
+	url = https://github.com/Amoh3/EchoServer.git
