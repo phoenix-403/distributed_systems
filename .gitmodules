@@ -1,6 +1,6 @@
-[submodule "EchoClient"]
-	path = EchoClient
-	url = https://github.com/Amoh3/EchoClient.git
-[submodule "EchoServer"]
-	path = EchoServer
-	url = https://github.com/Amoh3/EchoServer.git
+[submodule "Client"]
+	path = Client
+	url = https://github.com/Amoh3/Client.git
+[submodule "Server"]
+	path = Server
+	url = https://github.com/Amoh3/Server.git
