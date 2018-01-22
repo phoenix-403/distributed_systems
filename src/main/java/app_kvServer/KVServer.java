@@ -132,7 +132,7 @@ public class KVServer implements IKVServer {
             while (serverRunning) {
                 try {
                     Socket client = serverSocket.accept();
-                    ClientConnection connection = new ClientConnection(client);
+                    ClientConnection connection = new ClientConnection(this, client);
                     Thread clientThread = new Thread(connection);
                     clientThread.start();
                     clientThreads.add(clientThread);
