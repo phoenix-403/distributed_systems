@@ -1,17 +1,19 @@
-package test;
+package java;
 
+import main.java.client.KVStore;
+import main.java.common.messages.KVMessage;
+import main.java.common.messages.KVMessage.StatusType;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import main.client.KVStore;
-import junit.framework.TestCase;
-import main.common.messages.KVMessage;
-import main.common.messages.KVMessage.StatusType;
 
-
-public class InteractionTest extends TestCase {
+public class InteractionTest {
 
 	private KVStore kvClient;
 	
+	@Before
 	public void setUp() {
 		kvClient = new KVStore("localhost", 50000);
 		try {
@@ -20,6 +22,7 @@ public class InteractionTest extends TestCase {
 		}
 	}
 
+	@After
 	public void tearDown() {
 		kvClient.disconnect();
 	}
@@ -38,7 +41,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
+		Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
 	}
 	
 	@Test
@@ -54,7 +57,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertNotNull(ex);
+		Assert.assertNotNull(ex);
 	}
 
 	@Test
@@ -74,7 +77,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.PUT_UPDATE
+		Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_UPDATE
 				&& response.getValue().equals(updatedValue));
 	}
 	
@@ -94,7 +97,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
+		Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
 	}
 	
 	@Test
@@ -111,7 +114,7 @@ public class InteractionTest extends TestCase {
 				ex = e;
 			}
 		
-		assertTrue(ex == null && response.getValue().equals("bar"));
+		Assert.assertTrue(ex == null && response.getValue().equals("bar"));
 	}
 
 	@Test
@@ -126,7 +129,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
+		Assert.assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
 	}
 	
 

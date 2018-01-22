@@ -1,12 +1,22 @@
-package main.app_kvServer;
+package main.java.app_kvServer;
 
 public interface IKVServer {
     public enum CacheStrategy {
-        None,
-        LRU,
-        LFU,
-        FIFO
-    };
+        None("None"),
+        LRU("LRU"),
+        LFU("LFU"),
+        FIFO("FIFO");
+
+        String value;
+
+        CacheStrategy(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
 
     /**
      * Get the port number of the server

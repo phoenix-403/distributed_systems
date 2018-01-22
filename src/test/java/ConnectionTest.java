@@ -1,8 +1,8 @@
-package test;
+package java;
 
 import java.net.UnknownHostException;
 
-import main.client.KVStore;
+import main.java.client.KVStore;
 
 import junit.framework.TestCase;
 

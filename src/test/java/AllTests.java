@@ -1,13 +1,13 @@
-package test;
+package java;
 
 import java.io.IOException;
 
 import org.apache.log4j.Level;
 
-import main.app_kvServer.KVServer;
+import main.java.app_kvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import main.logger.LogSetup;
+import main.java.logger.LogSetup;
 
 
 public class AllTests {

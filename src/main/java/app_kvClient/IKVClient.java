@@ -1,6 +1,6 @@
-package main.app_kvClient;
+package main.java.app_kvClient;
 
-import main.client.KVCommInterface;
+import main.java.client.KVCommInterface;
 
 public interface IKVClient {
     /**

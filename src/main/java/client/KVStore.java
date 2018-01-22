@@ -1,6 +1,6 @@
-package main.client;
+package main.java.client;
 
-import main.common.messages.KVMessage;
+import main.java.common.messages.KVMessage;
 
 public class KVStore implements KVCommInterface {
 	/**
