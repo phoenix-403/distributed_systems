@@ -1,0 +1,9 @@
+# Created by .ignore support plugin (hsz.mobi)
+/.idea/
+/m1-server.jar
+/m1-client.jar
+/SERVER_MANIFEST.MF
+/CLIENT_MANIFEST.MF
+.gitignore
+bin/
+distributed_systems.iml

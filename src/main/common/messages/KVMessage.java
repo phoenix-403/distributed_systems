@@ -1,4 +1,4 @@
-package common.messages;
+package main.common.messages;
 
 public interface KVMessage {
 	

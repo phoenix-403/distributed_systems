@@ -1,6 +1,6 @@
-package client;
+package main.client;
 
-import common.messages.KVMessage;
+import main.common.messages.KVMessage;
 
 public interface KVCommInterface {
 
@@ -13,7 +13,7 @@ public interface KVCommInterface {
 	public void connect() throws Exception;
 
 	/**
-	 * disconnects the client from the currently connected server.
+	 * disconnects the main.client from the currently connected server.
 	 */
 	public void disconnect();
 

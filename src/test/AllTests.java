@@ -1,20 +1,20 @@
-package testing;
+package test;
 
 import java.io.IOException;
 
 import org.apache.log4j.Level;
 
-import app_kvServer.KVServer;
+import main.app_kvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import logger.LogSetup;
+import main.logger.LogSetup;
 
 
 public class AllTests {
 
 	static {
 		try {
-			new LogSetup("logs/testing/test.log", Level.ERROR);
+			new LogSetup("logs/test/test.log", Level.ERROR);
 			new KVServer(50000, 10, "FIFO");
 		} catch (IOException e) {
 			e.printStackTrace();

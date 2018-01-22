@@ -1,4 +1,4 @@
-package app_kvServer;
+package main.app_kvServer;
 
 public class KVServer implements IKVServer {
 
@@ -87,4 +87,9 @@ public class KVServer implements IKVServer {
     public void close(){
 		// TODO Auto-generated method stub
 	}
+
+	public static void main(){
+
+    }
+
 }

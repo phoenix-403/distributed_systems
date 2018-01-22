@@ -1,4 +1,4 @@
-package app_kvServer;
+package main.app_kvServer;
 
 public interface IKVServer {
     public enum CacheStrategy {

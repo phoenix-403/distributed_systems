@@ -1,6 +1,6 @@
-package app_kvClient;
+package main.app_kvClient;
 
-import client.KVCommInterface;
+import main.client.KVCommInterface;
 
 public interface IKVClient {
     /**
