@@ -64,7 +64,7 @@ public class KVServer implements IKVServer {
         clientThreads = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
-            logger.info("listening on port: " + serverSocket.getLocalPort());
+            logger.info("Initialize! listening on port: " + serverSocket.getLocalPort());
 
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket:\n" + e.getMessage());
@@ -126,6 +126,8 @@ public class KVServer implements IKVServer {
 
     @Override
     public void run() {
+        logger.info("Now accepting client connections..");
+        serverRunning = true;
         if (serverSocket != null) {
             while (serverRunning) {
                 try {
@@ -167,6 +169,7 @@ public class KVServer implements IKVServer {
         }
 
         KVServer server = new KVServer(Integer.parseInt(args[0]), Integer.parseInt(args[1]), args[2]);
+        server.run();
 
     }
 
