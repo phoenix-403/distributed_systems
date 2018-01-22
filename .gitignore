@@ -4,6 +4,6 @@
 /m1-client.jar
 /SERVER_MANIFEST.MF
 /CLIENT_MANIFEST.MF
-.gitignore
 bin/
 distributed_systems.iml
+/logs/server/server.log
