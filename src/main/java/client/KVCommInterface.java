@@ -1,6 +1,6 @@
-package main.java.client;
+package client;
 
-import main.java.common.messages.KVMessage;
+import common.messages.KVMessage;
 
 public interface KVCommInterface {
 

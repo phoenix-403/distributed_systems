@@ -1,15 +1,16 @@
-package java;
+package milestone_1;
 
-import main.java.client.KVStore;
-import main.java.common.messages.KVMessage;
-import main.java.common.messages.KVMessage.StatusType;
+import junit.framework.TestCase;
+import client.KVStore;
+import common.messages.KVMessage;
+import common.messages.KVMessage.StatusType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 
-public class InteractionTest {
+public class InteractionTest extends TestCase{
 
 	private KVStore kvClient;
 	

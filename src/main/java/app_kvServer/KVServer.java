@@ -1,11 +1,16 @@
-package main.java.app_kvServer;
+package app_kvServer;
 
+import logger.LogSetup;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class KVServer implements IKVServer {
 
@@ -20,6 +25,8 @@ public class KVServer implements IKVServer {
     private ServerSocket serverSocket;
     private boolean serverRunning;
 
+    List<Thread> clientThreads;
+
     /**
      * Start KV Server at given port
      *
@@ -33,6 +40,12 @@ public class KVServer implements IKVServer {
      */
     public KVServer(int port, int cacheSize, String strategy) {
 
+        try {
+            new LogSetup("logs/server/server.log", Level.ALL);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // saving server variables
         this.port = port;
         this.cacheSize = cacheSize;
@@ -42,19 +55,19 @@ public class KVServer implements IKVServer {
         try {
             inetAddress = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            // todo, log this
             logger.error("Unknown host exception:\n" + e.getMessage());
         }
 
         // Initializing the server
         logger.info("Attempting to initialize server...");
         serverRunning = false;
+        clientThreads = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
             logger.info("listening on port: " + serverSocket.getLocalPort());
 
         } catch (IOException e) {
-            logger.error("Error! Cannot open server socket:\n" + e.getMessage() );
+            logger.error("Error! Cannot open server socket:\n" + e.getMessage());
         }
     }
 
@@ -113,9 +126,23 @@ public class KVServer implements IKVServer {
 
     @Override
     public void run() {
+        if (serverSocket != null) {
+            while (serverRunning) {
+                try {
+                    Socket client = serverSocket.accept();
+                    ClientConnection connection = new ClientConnection(client);
+                    Thread clientThread = new Thread(connection);
+                    clientThread.start();
+                    clientThreads.add(clientThread);
 
-
-
+                    logger.info("Connected to " + client.getInetAddress().getHostName() + " on port " + client
+                            .getPort());
+                } catch (IOException e) {
+                    logger.error("Error! Unable to establish connection. \n", e);
+                }
+            }
+        }
+        logger.info("Server stopped.");
     }
 
     @Override

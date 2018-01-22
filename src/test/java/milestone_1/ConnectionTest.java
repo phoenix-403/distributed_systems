@@ -1,10 +1,9 @@
-package java;
+package milestone_1;
+
+import client.KVStore;
+import junit.framework.TestCase;
 
 import java.net.UnknownHostException;
-
-import main.java.client.KVStore;
-
-import junit.framework.TestCase;
 
 
 public class ConnectionTest extends TestCase {

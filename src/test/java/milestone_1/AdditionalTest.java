@@ -1,4 +1,4 @@
-package java;
+package milestone_1;
 
 import org.junit.Test;
 

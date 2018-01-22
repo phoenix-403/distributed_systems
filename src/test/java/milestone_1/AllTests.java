@@ -1,13 +1,12 @@
-package java;
+package milestone_1;
 
-import java.io.IOException;
-
-import org.apache.log4j.Level;
-
-import main.java.app_kvServer.KVServer;
+import app_kvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import main.java.logger.LogSetup;
+import logger.LogSetup;
+import org.apache.log4j.Level;
+
+import java.io.IOException;
 
 
 public class AllTests {
