@@ -4,9 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import common.messages.Request;
 import common.messages.Response;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.Socket;
 
 
@@ -19,7 +23,7 @@ import java.net.Socket;
  */
 public class ClientConnection implements Runnable {
 
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = LogManager.getLogger(ClientConnection.class);
 
     private KVServer kvServer;
 

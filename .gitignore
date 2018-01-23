@@ -4,6 +4,8 @@
 /m1-client.jar
 /SERVER_MANIFEST.MF
 /CLIENT_MANIFEST.MF
-bin/
-distributed_systems.iml
-/logs/server/server.log
+/bin/
+/distributed_systems.iml
+/logs/
+
+/db/
