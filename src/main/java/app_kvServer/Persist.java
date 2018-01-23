@@ -55,12 +55,7 @@ public class Persist {
         return true;
     }
 
-    public static boolean checkIfExist() {
-        // todo
-        return false;
-    }
-
-    public static boolean write(String key, String value) {
+    public static boolean checkIfExist(String key) {
         // todo
         return false;
     }
@@ -69,6 +64,13 @@ public class Persist {
         // todo
         return null;
     }
+
+    public static boolean write(String key, String value) {
+        // todo
+        return false;
+    }
+
+
 
     /**
      * Initiates get file name depending on key
