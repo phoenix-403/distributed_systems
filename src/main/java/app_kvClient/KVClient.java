@@ -14,7 +14,7 @@ import java.io.InputStreamReader;
 
 public class KVClient implements IKVClient {
     @Override
-    public void newConnection(String hostname, int port) throws Exception{
+    public void newConnection(String hostname, int port) throws Exception {
         // TODO Auto-generated method stub
     }
 
@@ -208,8 +208,8 @@ public class KVClient implements IKVClient {
     }
 
     /**
-     * Main entry point for the echo server application.
      * @param args contains the port number at args[0].
+     * Main entry point for the echo server application.
      */
     public static void main(String[] args) {
         try {
