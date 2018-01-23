@@ -1,21 +1,19 @@
 package client;
 
 import com.google.gson.Gson;
+import common.messages.KVMessage;
+import common.messages.Request;
 import common.messages.Response;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import common.messages.KVMessage;
-import common.messages.Request;
 
 public class KVStore implements KVCommInterface {
-	/**
-	 * Initialize KVStore with address and port of KVServer
-	 * @param address the address of the KVServer
-	 * @param port the port of the KVServer
-	 */
-	private static Logger logger = Logger.getRootLogger();
+
+
+	private static Logger logger = LogManager.getLogger(KVStore.class);
 	private static final String PROMPT = "EchoClient> ";
 	private BufferedReader stdin;
 	private Client client = null;
@@ -34,8 +32,9 @@ public class KVStore implements KVCommInterface {
         try {
             client = new Client(serverAddress, serverPort);
         } catch (IOException e) {
-            printError("Unable to connect");
+            printError("Unable to connect - " + e.getMessage());
         }
+        // todo @Henry - should check if client is null
         client.start();
         System.out.println(client.getMessage().getMsg());
 

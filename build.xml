@@ -10,6 +10,8 @@
     <property name="src.dir" value="src/main/java"/>
     <property name="test_src.dir" value="src/test/java"/>
     <property name="lib.dir" value="libs"/>
+    <property name="logs.dir" value="logs"/>
+    <property name="database.dir" value="db"/>
 
     <!-- Configuration for main.client application -->
     <property name="clientjar.file" value="m1-client.jar"/>
@@ -56,7 +58,10 @@
         <delete file="${servermanifest.file}"/>
     </target>
 
-    <target name="cleanall" depends="clean"/>
+    <target name="cleanall" depends="clean">
+        <delete dir="${logs.dir}"/>
+        <delete dir="${database.dir}"/>
+    </target>
 
     <!-- build complete project -->
     <target name="build" depends="clean, init">

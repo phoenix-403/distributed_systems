@@ -2,6 +2,7 @@ package app_kvServer;
 
 import logger.LogSetup;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -14,7 +15,7 @@ import java.util.List;
 
 public class KVServer implements IKVServer {
 
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = LogManager.getLogger(KVServer.class);
 
     private int port;
     private int cacheSize;
@@ -67,7 +68,7 @@ public class KVServer implements IKVServer {
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
 
         } catch (IOException e) {
-            logger.error("Error! Cannot open server socket:\n" + e.getMessage());
+            logger.error("Error! Cannot open server socket: " + e.getMessage());
         }
     }
 
@@ -126,9 +127,9 @@ public class KVServer implements IKVServer {
 
     @Override
     public void run() {
-        logger.info("Now accepting client connections..");
-        serverRunning = true;
         if (serverSocket != null) {
+            serverRunning = true;
+            logger.info("Now accepting client connections..");
             while (serverRunning) {
                 try {
                     Socket client = serverSocket.accept();

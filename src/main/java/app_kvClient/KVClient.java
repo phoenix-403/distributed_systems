@@ -2,14 +2,15 @@ package app_kvClient;
 
 import client.KVCommInterface;
 import client.KVStore;
+import common.messages.KVMessage;
 import logger.LogSetup;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import common.messages.KVMessage;
 
 public class KVClient implements IKVClient {
     @Override
@@ -23,7 +24,7 @@ public class KVClient implements IKVClient {
         return null;
     }
 
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "EchoClient> ";
     private BufferedReader stdin;
     private KVStore KVinstance = null;
