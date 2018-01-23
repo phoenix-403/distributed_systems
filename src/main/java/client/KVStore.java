@@ -1,6 +1,7 @@
 package client;
 
 import com.google.gson.Gson;
+import common.messages.Response;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -8,7 +9,7 @@ import java.io.IOException;
 import common.messages.KVMessage;
 import common.messages.Request;
 
-public class KVStore implements KVCommInterface, ClientSocketListener{
+public class KVStore implements KVCommInterface {
 	/**
 	 * Initialize KVStore with address and port of KVServer
 	 * @param address the address of the KVServer
@@ -35,8 +36,9 @@ public class KVStore implements KVCommInterface, ClientSocketListener{
         } catch (IOException e) {
             printError("Unable to connect");
         }
-        client.addListener(this);
         client.start();
+        System.out.println(client.getMessage().getMsg());
+
 	}
 
 	@Override
@@ -51,9 +53,12 @@ public class KVStore implements KVCommInterface, ClientSocketListener{
 	public KVMessage put(String key, String value) {
 		// TODO Auto-generated method stub
         if(client != null && client.isRunning()){
-            Request req = new Request(124, key, value, KVMessage.StatusType.PUT);
+            Request req = new Request(0, key, value, KVMessage.StatusType.PUT);
 
             sendMessage(new Gson().toJson(req));
+            KVMessage resp =getKVMessage();
+            System.out.println( new Gson().toJson(resp));
+            return resp;
         } else {
             printError("Not connected!");
         }
@@ -64,38 +69,16 @@ public class KVStore implements KVCommInterface, ClientSocketListener{
 	public KVMessage get(String key) {
         // TODO Auto-generated method stub
         if(client != null && client.isRunning()){
-            Request req = new Request(125, key, null, KVMessage.StatusType.GET);
+            Request req = new Request(0, key, null, KVMessage.StatusType.GET);
 
             sendMessage(new Gson().toJson(req));
+            KVMessage resp =getKVMessage();
+            System.out.println( new Gson().toJson(resp));
+            return resp;
         } else {
             printError("Not connected!");
         }
         return null;
-	}
-
-	@Override
-	public void handleNewMessage(TextMessage msg) {
-		if(!stop) {
-			System.out.println(msg.getMsg());
-			System.out.print(PROMPT);
-		}
-	}
-
-	@Override
-	public void handleStatus(SocketStatus status) {
-		if(status == SocketStatus.CONNECTED) {
-
-		} else if (status == SocketStatus.DISCONNECTED) {
-			System.out.print(PROMPT);
-			System.out.println("Connection terminated: "
-					+ serverAddress + " / " + serverPort);
-
-		} else if (status == SocketStatus.CONNECTION_LOST) {
-			System.out.println("Connection lost: "
-					+ serverAddress + " / " + serverPort);
-			System.out.print(PROMPT);
-		}
-
 	}
 
     private void sendMessage(String msg){
@@ -106,6 +89,8 @@ public class KVStore implements KVCommInterface, ClientSocketListener{
             disconnect();
         }
     }
+
+    private KVMessage getKVMessage(){ return new Gson().fromJson(client.getMessage().getMsg(), Response.class);}
 
 	private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);

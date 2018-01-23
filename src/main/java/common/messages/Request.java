@@ -14,7 +14,6 @@ public class Request implements KVMessage {
         this.statusType = statusType;
     }
 
-
     public long getId() {
         return id;
     }

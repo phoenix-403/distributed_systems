@@ -1,6 +1,7 @@
 package client;
 
 
+import common.messages.KVMessage;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -14,7 +15,6 @@ import java.util.Set;
 public class Client extends Thread {
 
 	private Logger logger = Logger.getRootLogger();
-	private Set<ClientSocketListener> listeners;
 	private boolean running;
 	
 	private Socket clientSocket;
@@ -29,49 +29,10 @@ public class Client extends Thread {
 			throws UnknownHostException, IOException {
 
 		clientSocket = new Socket(address, port);
-		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
 		logger.info("Connection established");
-	}
-
-	/**
-	 * Initializes and starts the client connection. 
-	 * Loops until the connection is closed or aborted by the client.
-	 */
-	public void run() {
-		try {
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
-			
-			while(isRunning()) {
-				try {
-					TextMessage latestMsg = receiveMessage();
-					for(ClientSocketListener listener : listeners) {
-						listener.handleNewMessage(latestMsg);
-					}
-				} catch (IOException ioe) {
-					if(isRunning()) {
-						logger.error("Connection lost!");
-						try {
-							tearDownConnection();
-							for(ClientSocketListener listener : listeners) {
-								listener.handleStatus(
-										ClientSocketListener.SocketStatus.CONNECTION_LOST);
-							}
-						} catch (IOException e) {
-							logger.error("Unable to close connection!");
-						}
-					}
-				}				
-			}
-		} catch (IOException ioe) {
-			logger.error("Connection could not be established!");
-			
-		} finally {
-			if(isRunning()) {
-				closeConnection();
-			}
-		}
+        output = clientSocket.getOutputStream();
+        input = clientSocket.getInputStream();
 	}
 	
 	public synchronized void closeConnection() {
@@ -79,9 +40,6 @@ public class Client extends Thread {
 		
 		try {
 			tearDownConnection();
-			for(ClientSocketListener listener : listeners) {
-				listener.handleStatus(ClientSocketListener.SocketStatus.DISCONNECTED);
-			}
 		} catch (IOException ioe) {
 			logger.error("Unable to close connection!");
 		}
@@ -98,6 +56,22 @@ public class Client extends Thread {
 			logger.info("connection closed!");
 		}
 	}
+
+	public TextMessage getMessage() {
+		TextMessage response = null;
+		if (isRunning()) {
+			try {
+				response = receiveMessage();
+			} catch (IOException ioe) {
+				if(isRunning()) {
+//					System.out.println("Error:> "+ioe.getMessage());
+					logger.error("Connection lost!");
+						closeConnection();
+				}
+			}
+		}
+		return response;
+	}
 	
 	public boolean isRunning() {
 		return running;
@@ -105,10 +79,6 @@ public class Client extends Thread {
 	
 	public void setRunning(boolean run) {
 		running = run;
-	}
-	
-	public void addListener(ClientSocketListener listener){
-		listeners.add(listener);
 	}
 	
 	/**
@@ -134,7 +104,7 @@ public class Client extends Thread {
 		byte read = (byte) input.read();	
 		boolean reading = true;
 		
-		while(read != 13 && reading) {/* carriage return */
+		while(read != 10 && reading) {/* carriage return */
 			/* if buffer filled, copy to msg array */
 			if(index == BUFFER_SIZE) {
 				if(msgBytes == null){
