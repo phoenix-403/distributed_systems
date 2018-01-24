@@ -4,14 +4,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import common.messages.Request;
 import common.messages.Response;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
+
+import static common.messages.KVMessage.StatusType;
 
 
 /**
@@ -53,16 +53,25 @@ public class ClientConnection implements Runnable {
         InputStreamReader inputStreamReader = null;
         InputStream inputStream;
 
+        OutputStreamWriter outputStreamWriter = null;
+
         try {
             inputStream = clientSocket.getInputStream();
             inputStreamReader = new InputStreamReader(inputStream);
             bufferedInputStream = new BufferedReader(inputStreamReader);
+
+            outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
+
 
             while (clientSocketOpen) {
                 try {
                     String reqLine;
                     while ((reqLine = bufferedInputStream.readLine()) != null) {
                         Response response = handleRequest(reqLine);
+
+                        Gson gson = new Gson();
+                        outputStreamWriter.write(gson.toJson(response, Response.class) + "\r\n");
+
                     }
 
                     /* connection either terminated by the client or lost due to
@@ -94,51 +103,105 @@ public class ClientConnection implements Runnable {
         }
     }
 
+    /**
+     * Handles request and request validation
+     *
+     * @return Response to send back to server
+     */
     private Response handleRequest(String reqLine) throws IOException {
 
+        Request request = null;
         Response response;
 
         Gson gson = new Gson();
         try {
             // deserializes string into a request and pass it off to handle it
-            Request request = gson.fromJson(reqLine, Request.class);
+            request = gson.fromJson(reqLine, Request.class);
             if (validateRequest(request)) {
-
                 switch (request.getStatus()) {
                     case PUT:
-
                         try {
-                            kvServer.putKV(request.getKey(), request.getValue());
-                        } catch (Exception e) {
-                            // Todo return appropriate error and log
-                            e.printStackTrace();
+                            boolean keyExistInStorage = kvServer.inStorage(request.getKey());
+                            boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
+                                    .getValue());
+
+                            // If the user is trying to delete
+                            if (request.getValue() == null) {
+                                if (writeModifyDeleteStatus) {
+                                    return new Response(request.getId(), request.getKey(), null, StatusType
+                                            .DELETE_SUCCESS);
+                                } else {
+                                    return new Response(request.getId(), request.getKey(), null, StatusType
+                                            .DELETE_ERROR);
+                                }
+                            }
+                            // if user is trying to modify or write new -/- status is true when new field or false
+                            // when update
+                            if (writeModifyDeleteStatus) {
+                                return new Response(request.getId(), request.getKey(), request.getValue(),
+                                        StatusType.PUT_SUCCESS);
+                            } else {
+                                return new Response(request.getId(), request.getKey(), request.getValue(),
+                                        StatusType.PUT_UPDATE);
+                            }
+
+
+                        } catch (IOException e) {
+                            logger.error("Unable to get value from cache/disk - " + e.getMessage());
+                            return new Response(-1, null, null, StatusType.SERVER_ERROR);
                         }
 
-                        break;
                     case GET:
                         try {
-                            kvServer.getKV(request.getKey());
-                        } catch (Exception e) {
-                            // Todo return appropriate error and log
-                            e.printStackTrace();
+                            String value = kvServer.getKV(request.getKey());
+                            if (value != null) {
+                                return new Response(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
+                            } else {
+                                return new Response(request.getId(), request.getKey(), value, StatusType.GET_ERROR);
+                            }
+                        } catch (IOException e) {
+                            logger.error("Unable to get value from cache/disk - " + e.getMessage());
+                            return new Response(-1, null, null, StatusType.SERVER_ERROR);
                         }
-                        break;
                 }
             }
-
-
         } catch (JsonSyntaxException jsonException) {
-
+            logger.error("Unable to parse JSON Request");
         } finally {
-            // To do fix this to return actual response
-            response = new Response(0, null, null, null);
+            response = new Response(-1, null, null, StatusType.INVALID_REQUEST);
         }
 
         return response;
     }
 
+    /**
+     * Validates requests
+     *
+     * @return true if request are good to proceed with otherwise false
+     */
     private boolean validateRequest(Request request) {
-        // validate request logistics;
+        // if status is not get or put, send invalid request
+        if (request.getStatus() != StatusType.GET || request.getStatus() != StatusType.PUT) {
+            logger.error("Unknown request");
+            return false;
+        }
+
+        // sanity check for get
+        if (request.getStatus() == StatusType.GET) {
+            if (StringUtils.isEmpty(request.getKey()) || request.getValue() != null) {
+                logger.error("Invalid GET request");
+                return false;
+            }
+        }
+
+        // sanity check for put
+        if (request.getStatus() == StatusType.PUT) {
+            if (StringUtils.isEmpty(request.getKey())) {
+                logger.error("Invalid put request");
+                return false;
+            }
+        }
+
         return true;
     }
 

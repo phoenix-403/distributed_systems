@@ -61,6 +61,14 @@ public class KVServer implements IKVServer {
 
         // Initializing the server
         logger.info("Attempting to initialize server...");
+        // setting up cache
+        Cache.setup(cacheSize, cacheStrategy);
+        // setting up Database
+        if (!Persist.init()) {
+            logger.fatal("Can't start a server without a database!");
+            // if persist is not available exit server.. cant live without persist but can live without cache
+            System.exit(-1);
+        }
         serverRunning = false;
         clientThreads = new ArrayList<>();
         try {
@@ -94,35 +102,41 @@ public class KVServer implements IKVServer {
 
     @Override
     public boolean inStorage(String key) {
-        // TODO Auto-generated method stub
+        try {
+           return Persist.checkIfExists(key);
+        } catch (IOException e) {
+            logger.error("Can't check if " + key + " exists in storage: " + e.getMessage());
+        }
         return false;
     }
 
     @Override
     public boolean inCache(String key) {
-        // TODO Auto-generated method stub
-        return false;
+        return Cache.inCache(key);
     }
 
     @Override
-    public String getKV(String key) throws Exception {
-        // TODO Auto-generated method stub
-        return "";
+    public String getKV(String key) throws IOException {
+        return Cache.lookup(key);
     }
 
     @Override
-    public void putKV(String key, String value) throws Exception {
-        // TODO Auto-generated method stub
+    public void putKV(String key, String value) throws IOException {
+        putKVWithError(key, value);
+    }
+
+    public boolean putKVWithError(String key, String value) throws IOException {
+        return Persist.write(key,value);
     }
 
     @Override
     public void clearCache() {
-        // TODO Auto-generated method stub
+        Cache.clearCache();
     }
 
     @Override
     public void clearStorage() {
-        // TODO Auto-generated method stub
+        Persist.clearStorage();
     }
 
     @Override
@@ -155,6 +169,7 @@ public class KVServer implements IKVServer {
 
     @Override
     public void close() {
+        // todo
         serverRunning = false;
         try {
             serverSocket.close();

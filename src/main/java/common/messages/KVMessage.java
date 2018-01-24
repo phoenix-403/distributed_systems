@@ -15,7 +15,9 @@ public interface KVMessage {
         DELETE_ERROR,    /* RESP => Delete - request unsuccessful */
 
         INVALID_REQUEST,  /* server can not parse string into an appropriate request */
-        INVALID_RESPONSE  /* client can not parse string into an appropriate response */
+        INVALID_RESPONSE,  /* client can not parse string into an appropriate response */
+
+        SERVER_ERROR /* An error occurred on server side */
     }
 
     /**
