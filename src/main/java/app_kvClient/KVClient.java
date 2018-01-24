@@ -2,6 +2,7 @@ package app_kvClient;
 
 import client.KVCommInterface;
 import client.KVStore;
+import common.messages.ErrorMessage;
 import common.messages.KVMessage;
 import logger.LogSetup;
 import org.apache.log4j.Level;
@@ -11,27 +12,31 @@ import org.apache.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 public class KVClient implements IKVClient {
-    @Override
-    public void newConnection(String hostname, int port) throws Exception {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
-    public KVCommInterface getStore(){
-        // TODO Auto-generated method stub
-        return null;
-    }
-
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "EchoClient> ";
     private BufferedReader stdin;
     private KVStore KVinstance = null;
     private boolean stop = false;
+    private ErrorMessage errM= new ErrorMessage();
 
     private String serverAddress;
     private int serverPort;
+
+    @Override
+    public void newConnection(String hostname, int port) throws Exception {
+        serverAddress = hostname;
+        serverPort = port;
+        KVinstance = new KVStore(serverAddress, serverPort);
+        KVinstance.connect();
+    }
+
+    @Override
+    public KVCommInterface getStore(){
+        return KVinstance;
+    }
 
     public void run() {
         while(!stop) {
@@ -50,7 +55,9 @@ public class KVClient implements IKVClient {
 
     private void handleCommand(String cmdLine) {
         String[] tokens = cmdLine.split("\\s+");
-
+        tokens = Arrays.stream(tokens)
+                .filter(s -> (s != null && s.length() > 0))
+                .toArray(String[]::new);
 
         if(tokens[0].equals("quit")) {
             stop = true;
@@ -60,58 +67,41 @@ public class KVClient implements IKVClient {
         } else if (tokens[0].equals("connect")){
             if(tokens.length == 3) {
                 try{
-                    serverAddress = tokens[1];
-                    serverPort = Integer.parseInt(tokens[2]);
-                    KVinstance = new KVStore(serverAddress, serverPort);
-                    KVinstance.connect();
+                    newConnection(tokens[1], Integer.parseInt(tokens[2]));
 //					connect(serverAddress, serverPort);
                 } catch(NumberFormatException nfe) {
                     printError("No valid address. Port must be a number!");
                     logger.info("Unable to parse argument <port>", nfe);
+                } catch (Exception e) {
+                    errM.printUnableToConnectError(e.getMessage());
                 }
             } else {
                 printError("Invalid number of parameters!");
             }
         } else if (tokens[0].equals("get")) {
-            if (tokens.length <2) {
-                printError("No value passed!");
-            } else if (tokens[1].length() > 20) {
-                printError("Key exceeds 20B!");
-            } else {
-                if (KVinstance == null) {
-                    printError("Connect First");
-                } else {
-                    try {
-                        KVinstance.get(tokens[1]);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            if (KVinstance != null &&
+                    KVinstance.isRunning() &&
+                    errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                try {
+                    KVinstance.get(tokens[1]);
+                } catch (Exception e) {
+                    errM.printUnableToConnectError(e.getMessage());
                 }
+            } else {
+                errM.printNotConnectedError();
             }
-
         } else if (tokens[0].equals("put")) {
-            if (tokens.length > 3) {
-                printError("Too many arguments!");
-            } else if (tokens.length <3) {
-                printError("Too few arguments!");
-            } if (tokens[1].length() > 20) {
-                printMessage(KVMessage.StatusType.PUT_ERROR.toString());
-            } else if (tokens[2].length() > 120*1024) {
-                printError("Value exceeds 120KB");
-            } else if(tokens.length == 3) {
-                if (KVinstance == null) {
-                    printError("Connect First");
-                } else {
-                    try {
-                        KVinstance.put(tokens[1], tokens[2]);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            if (KVinstance != null &&
+                    KVinstance.isRunning() &&
+                    errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
+                try {
+                    KVinstance.get(tokens[1]);
+                } catch (Exception e) {
+                    errM.printUnableToConnectError(e.getMessage());
                 }
             } else {
-                printError("No value passed!");
+                errM.printNotConnectedError();
             }
-
         } else if(tokens[0].equals("disconnect")) {
             KVinstance.disconnect();
 
