@@ -129,7 +129,7 @@ public class KVClient implements IKVClient {
 
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
-        sb.append(PROMPT).append("ECHO CLIENT HELP (Usage):\n");
+        sb.append(PROMPT).append("KV CLIENT HELP (Usage):\n");
         sb.append(PROMPT);
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\n");
@@ -199,7 +199,7 @@ public class KVClient implements IKVClient {
 
     /**
      * @param args contains the port number at args[0].
-     * Main entry point for the echo server application.
+     * Main entry point for the KV client application.
      */
     public static void main(String[] args) {
         try {
