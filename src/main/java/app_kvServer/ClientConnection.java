@@ -113,7 +113,7 @@ public class ClientConnection implements Runnable {
 
         Gson gson = new Gson();
         try {
-            // deserializes string into a request and pass it off to handle it
+            // deserialize string into a request and pass it off to handle it
             request = gson.fromJson(reqLine, Request.class);
             if (validateRequest(request)) {
                 switch (request.getStatus()) {

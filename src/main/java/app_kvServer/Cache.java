@@ -8,7 +8,6 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import static app_kvServer.IKVServer.CacheStrategy;
 
@@ -87,21 +86,8 @@ public class Cache {
         // lookup from cache -- in_cache will return false if cache is not setup
         if (inCache(key)) {
             logger.info("Cache hit for key");
-            // TODO for LDU and LRU, you should call a function to update keyStrategyPairArray
-            switch (cacheStrategy) {
-                case LRU:
-                    for (int i = 0; i < keyStrategyPairArray.size(); i ++) {
-                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
-                        if (pair.getKey().equals(key)) {
-                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
-                                    LRU_INIT));
-                        } else {
-                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
-                                    pair.getStrategyInt()-4));
-                        }
-                    }
-                    break;
-            }
+            String value = cache.get(key);
+            updateCache(key, value);
             return cache.get(key);
         }
 
@@ -114,6 +100,8 @@ public class Cache {
         return value;
     }
 
+
+
     // todo -Abdel maybe- have a cache for write and create a thread to periodically write to disk???
 
     private static void updateCache(String key, String value) {
@@ -123,43 +111,57 @@ public class Cache {
                 // TODO LFU
                 break;
             case LRU:
-                // TODO LRU
-                if (cache.size() < size) {
-                    // just add it since it is less than size
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
-
+                if (inCache(key)) {
+                    for (int i = 0; i < keyStrategyPairArray.size(); i++) {
+                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
+                        if (pair.getKey().equals(key)) {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    LRU_INIT));
+                        } else {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    pair.getStrategyInt() - 4));
+                        }
+                    }
                 } else {
-                    KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
-                    cache.remove(minPair.getKey());
-                    keyStrategyPairArray.remove(minPair);
+                    if (cache.size() < size) {
+                        // just add it since it is less than size
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
 
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+                    } else {
+                        KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
+                        cache.remove(minPair.getKey());
+                        keyStrategyPairArray.remove(minPair);
+
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+                    }
                 }
                 break;
             case FIFO:
-                if (cache.size() < size) {
-                    // just add it since it is less than size
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                if (!inCache(key)) {
+                    if (cache.size() < size) {
+                        // just add it since it is less than size
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
 
-                } else {
-                    cache.remove(keyStrategyPairArray.get(0).getKey());
-                    keyStrategyPairArray.remove(0);
+                    } else {
+                        cache.remove(keyStrategyPairArray.get(0).getKey());
+                        keyStrategyPairArray.remove(0);
 
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                    }
                 }
                 break;
         }
     }
 
-    private static KeyStrategyPair getMinPair(ArrayList<KeyStrategyPair> list){
+    private static KeyStrategyPair getMinPair(ArrayList<KeyStrategyPair> list) {
         int minStrategyInt = LRU_INIT;
         KeyStrategyPair minPair = null;
 
-        for(KeyStrategyPair x : list ){
+        for (KeyStrategyPair x : list) {
             if (x.getStrategyInt() < minStrategyInt) {
                 minPair = x;
             }
@@ -218,7 +220,7 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(3, CacheStrategy.FIFO);
+        Cache.setup(3, CacheStrategy.LRU);
         Persist.init();
 
         Persist.write("ab", "test1");
