@@ -34,7 +34,7 @@ public class KVStore implements KVCommInterface {
 	public void connect() throws Exception{
         client = new Client(serverAddress, serverPort);
         client.start();
-        System.out.println(client.getMessage().getMsg());
+//        System.out.println(client.getMessage().getMsg()); //todo @Henry this blocks
         // todo @Henry - should check if client is null
 	}
 
