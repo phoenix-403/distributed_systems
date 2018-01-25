@@ -74,7 +74,7 @@ public class Persist {
     }
 
     /**
-     * reads value from database given a key;
+     * reads value from database given a key; cache get updated from cach
      *
      * @return value if key-value pair is found else null
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
@@ -97,13 +97,13 @@ public class Persist {
     }
 
     /**
-     * writes value into database given a key;
+     * writes value into database given a key; updates cache as well
      *
      * @return true if it is a new value, false if it updated an existing one;
      * true if deleted false if not
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
-    public static boolean write(String key, String value) throws IOException {
+    public static synchronized boolean write(String key, String value) throws IOException {
         File savedToFile = getFileKeyStoredIn(key);
 
         ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(savedToFile.toPath());
@@ -126,6 +126,7 @@ public class Persist {
             fileLines.add(key + DELIMITER + value);
             Files.write(savedToFile.toPath(), fileLines);
             logger.info("added new key: " + key + " with value: " + value);
+            Cache.updateCache(key, value);
             return true;
         }
 
@@ -135,12 +136,14 @@ public class Persist {
             fileLines.remove(index);
             Files.write(savedToFile.toPath(), fileLines);
             logger.info("deleted key: " + key);
+            Cache.remove(key);
             return true;
         }
         // 2.2 modify value
         fileLines.set(index, key + DELIMITER + value);
         Files.write(savedToFile.toPath(), fileLines);
         logger.info("Modified key: " + key + " with value of: " + value);
+        Cache.updateCache(key, value);
         return false;
     }
 
@@ -158,7 +161,7 @@ public class Persist {
         return DB_FILES[26];
     }
 
-    public static void clearStorage(){
+    public static void clearStorage() {
         // deleting bin directory
         deleteDirectory(new File(DB_FILE_PATH));
         logger.info("Cleared Persisted files. Reinitializing it...");
@@ -167,10 +170,13 @@ public class Persist {
         init();
     }
 
-    private static void deleteDirectory(File directory){
+    private static void deleteDirectory(File directory) {
         if (directory.exists()) {
-            for (File file : directory.listFiles()) {
-                file.delete();
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    file.delete();
+                }
             }
             directory.delete();
         }

@@ -17,14 +17,14 @@ public class Cache {
 
     private static int size;
     private static CacheStrategy cacheStrategy;
-    private static HashMap<String, String> cache = new HashMap<>();
+    private static volatile HashMap<String, String> cache = new HashMap<>();
 
     private static boolean isCacheSetup = false;
     private static int LRU_INIT = Integer.MAX_VALUE;
 
     // variables to be used for strategy eviction
     private static int cacheWeight = 0;
-    private static ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
+    private static volatile ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
 
     private Cache() {
     }
@@ -81,7 +81,7 @@ public class Cache {
      * @return looked up value if it finds key in cache or disk, if miss in both will return null
      * @throws IOException if unable to read from disk
      */
-    public static String lookup(String key) throws IOException {
+    public static synchronized String lookup(String key) throws IOException {
 
         // lookup from cache -- in_cache will return false if cache is not setup
         if (inCache(key)) {
@@ -100,12 +100,7 @@ public class Cache {
         return value;
     }
 
-
-
-    // todo -Abdel maybe- have a cache for write and create a thread to periodically write to disk???
-
-    private static void updateCache(String key, String value) {
-
+    protected static void updateCache(String key, String value) {
         switch (cacheStrategy) {
             case LFU:
                 // TODO LFU
@@ -131,7 +126,7 @@ public class Cache {
                     } else {
                         KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
                         cache.remove(minPair.getKey());
-                        keyStrategyPairArray.remove(minPair);
+                        keyStrategyPairArray.remove(keyStrategyPairArray.indexOf(minPair));
 
                         cache.put(key, value);
                         keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
@@ -154,6 +149,22 @@ public class Cache {
                     }
                 }
                 break;
+        }
+    }
+
+    protected static synchronized void remove(String key) {
+        if (isCacheSetup && inCache(key)) {
+            KeyStrategyPair keyStrategyPair = null;
+            cache.remove(key);
+            for (KeyStrategyPair keyStrPair : keyStrategyPairArray) {
+                if (key.equals(keyStrPair.getKey())) {
+                    keyStrategyPair = keyStrPair;
+                    break;
+                }
+            }
+            if(keyStrategyPair != null){
+                keyStrategyPairArray.remove(keyStrategyPair);
+            }
         }
     }
 
@@ -220,19 +231,41 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(3, CacheStrategy.LRU);
+        Cache.setup(3, CacheStrategy.FIFO);
         Persist.init();
 
         Persist.write("ab", "test1");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ac", "test2");
+        System.out.println(Cache.cache.toString());
+
+        Persist.write("ac", null);
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ad", "test3");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ae", "test4");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("af", "test5");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ag", "test6");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ah", "test7");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ai", "test8");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("aj", "test9");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ak", "test10");
+        System.out.println(Cache.cache.toString());
 
         Cache.lookup("ab");
         System.out.println(Cache.cache.toString());
