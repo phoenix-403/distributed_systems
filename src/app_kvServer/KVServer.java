@@ -170,7 +170,6 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void close() {
-        // todo
         serverRunning = false;
         try {
             serverSocket.close();

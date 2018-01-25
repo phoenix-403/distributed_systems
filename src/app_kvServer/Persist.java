@@ -17,7 +17,7 @@ public class Persist {
     private static Logger logger = LogManager.getLogger(Persist.class);
 
     // Save data into multiple DB_FILES - 1 for each letter and 1 extra for all other
-    // todo lock one file
+    // TODO -optional- lock one file
     private static volatile File[] DB_FILES = new File[27];
     private static final String DB_FILE_PATH = "db/";
 
