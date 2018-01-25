@@ -21,6 +21,7 @@ public class Cache {
     private static HashMap<String, String> cache = new HashMap<>();
 
     private static boolean isCacheSetup = false;
+    private static int LRU_INIT = Integer.MAX_VALUE;
 
     // variables to be used for strategy eviction
     private static int cacheWeight = 0;
@@ -87,6 +88,20 @@ public class Cache {
         if (inCache(key)) {
             logger.info("Cache hit for key");
             // TODO for LDU and LRU, you should call a function to update keyStrategyPairArray
+            switch (cacheStrategy) {
+                case LRU:
+                    for (int i = 0; i < keyStrategyPairArray.size(); i ++) {
+                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
+                        if (pair.getKey().equals(key)) {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    LRU_INIT));
+                        } else {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    pair.getStrategyInt()-4));
+                        }
+                    }
+                    break;
+            }
             return cache.get(key);
         }
 
@@ -109,6 +124,19 @@ public class Cache {
                 break;
             case LRU:
                 // TODO LRU
+                if (cache.size() < size) {
+                    // just add it since it is less than size
+                    cache.put(key, value);
+                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+
+                } else {
+                    KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
+                    cache.remove(minPair.getKey());
+                    keyStrategyPairArray.remove(minPair);
+
+                    cache.put(key, value);
+                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+                }
                 break;
             case FIFO:
                 if (cache.size() < size) {
@@ -125,6 +153,18 @@ public class Cache {
                 }
                 break;
         }
+    }
+
+    private static KeyStrategyPair getMinPair(ArrayList<KeyStrategyPair> list){
+        int minStrategyInt = LRU_INIT;
+        KeyStrategyPair minPair = null;
+
+        for(KeyStrategyPair x : list ){
+            if (x.getStrategyInt() < minStrategyInt) {
+                minPair = x;
+            }
+        }
+        return minPair;
     }
 
     private static class KeyStrategyPair implements Comparable<KeyStrategyPair> {
