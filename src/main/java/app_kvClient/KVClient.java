@@ -203,7 +203,7 @@ public class KVClient implements IKVClient {
      */
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/client.log", Level.OFF);
+            new LogSetup("logs/client/client.log", Level.OFF);
         } catch (IOException e) {
             System.out.println("Error! Unable to initialize logger!");
             e.printStackTrace();
