@@ -1,4 +1,6 @@
-package common.messages;
+package app_kvClient;
+
+import common.messages.KVMessage;
 
 public class ErrorMessage {
     private static final String PROMPT = "KV_Client> ";
@@ -62,7 +64,7 @@ public class ErrorMessage {
 
         switch (type){
             case PUT:
-                if (size == 3)
+                if (size >= 2)
                     return true;
 
                 break;

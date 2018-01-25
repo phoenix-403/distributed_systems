@@ -34,7 +34,7 @@ public class AdditionalTest extends TestCase {
         Assert.assertEquals("97.db", ((File) method.invoke(null, "abc")).getName());
         Assert.assertEquals("98.db", ((File) method.invoke(null, "b")).getName());
         Assert.assertEquals("99.db", ((File) method.invoke(null, "c")).getName());
-        Assert.assertEquals("97.db", ((File) method.invoke(null, "~")).getName());
+        Assert.assertEquals("123.db", ((File) method.invoke(null, "~")).getName());
 
     }
 

@@ -124,7 +124,7 @@
     <target name="build-jar" depends="build-client-jar, build-server-jar"/>
 
     <!-- run test cases -->
-    <target name="test" depends="build_test">
+    <target name="test" depends="cleanall,build_test">
         <junit>
             <classpath refid="project.classpath"/>
             <formatter type="brief" usefile="false"/>
