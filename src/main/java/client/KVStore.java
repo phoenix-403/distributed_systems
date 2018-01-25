@@ -1,5 +1,6 @@
 package client;
 
+import app_kvClient.IClientSocketListener;
 import com.google.gson.Gson;
 import common.messages.KVMessage;
 import common.messages.Request;
@@ -7,72 +8,112 @@ import common.messages.Response;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
+import java.io.*;
+import java.net.Socket;
 
 public class KVStore implements KVCommInterface {
 
 
-	private static Logger logger = LogManager.getLogger(KVStore.class);
-	private static final String PROMPT = "KV_Client> ";
-	private BufferedReader stdin;
-	private Client client = null;
-	private boolean stop = false;
+    private static Logger logger = LogManager.getLogger(KVStore.class);
 
-	private String serverAddress;
-	private int serverPort;
+    private String address;
+    private int port;
 
-	public KVStore(String address, int port) {
-		serverAddress = address;
-		serverPort = port;
-	}
+    private static final int TIMEOUT = 4 * 1000;
 
-	public boolean isRunning(){
-	    return client.isRunning();
+    private Socket clientSocket;
+    private IClientSocketListener clientSocketListener;
+    private OutputStreamWriter outputStreamWriter;
+    private InputStream inputStream;
+    private InputStreamReader inputStreamReader;
+    private BufferedReader bufferedInputStream;
+
+    volatile boolean active;
+
+    private int requestId = 0;
+
+    public KVStore(String address, int port) {
+        this.address = address;
+        this.port = port;
     }
 
-	@Override
-	public void connect() throws Exception{
-        client = new Client(serverAddress, serverPort);
-        client.start();
-//        System.out.println(client.getMessage().getMsg()); //todo @Henry this blocks
-        // todo @Henry - should check if client is null
-	}
+    @Override
+    public void connect() throws Exception {
+        clientSocket = new Socket(address, port);
+        inputStream = clientSocket.getInputStream();
+        inputStreamReader = new InputStreamReader(inputStream);
+        bufferedInputStream = new BufferedReader(inputStreamReader);
+        outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
+        logger.info("Connection established");
+    }
 
-	@Override
-	public void disconnect() {
-        if(client != null) {
-            client.closeConnection();
-            client = null;
+    @Override
+    public void disconnect() {
+        logger.info("try to close connection ...");
+        try {
+            tearDownConnection();
+        } catch (IOException ioe) {
+            logger.error("Unable to close connection!");
         }
-	}
-
-	@Override
-	public KVMessage put(String key, String value) throws Exception{
-        Request req = new Request(0, key, value, KVMessage.StatusType.PUT);
-
-        sendMessage(new Gson().toJson(req));
-        KVMessage resp =getKVMessage();
-        System.out.println( new Gson().toJson(resp));
-        return resp;
     }
 
-	@Override
-	public KVMessage get(String key) throws Exception{
-        Request req = new Request(0, key, null, KVMessage.StatusType.GET);
-
-        sendMessage(new Gson().toJson(req));
-        KVMessage resp =getKVMessage();
-        System.out.println( new Gson().toJson(resp));
-        return resp;
-	}
-
-    private void sendMessage(String msg) throws Exception{
-	    client.sendMessage(new TextMessage(msg));
+    private void tearDownConnection() throws IOException {
+        logger.info("tearing down the connection ...");
+        if (clientSocket != null) {
+            inputStream.close();
+            inputStreamReader.close();
+            bufferedInputStream.close();
+            outputStreamWriter.close();
+            clientSocket.getOutputStream().close();
+            clientSocket.close();
+            clientSocket = null;
+            logger.info("connection closed!");
+        }
     }
 
-    private KVMessage getKVMessage(){ return new Gson().fromJson(client.getMessage().getMsg(), Response.class);}
+    @Override
+    public KVMessage put(String key, String value) throws Exception {
+        Request req = new Request(requestId++, key, value, KVMessage.StatusType.PUT);
+        sendRequest(req);
+        return getResponse();
+    }
 
-	private void printError(String error){
-		System.out.println(PROMPT + "Error! " +  error);
-	}
+    @Override
+    public KVMessage get(String key) throws Exception {
+        Request req = new Request(requestId++, key, null, KVMessage.StatusType.GET);
+        sendRequest(req);
+        return getResponse();
+    }
+
+    private void sendRequest(Request req) throws IOException {
+        outputStreamWriter.write(new Gson().toJson(req, Request.class) + "\r\n");
+        outputStreamWriter.flush();
+    }
+
+
+    private Response getResponse() throws IOException {
+
+        Response response;
+
+        long startTime = System.currentTimeMillis();
+
+        String respLine;
+        while (System.currentTimeMillis() - startTime < TIMEOUT
+                && (respLine = bufferedInputStream.readLine()) != null) {
+
+            Gson gson = new Gson();
+            response = gson.fromJson(respLine, Response.class);
+            clientSocketListener.printTerminal(response.toString());
+            return response;
+
+        }
+
+        response = new Response(-1, null, null, KVMessage.StatusType.TIME_OUT);
+        clientSocketListener.printTerminal(response.toString());
+        return response;
+    }
+
+    public void set(IClientSocketListener listener) {
+        clientSocketListener = listener;
+    }
 }
