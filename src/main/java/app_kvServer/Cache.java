@@ -86,6 +86,7 @@ public class Cache {
         // lookup from cache -- in_cache will return false if cache is not setup
         if (inCache(key)) {
             logger.info("Cache hit for key");
+            // TODO for LDU and LRU, you should call a function to update keyStrategyPairArray
             return cache.get(key);
         }
 
@@ -98,15 +99,16 @@ public class Cache {
         return value;
     }
 
-    // todo - have a cache for write and create a thread to periodically write to disk???
+    // todo -Abdel maybe- have a cache for write and create a thread to periodically write to disk???
 
     private static void updateCache(String key, String value) {
 
-        // TODO Implement cache strategy
         switch (cacheStrategy) {
             case LFU:
+                // TODO LFU
                 break;
             case LRU:
+                // TODO LRU
                 break;
             case FIFO:
                 if (cache.size() < size) {
@@ -172,8 +174,8 @@ public class Cache {
 
     public static void main(String[] args) throws IOException {
 
+        // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
-        logger.error("test");
 
         Cache.setup(0, CacheStrategy.FIFO);
         Persist.init();
