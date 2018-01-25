@@ -64,7 +64,7 @@ public class ErrorMessage {
 
         switch (type){
             case PUT:
-                if (size == 3)
+                if (size >= 2)
                     return true;
 
                 break;

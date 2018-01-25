@@ -28,8 +28,6 @@ public class KVStore implements KVCommInterface {
     private InputStreamReader inputStreamReader;
     private BufferedReader bufferedInputStream;
 
-    volatile boolean active;
-
     private int requestId = 0;
 
     public KVStore(String address, int port) {
@@ -45,6 +43,7 @@ public class KVStore implements KVCommInterface {
         bufferedInputStream = new BufferedReader(inputStreamReader);
         outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
         logger.info("Connection established");
+
     }
 
     @Override
@@ -64,7 +63,6 @@ public class KVStore implements KVCommInterface {
             inputStreamReader.close();
             bufferedInputStream.close();
             outputStreamWriter.close();
-            clientSocket.getOutputStream().close();
             clientSocket.close();
             clientSocket = null;
             logger.info("connection closed!");
@@ -72,48 +70,86 @@ public class KVStore implements KVCommInterface {
     }
 
     @Override
-    public KVMessage put(String key, String value) throws Exception {
+    public KVMessage put(String key, String value) throws IOException {
+        if ("null".equals(value)){
+            value = null;
+        }
         Request req = new Request(requestId++, key, value, KVMessage.StatusType.PUT);
-        sendRequest(req);
-        return getResponse();
+        boolean status = sendRequest(req);
+        if (status) {
+            Response response = getResponse();
+            if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
+                throw new IOException("Connection Dropped");
+            return response;
+        } else {
+            throw new IOException("Not Connected");
+        }
+
     }
 
     @Override
-    public KVMessage get(String key) throws Exception {
+    public KVMessage get(String key) throws IOException {
         Request req = new Request(requestId++, key, null, KVMessage.StatusType.GET);
-        sendRequest(req);
-        return getResponse();
+        boolean status = sendRequest(req);
+        if (status) {
+            Response response = getResponse();
+            if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
+                throw new IOException("Connection Dropped");
+            return response;
+        } else {
+            throw new IOException("Not Connected");
+        }
     }
 
-    private void sendRequest(Request req) throws IOException {
-        outputStreamWriter.write(new Gson().toJson(req, Request.class) + "\r\n");
-        outputStreamWriter.flush();
+    private boolean sendRequest(Request req) {
+        try {
+            outputStreamWriter.write(new Gson().toJson(req, Request.class) + "\r\n");
+            outputStreamWriter.flush();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
 
-    private Response getResponse() throws IOException {
+    private Response getResponse() {
+        try {
+            Response response;
 
-        Response response;
+            long startTime = System.currentTimeMillis();
 
-        long startTime = System.currentTimeMillis();
+            String respLine;
+            while (System.currentTimeMillis() - startTime < TIMEOUT
+                    && (respLine = bufferedInputStream.readLine()) != null) {
 
-        String respLine;
-        while (System.currentTimeMillis() - startTime < TIMEOUT
-                && (respLine = bufferedInputStream.readLine()) != null) {
+                Gson gson = new Gson();
+                response = gson.fromJson(respLine, Response.class);
+                if (clientSocketListener != null)
+                    clientSocketListener.printTerminal(response.toString());
+                return response;
 
-            Gson gson = new Gson();
-            response = gson.fromJson(respLine, Response.class);
-            clientSocketListener.printTerminal(response.toString());
+            }
+
+            response = new Response(-1, null, null, KVMessage.StatusType.TIME_OUT);
+            if (clientSocketListener != null)
+                clientSocketListener.printTerminal(response.toString());
             return response;
 
+        } catch (IOException e) {
+            return connectionDropped();
         }
+    }
 
-        response = new Response(-1, null, null, KVMessage.StatusType.TIME_OUT);
-        clientSocketListener.printTerminal(response.toString());
+    private Response connectionDropped() {
+        Response response = new Response(-1, null, null,
+                KVMessage.StatusType.CONNECTION_DROPPED);
+        if (clientSocketListener != null)
+            clientSocketListener.printTerminal(response.toString());
         return response;
     }
 
     public void set(IClientSocketListener listener) {
-        clientSocketListener = listener;
+        if (clientSocketListener != null)
+            clientSocketListener = listener;
     }
 }

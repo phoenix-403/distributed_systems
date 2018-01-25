@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 
-public class KVClient implements IKVClient, IClientSocketListener{
+public class KVClient implements IKVClient, IClientSocketListener {
 
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "KV_Client> ";
@@ -103,7 +103,16 @@ public class KVClient implements IKVClient, IClientSocketListener{
             if (kvStoreInstance != null &&
                     errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
                 try {
-                    kvStoreInstance.put(tokens[1], tokens[2]);
+                    String arg = tokens.length<=2 ? null : tokens[2];
+                    if (arg!= null) {
+                        for (int i = 3; i < tokens.length; i++) {
+                            arg += (" " + tokens[i]);
+                        }
+                    }
+                    if ("null".equals(arg)){
+                        arg = null;
+                    }
+                    kvStoreInstance.put(tokens[1], arg);
                 } catch (Exception e) {
                     errM.printUnableToConnectError(e.getMessage());
                 }
@@ -203,7 +212,7 @@ public class KVClient implements IKVClient, IClientSocketListener{
 
     @Override
     public void printTerminal(String msg) {
-        System.out.println(PROMPT + msg );
+        System.out.println(PROMPT + msg);
         System.out.flush();
     }
 
@@ -216,7 +225,6 @@ public class KVClient implements IKVClient, IClientSocketListener{
         KVClient app = new KVClient();
         app.run();
     }
-
 
 
 }

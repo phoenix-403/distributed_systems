@@ -39,28 +39,30 @@ public class Response implements KVMessage {
 
         switch (statusType) {
             case GET_SUCCESS:
-                return id + "-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
             case GET_ERROR:
-                return id + "-" + statusType.toString() + "<" + key + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
 
             case PUT_SUCCESS:
             case PUT_UPDATE:
-                return id + "-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
             case PUT_ERROR:
-                return id + "-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
 
             case DELETE_SUCCESS:
-                return id + "-" + statusType.toString() + "<" + key + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
             case DELETE_ERROR:
-                return id + "-" + statusType.toString() + "<" + key + ">";
+                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
 
             case INVALID_REQUEST:
-                return id + "-" + statusType.toString();
+                return "(" + id + ")-" + statusType.toString();
             case INVALID_RESPONSE:
-                return id + "-" + statusType.toString();
+                return "(" + id + ")-" + statusType.toString();
 
             case TIME_OUT:
-                return id + "-" + statusType.toString();
+                return "(" + id + ")-" + statusType.toString();
+            case CONNECTION_DROPPED:
+                return "(" + id + ")-" + statusType.toString() + "_OR_CLOSED. Please reconnect!";
         }
 
         return super.toString();

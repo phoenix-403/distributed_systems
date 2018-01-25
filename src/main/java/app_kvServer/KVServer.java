@@ -13,7 +13,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class KVServer implements IKVServer {
+public class KVServer implements IKVServer, Runnable {
 
     private static Logger logger = LogManager.getLogger(KVServer.class);
 
