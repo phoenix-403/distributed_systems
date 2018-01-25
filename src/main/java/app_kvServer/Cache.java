@@ -129,6 +129,7 @@ public class Cache {
 
     private static class KeyStrategyPair implements Comparable<KeyStrategyPair> {
         private String key;
+        // this value is frequency for LFU, MMM for LRY and is not used for fifo
         private int strategyInt;
 
         private KeyStrategyPair(String key, int strategyInt) {
@@ -136,19 +137,19 @@ public class Cache {
             this.strategyInt = strategyInt;
         }
 
-        public String getKey() {
+        private String getKey() {
             return key;
         }
 
-        public void setKey(String key) {
+        private void setKey(String key) {
             this.key = key;
         }
 
-        public int getStrategyInt() {
+        private int getStrategyInt() {
             return strategyInt;
         }
 
-        public void setStrategyInt(int strategyInt) {
+        private void setStrategyInt(int strategyInt) {
             this.strategyInt = strategyInt;
         }
 
@@ -177,7 +178,7 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(0, CacheStrategy.FIFO);
+        Cache.setup(3, CacheStrategy.FIFO);
         Persist.init();
 
         Persist.write("ab", "test1");
