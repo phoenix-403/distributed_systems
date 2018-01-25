@@ -116,7 +116,7 @@
         <junit>
             <classpath refid="project.classpath"/>
             <formatter type="brief" usefile="false"/>
-            <test name="AllTests"/>
+            <test name="test.AllTests"/>
         </junit>
     </target>
 

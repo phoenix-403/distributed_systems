@@ -1,68 +1,43 @@
 package common.messages;
 
-public class Response implements KVMessage {
+public class Response extends RequestResponse {
 
-    private long id;
-
-    private String key;
-    private String value;
-    private StatusType statusType;
 
     public Response(long id, String key, String value, StatusType statusType) {
-        this.id = id;
-        this.key = key;
-        this.value = value;
-        this.statusType = statusType;
+        super(id, key, value, statusType);
     }
 
-    public long getId() {
-        return id;
-    }
 
-    @Override
-    public String getKey() {
-        return key;
-    }
-
-    @Override
-    public String getValue() {
-        return value;
-    }
-
-    @Override
-    public StatusType getStatus() {
-        return statusType;
-    }
 
     @Override
     public String toString() {
 
-        switch (statusType) {
+        switch (getStatus()) {
             case GET_SUCCESS:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
             case GET_ERROR:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
 
             case PUT_SUCCESS:
             case PUT_UPDATE:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
             case PUT_ERROR:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + "," + value + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
 
             case DELETE_SUCCESS:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
             case DELETE_ERROR:
-                return "(" + id + ")-" + statusType.toString() + "<" + key + ">";
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
 
             case INVALID_REQUEST:
-                return "(" + id + ")-" + statusType.toString();
+                return "(" + getId() + ")-" + getStatus().toString();
             case INVALID_RESPONSE:
-                return "(" + id + ")-" + statusType.toString();
+                return "(" + getId() + ")-" + getStatus().toString();
 
             case TIME_OUT:
-                return "(" + id + ")-" + statusType.toString();
+                return "(" + super.getId() + ")-" + getStatus().toString();
             case CONNECTION_DROPPED:
-                return "(" + id + ")-" + statusType.toString() + "_OR_CLOSED. Please reconnect!";
+                return "(" + super.getId() + ")-" + getStatus().toString() + "_OR_CLOSED. Please reconnect!";
         }
 
         return super.toString();
