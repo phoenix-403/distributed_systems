@@ -62,8 +62,8 @@ public class Client extends Thread {
 		}
 	}
 
-	public TextMessage getMessage() {
-		TextMessage response = null;
+	public String getMessage() {
+		String response = null;
 		if (isRunning()) {
 			try {
 				response = receiveMessage();
@@ -91,13 +91,13 @@ public class Client extends Thread {
 	 * @param msg the message that is to be sent.
 	 * @throws IOException some I/O error regarding the output stream
 	 */
-	public void sendMessage(TextMessage msg) throws IOException {
-		outputStreamWriter.write(msg.getMsg() + "\r\n");
-		logger.info("Send message:\t '" + msg.getMsg() + "'");
+	public void sendMessage(String msg) throws IOException {
+		outputStreamWriter.write(msg + "\r\n");
+		logger.info("Send message:\t '" + msg + "'");
     }
 	
 	
-	private TextMessage receiveMessage() throws IOException {
+	private String receiveMessage() throws IOException {
 		String msg = null;
 
 		long startTime = System.currentTimeMillis();
@@ -106,7 +106,7 @@ public class Client extends Thread {
             if ( bufferedInputStream.ready()) {
                 msg = bufferedInputStream.readLine();
                 logger.info("Receive message:\t '" + msg + "'");
-                return new TextMessage(msg);
+                return msg;
             }
         }
 		return null;

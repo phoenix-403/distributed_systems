@@ -34,8 +34,7 @@ public class KVStore implements KVCommInterface {
 	public void connect() throws Exception{
         client = new Client(serverAddress, serverPort);
         client.start();
-//        System.out.println(client.getMessage().getMsg()); //todo @Henry this blocks
-        // todo @Henry - should check if client is null
+//        System.out.println(client.getMessage()); //todo @Henry this blocks
 	}
 
 	@Override
@@ -50,7 +49,7 @@ public class KVStore implements KVCommInterface {
 	public KVMessage put(String key, String value) throws Exception{
         Request req = new Request(0, key, value, KVMessage.StatusType.PUT);
 
-        sendMessage(new Gson().toJson(req));
+        client.sendMessage(new Gson().toJson(req));
         KVMessage resp =getKVMessage();
         System.out.println( new Gson().toJson(resp));
         return resp;
@@ -60,17 +59,13 @@ public class KVStore implements KVCommInterface {
 	public KVMessage get(String key) throws Exception{
         Request req = new Request(0, key, null, KVMessage.StatusType.GET);
 
-        sendMessage(new Gson().toJson(req));
+        client.sendMessage(new Gson().toJson(req));
         KVMessage resp =getKVMessage();
         System.out.println( new Gson().toJson(resp));
         return resp;
 	}
 
-    private void sendMessage(String msg) throws Exception{
-	    client.sendMessage(new TextMessage(msg));
-    }
-
-    private KVMessage getKVMessage(){ return new Gson().fromJson(client.getMessage().getMsg(), Response.class);}
+    private KVMessage getKVMessage(){ return new Gson().fromJson(client.getMessage(), Response.class);}
 
 	private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
