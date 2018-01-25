@@ -38,5 +38,4 @@ public class AdditionalTest extends TestCase {
 
     }
 
-
 }

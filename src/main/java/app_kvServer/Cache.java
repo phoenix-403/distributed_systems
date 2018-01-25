@@ -7,8 +7,8 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 
 import static app_kvServer.IKVServer.CacheStrategy;
 
@@ -18,14 +18,14 @@ public class Cache {
 
     private static int size;
     private static CacheStrategy cacheStrategy;
-    private static HashMap<String, String> cache = new HashMap<>();
+    private static volatile HashMap<String, String> cache = new HashMap<>();
 
     private static boolean isCacheSetup = false;
     private static int LRU_INIT = Integer.MAX_VALUE;
 
     // variables to be used for strategy eviction
     private static int cacheWeight = 0;
-    private static ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
+    private static volatile ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
 
     private Cache() {
     }
@@ -82,26 +82,13 @@ public class Cache {
      * @return looked up value if it finds key in cache or disk, if miss in both will return null
      * @throws IOException if unable to read from disk
      */
-    public static String lookup(String key) throws IOException {
+    public static synchronized String lookup(String key) throws IOException {
 
         // lookup from cache -- in_cache will return false if cache is not setup
         if (inCache(key)) {
             logger.info("Cache hit for key");
-            // TODO for LDU and LRU, you should call a function to update keyStrategyPairArray
-            switch (cacheStrategy) {
-                case LRU:
-                    for (int i = 0; i < keyStrategyPairArray.size(); i ++) {
-                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
-                        if (pair.getKey().equals(key)) {
-                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
-                                    LRU_INIT));
-                        } else {
-                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
-                                    pair.getStrategyInt()-4));
-                        }
-                    }
-                    break;
-            }
+            String value = cache.get(key);
+            updateCache(key, value);
             return cache.get(key);
         }
 
@@ -114,57 +101,72 @@ public class Cache {
         return value;
     }
 
-    // todo -Abdel maybe- have a cache for write and create a thread to periodically write to disk???
-
-    private static void updateCache(String key, String value) {
-
+    protected static void updateCache(String key, String value) {
         switch (cacheStrategy) {
             case LFU:
                 // TODO LFU
                 break;
             case LRU:
-                // TODO LRU
-                if (cache.size() < size) {
-                    // just add it since it is less than size
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
-
+                if (inCache(key)) {
+                    for (int i = 0; i < keyStrategyPairArray.size(); i++) {
+                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
+                        if (pair.getKey().equals(key)) {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    LRU_INIT));
+                        } else {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    pair.getStrategyInt() - 4));
+                        }
+                    }
                 } else {
-                    KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
-                    cache.remove(minPair.getKey());
-                    keyStrategyPairArray.remove(minPair);
+                    if (cache.size() < size) {
+                        // just add it since it is less than size
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
 
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+                    } else {
+                        KeyStrategyPair minPair = Collections.min(keyStrategyPairArray);
+                        cache.remove(minPair.getKey());
+                        keyStrategyPairArray.remove(minPair);
+
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
+                    }
                 }
                 break;
             case FIFO:
-                if (cache.size() < size) {
-                    // just add it since it is less than size
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                if (!inCache(key)) {
+                    if (cache.size() < size) {
+                        // just add it since it is less than size
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
 
-                } else {
-                    cache.remove(keyStrategyPairArray.get(0).getKey());
-                    keyStrategyPairArray.remove(0);
+                    } else {
+                        cache.remove(keyStrategyPairArray.get(0).getKey());
+                        keyStrategyPairArray.remove(0);
 
-                    cache.put(key, value);
-                    keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                    }
                 }
                 break;
         }
     }
 
-    private static KeyStrategyPair getMinPair(ArrayList<KeyStrategyPair> list){
-        int minStrategyInt = LRU_INIT;
-        KeyStrategyPair minPair = null;
-
-        for(KeyStrategyPair x : list ){
-            if (x.getStrategyInt() < minStrategyInt) {
-                minPair = x;
+    protected static synchronized void remove(String key) {
+        if (isCacheSetup && inCache(key)) {
+            KeyStrategyPair keyStrategyPair = null;
+            cache.remove(key);
+            for (KeyStrategyPair keyStrPair : keyStrategyPairArray) {
+                if (key.equals(keyStrPair.getKey())) {
+                    keyStrategyPair = keyStrPair;
+                    break;
+                }
+            }
+            if(keyStrategyPair != null){
+                keyStrategyPairArray.remove(keyStrategyPair);
             }
         }
-        return minPair;
     }
 
     private static class KeyStrategyPair implements Comparable<KeyStrategyPair> {
@@ -218,52 +220,51 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(3, CacheStrategy.FIFO);
+        Cache.setup(3, CacheStrategy.LRU);
         Persist.init();
 
         Persist.write("ab", "test1");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ac", "test2");
+        System.out.println(Cache.cache.toString());
+
+        Persist.write("ac", null);
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ad", "test3");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ae", "test4");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("af", "test5");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ag", "test6");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ah", "test7");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ai", "test8");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("aj", "test9");
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ak", "test10");
-
-        Cache.lookup("ab");
         System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ab");
+        lookup("ab");
         System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ac");
-        System.out.println(Cache.cache);
+        lookup("ab");
+        System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ad");
-        System.out.println(Cache.cache);
+        lookup("ab");
+        System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ae");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("af");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ag");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ah");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ai");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("aj");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ak");
-        System.out.println(Cache.cache);
 
     }
 

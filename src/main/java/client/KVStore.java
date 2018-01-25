@@ -149,7 +149,6 @@ public class KVStore implements KVCommInterface {
     }
 
     public void set(IClientSocketListener listener) {
-        if (clientSocketListener != null)
             clientSocketListener = listener;
     }
 }
