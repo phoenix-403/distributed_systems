@@ -189,7 +189,7 @@ public class Persist {
             write("ax~~", "hh");
             System.out.println(checkIfExists("ax~~"));
 
-            write("ax~~", "hsh");
+            write("ax~~", "hh");
             System.out.println(checkIfExists("ax~~"));
 
             write("ax~~", null);
