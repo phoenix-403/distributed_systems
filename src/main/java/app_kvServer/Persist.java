@@ -46,7 +46,7 @@ public class Persist {
             }
         }
 
-
+        // creating files if needed
         try {
             int index = 0;
             for (File file : DB_FILES) {
@@ -186,26 +186,26 @@ public class Persist {
 //            System.out.println(checkIfExists("ax~~"));
 //            System.out.println(checkIfExists("hi"));
 
-            write("ax~~", "I love my bebe beb");
+            write("ax~~", "hh");
             System.out.println(checkIfExists("ax~~"));
 
-            write("ax~~", "I love my bebs");
-            System.out.println(checkIfExists("ax~~"));
-
-            write("ax~~", null);
+            write("ax~~", "hsh");
             System.out.println(checkIfExists("ax~~"));
 
             write("ax~~", null);
+            System.out.println(checkIfExists("ax~~"));
+
+            write("ax~~", null);
 
 
-            write("ax~~", "I love my bebe beb");
+            write("ax~~", "ssc");
             System.out.println(checkIfExists("ax~~"));
 
             clearStorage();
 
 //            System.out.println(checkIfExists("ax~~"));
 //
-//            write("AYOLO", "I love my bebe beb");
+//            write("AYOLO", "kjk);
         }
     }
 }
