@@ -16,7 +16,7 @@ import java.util.Arrays;
 
 public class KVClient implements IKVClient {
     private static Logger logger = LogManager.getLogger(KVClient.class);
-    private static final String PROMPT = "EchoClient> ";
+    private static final String PROMPT = "KV_Client> ";
     private BufferedReader stdin;
     private KVStore KVinstance = null;
     private boolean stop = false;

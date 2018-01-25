@@ -8,13 +8,12 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 
 public class KVStore implements KVCommInterface {
 
 
 	private static Logger logger = LogManager.getLogger(KVStore.class);
-	private static final String PROMPT = "EchoClient> ";
+	private static final String PROMPT = "KV_Client> ";
 	private BufferedReader stdin;
 	private Client client = null;
 	private boolean stop = false;

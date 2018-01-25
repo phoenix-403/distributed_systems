@@ -1,7 +1,7 @@
 package common.messages;
 
 public class ErrorMessage {
-    private static final String PROMPT = "EchoClient> ";
+    private static final String PROMPT = "KV_Client> ";
     private static final String KEY = "<key> ";
     private static final String VALUE = "<value> ";
     private static final int KEY_SIZE = 20;
