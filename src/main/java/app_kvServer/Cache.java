@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 import static app_kvServer.IKVServer.CacheStrategy;
@@ -124,9 +125,9 @@ public class Cache {
                         keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
 
                     } else {
-                        KeyStrategyPair minPair = getMinPair(keyStrategyPairArray);
+                        KeyStrategyPair minPair = Collections.min(keyStrategyPairArray);
                         cache.remove(minPair.getKey());
-                        keyStrategyPairArray.remove(keyStrategyPairArray.indexOf(minPair));
+                        keyStrategyPairArray.remove(minPair);
 
                         cache.put(key, value);
                         keyStrategyPairArray.add(new KeyStrategyPair(key, LRU_INIT));
@@ -166,18 +167,6 @@ public class Cache {
                 keyStrategyPairArray.remove(keyStrategyPair);
             }
         }
-    }
-
-    private static KeyStrategyPair getMinPair(ArrayList<KeyStrategyPair> list) {
-        int minStrategyInt = LRU_INIT;
-        KeyStrategyPair minPair = null;
-
-        for (KeyStrategyPair x : list) {
-            if (x.getStrategyInt() < minStrategyInt) {
-                minPair = x;
-            }
-        }
-        return minPair;
     }
 
     private static class KeyStrategyPair implements Comparable<KeyStrategyPair> {
@@ -231,7 +220,7 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(3, CacheStrategy.FIFO);
+        Cache.setup(3, CacheStrategy.LRU);
         Persist.init();
 
         Persist.write("ab", "test1");
@@ -267,38 +256,15 @@ public class Cache {
         Persist.write("ak", "test10");
         System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ab");
+        lookup("ab");
         System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ab");
+        lookup("ab");
         System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ac");
-        System.out.println(Cache.cache);
+        lookup("ab");
+        System.out.println(Cache.cache.toString());
 
-        Cache.lookup("ad");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ae");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("af");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ag");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ah");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ai");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("aj");
-        System.out.println(Cache.cache);
-
-        Cache.lookup("ak");
-        System.out.println(Cache.cache);
 
     }
 
