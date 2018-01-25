@@ -24,7 +24,6 @@ public class Cache {
     private static int LRU_INIT = Integer.MAX_VALUE;
 
     // variables to be used for strategy eviction
-    private static int cacheWeight = 0;
     private static volatile ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
 
     private Cache() {
@@ -66,7 +65,6 @@ public class Cache {
      * Clears the cache
      */
     public static void clearCache() {
-        cacheWeight = 0;
         keyStrategyPairArray = new ArrayList<>();
         cache = new HashMap<>();
 
@@ -139,14 +137,14 @@ public class Cache {
                     if (cache.size() < size) {
                         // just add it since it is less than size
                         cache.put(key, value);
-                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, 0));
 
                     } else {
                         cache.remove(keyStrategyPairArray.get(0).getKey());
                         keyStrategyPairArray.remove(0);
 
                         cache.put(key, value);
-                        keyStrategyPairArray.add(new KeyStrategyPair(key, cacheWeight++));
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, 0));
                     }
                 }
                 break;

@@ -168,6 +168,9 @@ public class Persist {
 
         // reinitializing storage
         init();
+
+        // clearing cache
+        Cache.clearCache();
     }
 
     private static void deleteDirectory(File directory) {
@@ -180,6 +183,7 @@ public class Persist {
             }
             directory.delete();
         }
+
     }
 
 
