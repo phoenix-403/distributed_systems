@@ -1,7 +1,7 @@
 package app_kvServer;
 
 public interface IKVServer {
-    public enum CacheStrategy {
+    enum CacheStrategy {
         None("None"),
         LRU("LRU"),
         LFU("LFU"),
@@ -22,39 +22,39 @@ public interface IKVServer {
      * Get the port number of the server
      * @return  port number
      */
-    public int getPort();
+    int getPort();
 
     /**
      * Get the hostname of the server
      * @return  hostname of server
      */
-    public String getHostname();
+    String getHostname();
 
     /**
      * Get the cache strategy of the server
      * @return  cache strategy
      */
-    public CacheStrategy getCacheStrategy();
+    CacheStrategy getCacheStrategy();
 
     /**
      * Get the cache size
      * @return  cache size
      */
-    public int getCacheSize();
+    int getCacheSize();
 
     /**
      * Check if key is in storage.
      * NOTE: does not modify any other properties
      * @return  true if key in storage, false otherwise
      */
-    public boolean inStorage(String key);
+    boolean inStorage(String key);
 
     /**
      * Check if key is in storage.
      * NOTE: does not modify any other properties
      * @return  true if key in storage, false otherwise
      */
-    public boolean inCache(String key);
+    boolean inCache(String key);
 
     /**
      * Get the value associated with the key
@@ -62,38 +62,38 @@ public interface IKVServer {
      * @throws Exception
      *      when key not in the key range of the server
      */
-    public String getKV(String key) throws Exception;
+    String getKV(String key) throws Exception;
 
     /**
      * Put the key-value pair into storage
      * @throws Exception
      *      when key not in the key range of the server
      */
-    public void putKV(String key, String value) throws Exception;
+    void putKV(String key, String value) throws Exception;
 
     /**
      * Clear the local cache of the server
      */
-    public void clearCache();
+    void clearCache();
 
     /**
      * Clear the storage of the server
      */
-    public void clearStorage();
+    void clearStorage();
 
     /**
      * Starts running the server
      */
-    public void run();
+    void run();
 
     /**
      * Abruptly stop the server without any additional actions
      * NOTE: this includes performing saving to storage
      */
-    public void kill();
+    void kill();
 
     /**
      * Gracefully stop the server, can perform any additional actions
      */
-    public void close();
+    void close();
 }

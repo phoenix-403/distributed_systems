@@ -33,7 +33,7 @@ public class ClientConnection implements Runnable {
     /**
      * Constructs a new ClientConnection object for a given TCP socket.
      *
-     * @param kvServer
+     * @param kvServer server
      * @param clientSocket the Socket object for the client connection.
      */
     ClientConnection(KVServer kvServer, Socket clientSocket) {

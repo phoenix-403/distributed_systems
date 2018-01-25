@@ -9,7 +9,7 @@ public class ErrorMessage {
     private static final int KEY_SIZE = 20;
     private static final int VALUE_SIZE = 120*1024;
 
-    public ErrorMessage(){
+    ErrorMessage(){
 
     }
 
@@ -17,7 +17,7 @@ public class ErrorMessage {
         String unit;
 
         if (size >=1024){
-            unit = (int) (size / 1024) +  "KB";
+            unit = size / 1024 +  "KB";
         } else
             unit = size + "B";
 

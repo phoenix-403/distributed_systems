@@ -7,8 +7,7 @@
     <property name="source" value="1.8"/>
 
     <property name="build.dir" value="bin"/>
-    <property name="src.dir" value="src/main/java"/>
-    <property name="test_src.dir" value="src/test/java"/>
+    <property name="src.dir" value="src"/>
     <property name="lib.dir" value="libs"/>
     <property name="logs.dir" value="logs"/>
     <property name="database.dir" value="db"/>
@@ -73,17 +72,6 @@
         </javac>
     </target>
 
-    <!-- build complete project with test packages-->
-    <target name="build_test" depends="clean, init">
-        <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac debug="true" debuglevel="${debuglevel}" destdir="bin"
-               source="${source}" target="${target}"
-               classpathref="project.classpath" includeantruntime="false">
-            <src path="${src.dir}"/>
-            <src path="${test_src.dir}"/>
-        </javac>
-    </target>
-
     <!-- build client jar -->
     <target name="build-client-jar" depends="build">
         <delete file="${clientjar.file}"/>
@@ -124,11 +112,11 @@
     <target name="build-jar" depends="build-client-jar, build-server-jar"/>
 
     <!-- run test cases -->
-    <target name="test" depends="cleanall,build_test">
+    <target name="test" depends="cleanall,build">
         <junit>
             <classpath refid="project.classpath"/>
             <formatter type="brief" usefile="false"/>
-            <test name="milestone_1.AllTests"/>
+            <test name="AllTests"/>
         </junit>
     </target>
 

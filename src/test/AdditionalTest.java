@@ -1,4 +1,4 @@
-package milestone_1;
+package test;
 
 import app_kvServer.Persist;
 import junit.framework.TestCase;

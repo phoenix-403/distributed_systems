@@ -1,9 +1,9 @@
-package milestone_1;
+package test;
 
-import junit.framework.TestCase;
 import client.KVStore;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
+import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

@@ -1,4 +1,4 @@
-package milestone_1;
+package test;
 
 import client.KVStore;
 import junit.framework.TestCase;
