@@ -56,7 +56,7 @@ public class KVServer implements IKVServer {
         try {
             inetAddress = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            logger.error("Unknown host exception:\n" + e.getMessage());
+            logger.error("Unknown host exception:\r\n" + e.getMessage());
         }
 
         // Initializing the server
@@ -156,7 +156,7 @@ public class KVServer implements IKVServer {
                             .getPort());
 
                 } catch (IOException e) {
-                    logger.error("Error! Unable to establish connection. \n", e);
+                    logger.error("Error! Unable to establish connection. \r\n", e);
                 }
             }
         }

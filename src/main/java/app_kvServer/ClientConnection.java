@@ -52,7 +52,7 @@ public class ClientConnection implements Runnable {
         BufferedReader bufferedInputStream = null;
         InputStreamReader inputStreamReader = null;
         InputStream inputStream;
-        OutputStreamWriter outputStreamWriter = null;
+        OutputStreamWriter outputStreamWriter;
 
         try {
             inputStream = clientSocket.getInputStream();
@@ -60,7 +60,6 @@ public class ClientConnection implements Runnable {
             bufferedInputStream = new BufferedReader(inputStreamReader);
             outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
 
-            outputStreamWriter.write("Connected \r\n");
             while (clientSocketOpen) {
                 try {
                     String reqLine;
@@ -69,6 +68,7 @@ public class ClientConnection implements Runnable {
 
                         Gson gson = new Gson();
                         outputStreamWriter.write(gson.toJson(response, Response.class) + "\r\n");
+                        outputStreamWriter.flush();
 
                     }
 
@@ -126,9 +126,11 @@ public class ClientConnection implements Runnable {
                             // If the user is trying to delete
                             if (request.getValue() == null) {
                                 if (writeModifyDeleteStatus) {
+                                    logger.info("delete success");
                                     return new Response(request.getId(), request.getKey(), null, StatusType
                                             .DELETE_SUCCESS);
                                 } else {
+                                    logger.info("delete error");
                                     return new Response(request.getId(), request.getKey(), null, StatusType
                                             .DELETE_ERROR);
                                 }
@@ -136,9 +138,11 @@ public class ClientConnection implements Runnable {
                             // if user is trying to modify or write new -/- status is true when new field or false
                             // when update
                             if (writeModifyDeleteStatus) {
+                                logger.info("write success");
                                 return new Response(request.getId(), request.getKey(), request.getValue(),
                                         StatusType.PUT_SUCCESS);
                             } else {
+                                logger.info("modify success");
                                 return new Response(request.getId(), request.getKey(), request.getValue(),
                                         StatusType.PUT_UPDATE);
                             }
@@ -153,8 +157,10 @@ public class ClientConnection implements Runnable {
                         try {
                             String value = kvServer.getKV(request.getKey());
                             if (value != null) {
+                                logger.info("get success");
                                 return new Response(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
                             } else {
+                                logger.info("get error");
                                 return new Response(request.getId(), request.getKey(), value, StatusType.GET_ERROR);
                             }
                         } catch (IOException e) {
@@ -179,7 +185,7 @@ public class ClientConnection implements Runnable {
      */
     private boolean validateRequest(Request request) {
         // if status is not get or put, send invalid request
-        if (request.getStatus() != StatusType.GET || request.getStatus() != StatusType.PUT) {
+        if (request.getStatus() != StatusType.GET && request.getStatus() != StatusType.PUT) {
             logger.error("Unknown request");
             return false;
         }
