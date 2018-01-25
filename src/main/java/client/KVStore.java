@@ -27,17 +27,16 @@ public class KVStore implements KVCommInterface {
 		serverPort = port;
 	}
 
+	public boolean isRunning(){
+	    return client.isRunning();
+    }
+
 	@Override
-	public void connect() {
-        try {
-            client = new Client(serverAddress, serverPort);
-        } catch (IOException e) {
-            printError("Unable to connect - " + e.getMessage());
-        }
-        // todo @Henry - should check if client is null
+	public void connect() throws Exception{
+        client = new Client(serverAddress, serverPort);
         client.start();
         System.out.println(client.getMessage().getMsg());
-
+        // todo @Henry - should check if client is null
 	}
 
 	@Override
@@ -49,44 +48,27 @@ public class KVStore implements KVCommInterface {
 	}
 
 	@Override
-	public KVMessage put(String key, String value) {
-		// TODO Auto-generated method stub
-        if(client != null && client.isRunning()){
-            Request req = new Request(0, key, value, KVMessage.StatusType.PUT);
+	public KVMessage put(String key, String value) throws Exception{
+        Request req = new Request(0, key, value, KVMessage.StatusType.PUT);
 
-            sendMessage(new Gson().toJson(req));
-            KVMessage resp =getKVMessage();
-            System.out.println( new Gson().toJson(resp));
-            return resp;
-        } else {
-            printError("Not connected!");
-        }
-        return null;
+        sendMessage(new Gson().toJson(req));
+        KVMessage resp =getKVMessage();
+        System.out.println( new Gson().toJson(resp));
+        return resp;
     }
 
 	@Override
-	public KVMessage get(String key) {
-        // TODO Auto-generated method stub
-        if(client != null && client.isRunning()){
-            Request req = new Request(0, key, null, KVMessage.StatusType.GET);
+	public KVMessage get(String key) throws Exception{
+        Request req = new Request(0, key, null, KVMessage.StatusType.GET);
 
-            sendMessage(new Gson().toJson(req));
-            KVMessage resp =getKVMessage();
-            System.out.println( new Gson().toJson(resp));
-            return resp;
-        } else {
-            printError("Not connected!");
-        }
-        return null;
+        sendMessage(new Gson().toJson(req));
+        KVMessage resp =getKVMessage();
+        System.out.println( new Gson().toJson(resp));
+        return resp;
 	}
 
-    private void sendMessage(String msg){
-        try {
-            client.sendMessage(new TextMessage(msg));
-        } catch (IOException e) {
-//            printError("Unable to send message!");
-            disconnect();
-        }
+    private void sendMessage(String msg) throws Exception{
+	    client.sendMessage(new TextMessage(msg));
     }
 
     private KVMessage getKVMessage(){ return new Gson().fromJson(client.getMessage().getMsg(), Response.class);}

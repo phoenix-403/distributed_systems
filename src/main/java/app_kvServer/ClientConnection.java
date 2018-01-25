@@ -52,17 +52,15 @@ public class ClientConnection implements Runnable {
         BufferedReader bufferedInputStream = null;
         InputStreamReader inputStreamReader = null;
         InputStream inputStream;
-
         OutputStreamWriter outputStreamWriter = null;
 
         try {
             inputStream = clientSocket.getInputStream();
             inputStreamReader = new InputStreamReader(inputStream);
             bufferedInputStream = new BufferedReader(inputStreamReader);
-
             outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
 
-
+            outputStreamWriter.write("Connected \r\n");
             while (clientSocketOpen) {
                 try {
                     String reqLine;
