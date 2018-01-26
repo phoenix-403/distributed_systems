@@ -22,6 +22,7 @@ public class Cache {
 
     private static boolean isCacheSetup = false;
     private static int LRU_INIT = Integer.MAX_VALUE;
+    private static int LFU_INIT = 0;
 
     // variables to be used for strategy eviction
     private static volatile ArrayList<KeyStrategyPair> keyStrategyPairArray = new ArrayList<>();
@@ -46,6 +47,7 @@ public class Cache {
             cacheStrategy = strategy;
             isCacheSetup = true;
             logger.info("Cache initialized!");
+            logger.debug("Strategy: " + cacheStrategy.toString());
             return;
         }
         logger.warn("Unable to initialize cache. Either size was not greater than 0 or cache strategy was none");
@@ -102,7 +104,31 @@ public class Cache {
     protected static void updateCache(String key, String value) {
         switch (cacheStrategy) {
             case LFU:
-                // TODO LFU
+                if (inCache(key)){
+                    for (int i = 0; i < keyStrategyPairArray.size(); i++) {
+                        KeyStrategyPair pair = keyStrategyPairArray.get(i);
+                        if (pair.getKey().equals(key)) {
+                            keyStrategyPairArray.set(i, new KeyStrategyPair(pair.getKey(),
+                                    pair.getStrategyInt() + 1));
+                        }
+                    }
+                }
+                else {
+                    if (cache.size() < size) {
+                        // just add it since it is less than size
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LFU_INIT + 1));
+
+                    } else {
+                        KeyStrategyPair minPair = Collections.min(keyStrategyPairArray);
+                        logger.debug("minPair: " + minPair.getKey().toString());
+                        cache.remove(minPair.getKey());
+                        keyStrategyPairArray.remove(minPair);
+
+                        cache.put(key, value);
+                        keyStrategyPairArray.add(new KeyStrategyPair(key, LFU_INIT + 1));
+                    }
+                }
                 break;
             case LRU:
                 if (inCache(key)) {
@@ -218,7 +244,7 @@ public class Cache {
         // testing caching
         new LogSetup("logs/server/server.log", Level.ALL);
 
-        Cache.setup(3, CacheStrategy.LRU);
+        Cache.setup(3, CacheStrategy.LFU);
         Persist.init();
 
         Persist.write("ab", "test1");
@@ -227,13 +253,16 @@ public class Cache {
         Persist.write("ac", "test2");
         System.out.println(Cache.cache.toString());
 
-        Persist.write("ac", null);
-        System.out.println(Cache.cache.toString());
+//        Persist.write("ac", null);
+//        System.out.println(Cache.cache.toString());
 
         Persist.write("ad", "test3");
         System.out.println(Cache.cache.toString());
 
         Persist.write("ae", "test4");
+        System.out.println(Cache.cache.toString());
+
+        Persist.write("ac", "testX");
         System.out.println(Cache.cache.toString());
 
         Persist.write("af", "test5");
