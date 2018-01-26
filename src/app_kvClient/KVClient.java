@@ -109,9 +109,6 @@ public class KVClient implements IKVClient, IClientSocketListener {
                             arg += (" " + tokens[i]);
                         }
                     }
-                    if ("null".equals(arg)){
-                        arg = null;
-                    }
                     kvStoreInstance.put(tokens[1], arg);
                 } catch (Exception e) {
                     errM.printUnableToConnectError(e.getMessage());

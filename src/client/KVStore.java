@@ -71,9 +71,6 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage put(String key, String value) throws IOException {
-        if ("null".equals(value)){
-            value = null;
-        }
         Request req = new Request(requestId++, key, value, KVMessage.StatusType.PUT);
         boolean status = sendRequest(req);
         if (status) {
