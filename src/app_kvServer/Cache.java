@@ -121,7 +121,6 @@ public class Cache {
 
                     } else {
                         KeyStrategyPair minPair = Collections.min(keyStrategyPairArray);
-                        logger.debug("minPair: " + minPair.getKey().toString());
                         cache.remove(minPair.getKey());
                         keyStrategyPairArray.remove(minPair);
 
