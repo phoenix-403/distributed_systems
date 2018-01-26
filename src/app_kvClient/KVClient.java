@@ -66,14 +66,14 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
     private void handleCommand(String cmdLine) {
         String[] tokens = cmdLine.split("\\s+");
-        tokens = Arrays.stream(tokens)
+        tokens = (String[]) Arrays.stream(tokens)
                 .filter(new Predicate<String>() {
                             @Override
                             public boolean test(String s) {
                                 return s != null && s.length() > 0;
                             }
                         }
-                ).toArray(String[]::new);
+                ).toArray();
 
         if (tokens.length == 0) {
             System.out.println(PROMPT);
