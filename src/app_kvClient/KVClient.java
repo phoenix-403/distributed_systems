@@ -69,75 +69,84 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 .filter(s -> (s != null && s.length() > 0))
                 .toArray(String[]::new);
 
-        if (tokens[0].equals("quit")) {
-            stop = true;
-            kvStoreInstance.disconnect();
-            System.out.println(PROMPT + "Application exit!");
+        switch (tokens[0]) {
+            case "quit":
+                stop = true;
+                kvStoreInstance.disconnect();
+                System.out.println(PROMPT + "Application exit!");
 
-        } else if (tokens[0].equals("connect")) {
-            if (tokens.length == 3) {
-                try {
-                    newConnection(tokens[1], Integer.parseInt(tokens[2]));
+                break;
+            case "connect":
+                if (tokens.length == 3) {
+                    try {
+                        newConnection(tokens[1], Integer.parseInt(tokens[2]));
 //					connect(serverAddress, serverPort);
-                } catch (NumberFormatException nfe) {
-                    printError("No valid address. Port must be a number!");
-                    logger.info("Unable to parse argument <port>", nfe);
-                } catch (Exception e) {
-                    errM.printUnableToConnectError(e.getMessage());
-                }
-            } else {
-                printError("Invalid number of parameters!");
-            }
-        } else if (tokens[0].equals("get")) {
-            if (kvStoreInstance != null &&
-                    errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
-                try {
-                    kvStoreInstance.get(tokens[1]);
-                } catch (Exception e) {
-                    errM.printUnableToConnectError(e.getMessage());
-                }
-            } else {
-                errM.printNotConnectedError();
-            }
-        } else if (tokens[0].equals("put")) {
-            if (kvStoreInstance != null &&
-                    errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
-                try {
-                    String arg = tokens.length<=2 ? null : tokens[2];
-                    if (arg!= null) {
-                        for (int i = 3; i < tokens.length; i++) {
-                            arg += (" " + tokens[i]);
-                        }
+                    } catch (NumberFormatException nfe) {
+                        printError("No valid address. Port must be a number!");
+                        logger.info("Unable to parse argument <port>", nfe);
+                    } catch (Exception e) {
+                        errM.printUnableToConnectError(e.getMessage());
                     }
-                    kvStoreInstance.put(tokens[1], arg);
-                } catch (Exception e) {
-                    errM.printUnableToConnectError(e.getMessage());
-                }
-            } else {
-                errM.printNotConnectedError();
-            }
-        } else if (tokens[0].equals("disconnect")) {
-            kvStoreInstance.disconnect();
-
-        } else if (tokens[0].equals("logLevel")) {
-            if (tokens.length == 2) {
-                String level = setLevel(tokens[1]);
-                if (level.equals(null)) {
-                    printError("No valid log level!");
-                    printPossibleLogLevels();
                 } else {
-                    System.out.println(PROMPT +
-                            "Log level changed to level " + level);
+                    printError("Invalid number of parameters!");
                 }
-            } else {
-                printError("Invalid number of parameters!");
-            }
+                break;
+            case "get":
+                if (kvStoreInstance != null &&
+                        errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                    try {
+                        kvStoreInstance.get(tokens[1]);
+                    } catch (Exception e) {
+                        errM.printUnableToConnectError(e.getMessage());
+                    }
+                } else {
+                    errM.printNotConnectedError();
+                }
+                break;
+            case "put":
+                if (kvStoreInstance != null &&
+                        errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
+                    try {
+                        String arg = tokens.length <= 2 ? null : tokens[2];
+                        if (arg != null) {
+                            for (int i = 3; i < tokens.length; i++) {
+                                arg += (" " + tokens[i]);
+                            }
+                        }
+                        kvStoreInstance.put(tokens[1], arg);
+                    } catch (Exception e) {
+                        errM.printUnableToConnectError(e.getMessage());
+                    }
+                } else {
+                    errM.printNotConnectedError();
+                }
+                break;
+            case "disconnect":
+                kvStoreInstance.disconnect();
 
-        } else if (tokens[0].equals("help")) {
-            printHelp();
-        } else {
-            printError("Unknown command");
-            printHelp();
+                break;
+            case "logLevel":
+                if (tokens.length == 2) {
+                    String level = setLevel(tokens[1]);
+                    if (level.equals(null)) {
+                        printError("No valid log level!");
+                        printPossibleLogLevels();
+                    } else {
+                        System.out.println(PROMPT +
+                                "Log level changed to level " + level);
+                    }
+                } else {
+                    printError("Invalid number of parameters!");
+                }
+
+                break;
+            case "help":
+                printHelp();
+                break;
+            default:
+                printError("Unknown command");
+                printHelp();
+                break;
         }
     }
 
