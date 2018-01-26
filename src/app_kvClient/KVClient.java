@@ -150,22 +150,21 @@ public class KVClient implements IKVClient, IClientSocketListener {
         sb.append(PROMPT).append("connect <host> <port>");
         sb.append("\t establishes a connection to a server\r\n");
         sb.append(PROMPT).append("put <key> <value>");
-        sb.append("\t\t Inserts a key-value pair into the storage server data structures.|" +
-                " Updates (overwrites) the current value with the given value if the server " +
-                "already contains the specified key.|" +
-                " Deletes the entry for the given key if <value> equals null.\r\n \r\n");
+        sb.append("\t\t Inserts a key-value pair into the storage server data structures.\r\n" +
+                "\t\t\t\t\t\t\t\t\t Updates (overwrites) the current value with the given value if the server " +
+                "already contains the specified key.\r\n" +
+                "\t\t\t\t\t\t\t\t\t Deletes the entry for the given key if <value> is null.\r\n");
         sb.append(PROMPT).append("get <key>");
-        sb.append("\t\t Retrieves the value for the given key from the storage server. \r\n");
+        sb.append("\t\t\t\t Retrieves the value for the given key from the storage server. \r\n");
         sb.append(PROMPT).append("disconnect");
-        sb.append("\t\t\t disconnects from the server \r\n");
+        sb.append("\t\t\t\t disconnects from the server \r\n");
 
         sb.append(PROMPT).append("logLevel");
-        sb.append("\t\t\t changes the logLevel \r\n");
-        sb.append(PROMPT).append("\t\t\t\t ");
+        sb.append("\t\t\t\t\t changes the logLevel: ");
         sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \r\n");
 
         sb.append(PROMPT).append("quit ");
-        sb.append("\t\t\t exits the program");
+        sb.append("\t\t\t\t\t exits the program");
         System.out.println(sb.toString());
     }
 
