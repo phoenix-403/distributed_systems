@@ -8,13 +8,16 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-public class KVClient implements IKVClient, IClientSocketListener {
+public class KVClient implements IKVClient, IClientSocketListener, KeyListener {
 
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "KV_Client> ";
@@ -66,18 +69,16 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
     private void handleCommand(String cmdLine) {
         String[] tokens = cmdLine.split("\\s+");
-        tokens = (String[]) Arrays.stream(tokens)
+        Arrays.stream(tokens)
                 .filter(new Predicate<String>() {
                             @Override
                             public boolean test(String s) {
                                 return s != null && s.length() > 0;
                             }
                         }
-                ).toArray();
+                ).collect(Collectors.toList()).toArray(tokens);
 
-        if (tokens.length == 0) {
-            System.out.println(PROMPT);
-        } else {
+        if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
                 case "quit":
                     stop = true;
@@ -131,8 +132,10 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     }
                     break;
                 case "disconnect":
-                    kvStoreInstance.disconnect();
-
+                    if (kvStoreInstance != null)
+                        kvStoreInstance.disconnect();
+                    else
+                        System.out.println(PROMPT + "Not connected");
                     break;
                 case "logLevel":
                     if (tokens.length == 2) {
@@ -242,4 +245,18 @@ public class KVClient implements IKVClient, IClientSocketListener {
     }
 
 
+    @Override
+    public void keyTyped(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+
+    }
 }
