@@ -123,7 +123,7 @@ public class ClientConnection implements Runnable {
                                     .getValue());
 
                             // If the user is trying to delete
-                            if (request.getValue() == null) {
+                            if (StringUtils.isEmpty(request.getValue())) {
                                 if (writeModifyDeleteStatus) {
                                     logger.info("delete success");
                                     return new RequestResponse(request.getId(), request.getKey(), null, StatusType

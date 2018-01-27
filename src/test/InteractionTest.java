@@ -100,7 +100,26 @@ public class InteractionTest extends TestCase{
 
 		Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
 	}
-	
+
+	@Test
+	public void testDelete2() {
+		String key = "deleteTestValue";
+		String value = "toDelete";
+
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			kvClient.put(key, value);
+			response = kvClient.put(key, "");
+
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
+	}
+
 	@Test
 	public void testGet() {
 		String key = "foo";
