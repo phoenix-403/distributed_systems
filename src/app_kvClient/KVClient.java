@@ -8,8 +8,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,7 +15,7 @@ import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class KVClient implements IKVClient, IClientSocketListener, KeyListener {
+public class KVClient implements IKVClient, IClientSocketListener {
 
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "KV_Client> ";
@@ -102,15 +100,16 @@ public class KVClient implements IKVClient, IClientSocketListener, KeyListener {
                     }
                     break;
                 case "get":
-                    if (kvStoreInstance != null &&
-                            errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
-                        try {
-                            kvStoreInstance.get(tokens[1]);
-                        } catch (Exception e) {
-                            errM.printUnableToConnectError(e.getMessage());
-                        }
-                    } else {
+                    if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
+                    } else {
+                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                            try {
+                                kvStoreInstance.get(tokens[1]);
+                            } catch (Exception e) {
+                                errM.printUnableToConnectError(e.getMessage());
+                            }
+                        }
                     }
                     break;
                 case "put":
@@ -135,7 +134,7 @@ public class KVClient implements IKVClient, IClientSocketListener, KeyListener {
                     if (kvStoreInstance != null)
                         kvStoreInstance.disconnect();
                     else
-                        System.out.println(PROMPT + "Not connected");
+                        System.out.println(PROMPT + "Not to disconnect from");
                     break;
                 case "logLevel":
                     if (tokens.length == 2) {
@@ -242,21 +241,5 @@ public class KVClient implements IKVClient, IClientSocketListener, KeyListener {
 
         KVClient app = new KVClient();
         app.run();
-    }
-
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-
     }
 }

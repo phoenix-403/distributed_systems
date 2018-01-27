@@ -90,9 +90,11 @@ public class Persist {
 
         int index = keys.indexOf(key);
         if (index != -1) {
+            logger.info("Found key " + key + " in database!");
             return fileLines.get(index).split(DELIMITER_PATTERN)[1];
         }
 
+        logger.info("key \"" + key + "\" not found in database!");
         return null;
     }
 

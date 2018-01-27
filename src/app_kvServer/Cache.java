@@ -86,12 +86,13 @@ public class Cache {
 
         // lookup from cache -- in_cache will return false if cache is not setup
         if (inCache(key)) {
-            logger.info("Cache hit for key");
+            logger.info("Cache hit for key \"" + key + "\"");
             String value = cache.get(key);
             updateCache(key, value);
             return cache.get(key);
         }
 
+        logger.info("Cache miss for key \"" + key + "\".. looking up in database");
         // lookup disk and if cache is setup update it
         String value = Persist.read(key);
         if (isCacheSetup && value != null) {
