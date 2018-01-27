@@ -49,7 +49,9 @@ public class ErrorMessage {
 
     public void printNotConnectedError(){printError("Please Connect First!");}
 
-    public void printUnableToConnectError(String errorMessage){printError("Unable to Connect - " + errorMessage);}
+    public void printUnableToConnectError(String errorMessage){printError("Unable to Connect: " + errorMessage);}
+
+    public void printRequestFailed(String errorMessage){printError("Request failed with message: " + errorMessage);}
 
     public boolean checkLength(int size, int max, String arg){
         if (size > max) {

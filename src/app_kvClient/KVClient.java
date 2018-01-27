@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.rmi.UnknownHostException;
 import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -88,12 +89,16 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     if (tokens.length == 3) {
                         try {
                             newConnection(tokens[1], Integer.parseInt(tokens[2]));
-//					connect(serverAddress, serverPort);
+                            System.out.println("Connected to " + serverAddress +" at port " + serverPort);
                         } catch (NumberFormatException nfe) {
                             printError("No valid address. Port must be a number!");
-                            logger.info("Unable to parse argument <port>", nfe);
-                        } catch (Exception e) {
-                            errM.printUnableToConnectError(e.getMessage());
+                            logger.error("Unable to parse argument <port>", nfe);
+                        } catch (UnknownHostException nfe) {
+                            printError("Not a valid hostname");
+                            logger.error("Unable to parse argument <host>", nfe);
+                        } catch (Exception nfe) {
+                            errM.printUnableToConnectError(nfe.getMessage());
+                            logger.error("Unable to connect: ", nfe);
                         }
                     } else {
                         printError("Invalid number of parameters!");
@@ -106,8 +111,9 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
                             try {
                                 kvStoreInstance.get(tokens[1]);
-                            } catch (Exception e) {
-                                errM.printUnableToConnectError(e.getMessage());
+                            } catch (Exception nfe) {
+                                errM.printRequestFailed(nfe.getMessage());
+                                logger.error("get request failed with message: ", nfe);
                             }
                         }
                     }
@@ -123,8 +129,9 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                 }
                             }
                             kvStoreInstance.put(tokens[1], arg);
-                        } catch (Exception e) {
-                            errM.printUnableToConnectError(e.getMessage());
+                        } catch (Exception nfe) {
+                            errM.printRequestFailed(nfe.getMessage());
+                            logger.error("put request failed with message: ", nfe);
                         }
                     } else {
                         errM.printNotConnectedError();
@@ -133,7 +140,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 case "disconnect":
                     if (kvStoreInstance != null) {
                         kvStoreInstance.disconnect();
-                        printTerminal("Disconnected!");
+                        System.out.println("disconnected from " + serverAddress + " port " + serverPort);
                     } else {
                         printTerminal("Nothing to disconnect from");
                     }
@@ -141,7 +148,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 case "logLevel":
                     if (tokens.length == 2) {
                         String level = setLevel(tokens[1]);
-                        if (level.equals(null)) {
+                        if (level == null) {
                             printError("No valid log level!");
                             printPossibleLogLevels();
                         } else {
