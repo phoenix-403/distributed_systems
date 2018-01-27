@@ -1,6 +1,6 @@
 package common.messages;
 
-class RequestResponse implements KVMessage {
+public class RequestResponse implements KVMessage {
 
     private long id;
 
@@ -8,7 +8,7 @@ class RequestResponse implements KVMessage {
     private String value;
     private StatusType statusType;
 
-    RequestResponse(long id, String key, String value, StatusType statusType) {
+    public RequestResponse(long id, String key, String value, StatusType statusType) {
         this.key = key;
         this.value = value;
         this.statusType = statusType;
@@ -31,6 +31,40 @@ class RequestResponse implements KVMessage {
     @Override
     public StatusType getStatus() {
         return statusType;
+    }
+
+    @Override
+    public String toString() {
+
+        switch (getStatus()) {
+            case GET_SUCCESS:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
+            case GET_ERROR:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
+
+            case PUT_SUCCESS:
+            case PUT_UPDATE:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
+            case PUT_ERROR:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
+
+            case DELETE_SUCCESS:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
+            case DELETE_ERROR:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
+
+            case INVALID_REQUEST:
+                return "(" + getId() + ")-" + getStatus().toString();
+            case INVALID_RESPONSE:
+                return "(" + getId() + ")-" + getStatus().toString();
+
+            case TIME_OUT:
+                return "(" + getId() + ")-" + getStatus().toString();
+            case CONNECTION_DROPPED:
+                return "(" + getId() + ")-" + getStatus().toString() + "_OR_CLOSED. Please reconnect!";
+        }
+
+        return super.toString();
     }
 
 }

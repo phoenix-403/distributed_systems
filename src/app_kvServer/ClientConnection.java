@@ -2,8 +2,7 @@ package app_kvServer;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import common.messages.Request;
-import common.messages.Response;
+import common.messages.RequestResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -64,10 +63,10 @@ public class ClientConnection implements Runnable {
                 try {
                     String reqLine;
                     while ((reqLine = bufferedInputStream.readLine()) != null) {
-                        Response response = handleRequest(reqLine);
+                        RequestResponse response = handleRequest(reqLine);
 
                         Gson gson = new Gson();
-                        outputStreamWriter.write(gson.toJson(response, Response.class) + "\r\n");
+                        outputStreamWriter.write(gson.toJson(response, RequestResponse.class) + "\r\n");
                         outputStreamWriter.flush();
 
                     }
@@ -106,15 +105,15 @@ public class ClientConnection implements Runnable {
      *
      * @return Response to send back to server
      */
-    private Response handleRequest(String reqLine) throws IOException {
+    private RequestResponse handleRequest(String reqLine) throws IOException {
 
-        Request request = null;
-        Response response;
+        RequestResponse request = null;
+        RequestResponse response;
 
         Gson gson = new Gson();
         try {
             // deserialize string into a request and pass it off to handle it
-            request = gson.fromJson(reqLine, Request.class);
+            request = gson.fromJson(reqLine, RequestResponse.class);
             if (validateRequest(request)) {
                 switch (request.getStatus()) {
                     case PUT:
@@ -127,11 +126,11 @@ public class ClientConnection implements Runnable {
                             if (request.getValue() == null) {
                                 if (writeModifyDeleteStatus) {
                                     logger.info("delete success");
-                                    return new Response(request.getId(), request.getKey(), null, StatusType
+                                    return new RequestResponse(request.getId(), request.getKey(), null, StatusType
                                             .DELETE_SUCCESS);
                                 } else {
                                     logger.info("delete error");
-                                    return new Response(request.getId(), request.getKey(), null, StatusType
+                                    return new RequestResponse(request.getId(), request.getKey(), null, StatusType
                                             .DELETE_ERROR);
                                 }
                             }
@@ -139,18 +138,18 @@ public class ClientConnection implements Runnable {
                             // when update
                             if (writeModifyDeleteStatus) {
                                 logger.info("write success");
-                                return new Response(request.getId(), request.getKey(), request.getValue(),
+                                return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
                                         StatusType.PUT_SUCCESS);
                             } else {
                                 logger.info("modify success");
-                                return new Response(request.getId(), request.getKey(), request.getValue(),
+                                return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
                                         StatusType.PUT_UPDATE);
                             }
 
 
                         } catch (IOException e) {
                             logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                            return new Response(-1, null, null, StatusType.SERVER_ERROR);
+                            return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
                         }
 
                     case GET:
@@ -158,21 +157,21 @@ public class ClientConnection implements Runnable {
                             String value = kvServer.getKV(request.getKey());
                             if (value != null) {
                                 logger.info("get success");
-                                return new Response(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
+                                return new RequestResponse(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
                             } else {
                                 logger.info("get error");
-                                return new Response(request.getId(), request.getKey(), value, StatusType.GET_ERROR);
+                                return new RequestResponse(request.getId(), request.getKey(), value, StatusType.GET_ERROR);
                             }
                         } catch (IOException e) {
                             logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                            return new Response(-1, null, null, StatusType.SERVER_ERROR);
+                            return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
                         }
                 }
             }
         } catch (JsonSyntaxException jsonException) {
             logger.error("Unable to parse JSON Request");
         } finally {
-            response = new Response(-1, null, null, StatusType.INVALID_REQUEST);
+            response = new RequestResponse(-1, null, null, StatusType.INVALID_REQUEST);
         }
 
         return response;
@@ -183,7 +182,7 @@ public class ClientConnection implements Runnable {
      *
      * @return true if request are good to proceed with otherwise false
      */
-    private boolean validateRequest(Request request) {
+    private boolean validateRequest(RequestResponse request) {
         // if status is not get or put, send invalid request
         if (request.getStatus() != StatusType.GET && request.getStatus() != StatusType.PUT) {
             logger.error("Unknown request");

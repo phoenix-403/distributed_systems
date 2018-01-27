@@ -131,10 +131,12 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     }
                     break;
                 case "disconnect":
-                    if (kvStoreInstance != null)
+                    if (kvStoreInstance != null) {
                         kvStoreInstance.disconnect();
-                    else
-                        System.out.println(PROMPT + "Not to disconnect from");
+                        printTerminal("Disconnected!");
+                    } else {
+                        printTerminal("Nothing to disconnect from");
+                    }
                     break;
                 case "logLevel":
                     if (tokens.length == 2) {
