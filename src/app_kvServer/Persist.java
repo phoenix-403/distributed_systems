@@ -1,6 +1,7 @@
 package app_kvServer;
 
 import logger.LogSetup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -120,7 +121,7 @@ public class Persist {
         // scenario1: key does not exist
         if (index == -1) {
             //1.1 should not delete a none existent value
-            if (value == null) {
+            if (StringUtils.isEmpty(value)) {
                 logger.warn("Trying to delete a non existing key");
                 return false;
             }
@@ -134,7 +135,7 @@ public class Persist {
 
         // scenario2: key exists
         // 2.1 delete value
-        if (value == null) {
+        if (StringUtils.isEmpty(value)) {
             fileLines.remove(index);
             Files.write(savedToFile.toPath(), fileLines);
             logger.info("deleted key: " + key);
