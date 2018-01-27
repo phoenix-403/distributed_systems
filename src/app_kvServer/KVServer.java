@@ -73,6 +73,9 @@ public class KVServer implements IKVServer, Runnable {
         clientThreads = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
+            if (port == 0){
+                this.port = serverSocket.getLocalPort();
+            }
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
 
         } catch (IOException e) {
