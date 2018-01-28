@@ -7,7 +7,7 @@ public class ErrorMessage {
     private static final String KEY = "<key> ";
     private static final String VALUE = "<value> ";
     private static final int KEY_SIZE = 20;
-    private static final int VALUE_SIZE = 120000;
+    private static final int VALUE_SIZE = 120 * 1024;
 
     ErrorMessage() {
 
