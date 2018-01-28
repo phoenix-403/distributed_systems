@@ -80,7 +80,7 @@ public class Persist {
      * @return value if key-value pair is found else null
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
-    public static String read(String key) throws IOException {
+    public static synchronized String read(String key) throws IOException {
 
         ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(getFileKeyStoredIn(key).toPath());
         ArrayList<String> keys = new ArrayList<>();

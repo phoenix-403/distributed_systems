@@ -102,7 +102,7 @@ public class Cache {
         return value;
     }
 
-    protected static void updateCache(String key, String value) {
+    protected synchronized static void updateCache(String key, String value) {
         switch (cacheStrategy) {
             case LFU:
                 if (inCache(key)){

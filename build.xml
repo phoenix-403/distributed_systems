@@ -57,7 +57,7 @@
         <delete file="${servermanifest.file}"/>
     </target>
 
-    <target name="cleanall" depends="clean">
+    <target name="clean_all" depends="clean">
         <delete dir="${logs.dir}"/>
         <delete dir="${database.dir}"/>
     </target>
@@ -112,7 +112,7 @@
     <target name="build-jar" depends="build-client-jar, build-server-jar"/>
 
     <!-- run test cases -->
-    <target name="test" depends="cleanall,build">
+    <target name="test" depends="clean_all,build">
         <junit>
             <classpath refid="project.classpath"/>
             <formatter type="brief" usefile="false"/>

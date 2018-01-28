@@ -9,8 +9,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class CustomTest extends TestCase {
 
     private KVStore kvClient;
@@ -68,13 +66,13 @@ public class CustomTest extends TestCase {
 
     @Test
     public void testPersistGet() {
-        String key = "updateThisTwice";
+        String key = "updateThisTwice1";
         String value = "persistPls";
         KVMessage response = null;
         Exception ex = null;
 
         try {
-            kvClient.put(key, value);
+            response = kvClient.put(key, value);
             kvClient.disconnect();
             kvClient.connect();
             response = kvClient.get(key);
