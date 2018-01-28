@@ -41,7 +41,6 @@ public class KVStore implements KVCommInterface {
         inputStreamReader = new InputStreamReader(inputStream);
         bufferedInputStream = new BufferedReader(inputStreamReader);
         outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
-        logger.info("Connection established");
 
     }
 
@@ -64,7 +63,7 @@ public class KVStore implements KVCommInterface {
             outputStreamWriter.close();
             clientSocket.close();
             clientSocket = null;
-            logger.info("connection closed!");
+            logger.info("disconnected from " + address + " port " + port);
         }
     }
 
@@ -120,20 +119,34 @@ public class KVStore implements KVCommInterface {
 
                 Gson gson = new Gson();
                 response = gson.fromJson(respLine, RequestResponse.class);
-                if (clientSocketListener != null)
+                if (clientSocketListener != null) {
                     clientSocketListener.printTerminal(response.toString());
+                    logResponse(response);
+                }
                 return response;
 
             }
 
             response = new RequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT);
-            if (clientSocketListener != null)
+            if (clientSocketListener != null) {
                 clientSocketListener.printTerminal(response.toString());
+                logResponse(response);
+            }
             return response;
 
         } catch (IOException e) {
             return connectionDropped();
         }
+    }
+
+    private void logResponse(RequestResponse response){
+        if(response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
+                || response.getStatus().equals(KVMessage.StatusType.PUT_ERROR)
+                || response.getStatus().equals(KVMessage.StatusType.DELETE_ERROR)
+                || response.getStatus().equals(KVMessage.StatusType.SERVER_ERROR))
+            logger.error(response.toString());
+        else
+            logger.info(response.toString());
     }
 
     private RequestResponse connectionDropped() {
