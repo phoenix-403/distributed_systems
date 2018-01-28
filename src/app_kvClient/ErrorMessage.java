@@ -7,30 +7,24 @@ public class ErrorMessage {
     private static final String KEY = "<key> ";
     private static final String VALUE = "<value> ";
     private static final int KEY_SIZE = 20;
-    private static final int VALUE_SIZE = 120*1024;
+    private static final int VALUE_SIZE = 120000;
 
-    ErrorMessage(){
-
-    }
-
-    public void printLengthError(int size, int max, String arg){
-        String unit;
-
-        if (size >=1024){
-            unit = size / 1024 +  "KB";
-        } else
-            unit = size + "B";
-
-        if (size > max)
-            printError("The length of " + arg + " cannot exceed " + max + unit);
+    ErrorMessage() {
 
     }
 
-    public void printMissingArguments(int length, KVMessage.StatusType type){
+    public void printLengthError(int size, int max) {
+        if (max == KEY_SIZE)
+            printError("The length of key cannot exceed " + max + " bytes.");
+        else
+            printError("The length of value cannot exceed " + max + " bytes.");
+    }
+
+    public void printMissingArguments(int length, KVMessage.StatusType type) {
         int total = 0;
         String usage = null;
 
-        switch (type){
+        switch (type) {
             case PUT:
                 total = 3;
                 usage = "put <key> <value>";
@@ -42,27 +36,31 @@ public class ErrorMessage {
 
         int difference = total - length;
         if (difference > 0)
-            printError("Missing "+ (total - length) + " of " + total + " arguments | Usage:" + usage);
+            printError("Missing " + (total - length) + " of " + total + " arguments | Usage:" + usage);
         else
-            printError((total - length)*-1 + " extra arguments | Usage:" + usage);
+            printError((total - length) * -1 + " extra arguments | Usage:" + usage);
     }
 
-    public void printNotConnectedError(){printError("Please Connect First!");}
+    public void printNotConnectedError() {
+        printError("Please Connect First!");
+    }
 
-    public void printUnableToConnectError(String errorMessage){printError("Unable to Connect - " + errorMessage);}
+    public void printUnableToConnectError(String errorMessage) {
+        printError("Connection lost - " + errorMessage);
+    }
 
-    public boolean checkLength(int size, int max, String arg){
+    public boolean checkLength(int size, int max) {
         if (size > max) {
-            printLengthError(size, max, arg);
+            printLengthError(size, max);
             return false;
         }
 
         return true;
     }
 
-    public boolean checkArgs(int size, KVMessage.StatusType type){
+    public boolean checkArgs(int size, KVMessage.StatusType type) {
 
-        switch (type){
+        switch (type) {
             case PUT:
                 if (size >= 2)
                     return true;
@@ -77,15 +75,15 @@ public class ErrorMessage {
         return false;
     }
 
-    public boolean validateServerCommand(String [] tokens, KVMessage.StatusType type){
-        switch (type){
+    public boolean validateServerCommand(String[] tokens, KVMessage.StatusType type) {
+        switch (type) {
             case PUT:
-                if (checkArgs(tokens.length, type) && checkLength(tokens[0].length(), KEY_SIZE, KEY))
+                if (checkArgs(tokens.length, type) && checkLength(tokens[1].length(), KEY_SIZE))
                     return true;
                 break;
             case GET:
-                if (checkArgs(tokens.length, type) && checkLength(tokens[0].length(), KEY_SIZE, KEY)
-                        && checkLength(tokens[0].length(), VALUE_SIZE, VALUE))
+                if (checkArgs(tokens.length, type) && checkLength(tokens[1].length(), KEY_SIZE)
+                        && checkLength(tokens[0].length(), VALUE_SIZE))
                     return true;
                 break;
         }
@@ -93,8 +91,8 @@ public class ErrorMessage {
         return false;
     }
 
-    public void printError(String message){
-        System.out.println(PROMPT + "Error! " +  message);
+    public void printError(String message) {
+        System.out.println(PROMPT + "Error! " + message);
     }
 
 

@@ -4,6 +4,7 @@ import client.KVCommInterface;
 import client.KVStore;
 import common.messages.KVMessage;
 import logger.LogSetup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -88,7 +89,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     if (tokens.length == 3) {
                         try {
                             newConnection(tokens[1], Integer.parseInt(tokens[2]));
-//					connect(serverAddress, serverPort);
+                            printTerminal("Connected!");
                         } catch (NumberFormatException nfe) {
                             printError("No valid address. Port must be a number!");
                             logger.info("Unable to parse argument <port>", nfe);
@@ -113,26 +114,28 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     }
                     break;
                 case "put":
-                    if (kvStoreInstance != null &&
-                            errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
-                        try {
-                            String arg = tokens.length <= 2 ? null : tokens[2];
-                            if (arg != null) {
-                                for (int i = 3; i < tokens.length; i++) {
-                                    arg += (" " + tokens[i]);
-                                }
-                            }
-                            kvStoreInstance.put(tokens[1], arg);
-                        } catch (Exception e) {
-                            errM.printUnableToConnectError(e.getMessage());
-                        }
-                    } else {
+                    if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
+                    } else {
+                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
+                            try {
+                                String arg = tokens.length <= 2 ? null : tokens[2];
+                                if (arg != null) {
+                                    for (int i = 3; i < tokens.length; i++) {
+                                        arg += (" " + tokens[i]);
+                                    }
+                                }
+                                kvStoreInstance.put(tokens[1], arg);
+                            } catch (Exception e) {
+                                errM.printUnableToConnectError(e.getMessage());
+                            }
+                        }
                     }
                     break;
                 case "disconnect":
                     if (kvStoreInstance != null) {
                         kvStoreInstance.disconnect();
+                        kvStoreInstance = null;
                         printTerminal("Disconnected!");
                     } else {
                         printTerminal("Nothing to disconnect from");
@@ -141,7 +144,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 case "logLevel":
                     if (tokens.length == 2) {
                         String level = setLevel(tokens[1]);
-                        if (level.equals(null)) {
+                        if (StringUtils.isEmpty(level)) {
                             printError("No valid log level!");
                             printPossibleLogLevels();
                         } else {

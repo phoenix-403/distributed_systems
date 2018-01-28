@@ -51,7 +51,7 @@ public class KVStore implements KVCommInterface {
         try {
             tearDownConnection();
         } catch (IOException ioe) {
-            logger.error("Unable to close connection!");
+            logger.error("Unable to close connection properly! - " + ioe.getMessage() );
         }
     }
 
