@@ -15,9 +15,9 @@ public class ErrorMessage {
 
     public void printLengthError(int size, int max) {
         
-        if (max == KEY_SIZE)
+        if (max == VALUE_SIZE)
             printError("The length of " + KEY + " cannot exceed " + max / 1024 +  "KB");
-        else if (max == VALUE_SIZE)
+        else if (max == KEY_SIZE)
             printError("The length of " + VALUE + " cannot exceed " + max + "B");
 
     }
