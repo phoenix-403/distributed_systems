@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class CustomTests extends TestCase {
+public class CustomTest extends TestCase {
 
     private KVStore kvClient;
     private static int CLIENT_CONNECTIONS = 50;
@@ -175,12 +175,11 @@ public class CustomTests extends TestCase {
     @Test
     public void testDisconnectedGet() {
         String key = "thisShouldNotWork";
-        KVMessage response = null;
         Exception ex = null;
 
         try {
             kvClient.disconnect();
-            response = kvClient.get(key);
+            kvClient.get(key);
             kvClient.connect();
         } catch (Exception e) {
             ex = e;

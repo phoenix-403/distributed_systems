@@ -22,13 +22,12 @@ public class AllTests {
 		}
 	}
 	
-	
 	public static Test suite() {
 		TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
 		clientSuite.addTestSuite(ConnectionTest.class);
 		clientSuite.addTestSuite(InteractionTest.class);
 		clientSuite.addTestSuite(AdditionalTest.class);
-		clientSuite.addTestSuite(CustomTests.class);
+		clientSuite.addTestSuite(CustomTest.class);
 		clientSuite.addTestSuite(PerformanceTest.class);
 		return clientSuite;
 	}

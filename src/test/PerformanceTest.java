@@ -43,6 +43,7 @@ public class PerformanceTest extends TestCase {
         Exception ex = null;
         long total_time = 0;
 
+        // this does not include time for random number generation
         try {
             for (int i = 0; i < TOTAL_REQUESTS * putRatio; i++) {
                 int temp = rand.nextInt(UNIQUE_KEYS);
@@ -67,11 +68,8 @@ public class PerformanceTest extends TestCase {
 
     private void printResult(String cacheType, double time1, double time2, double time3) {
         System.out.println("<=====================================" + cacheType + "=====================================>");
-        // Average time taken per request is: 3.0ms
         System.out.println("Average time taken per 80/20 request is: " + time1 + "ms");
-        // Average time taken per request is: 6.0ms
         System.out.println("Average time taken per 50/50 request is: " + time2 + "ms");
-        // Average time taken per request is: 16.0ms
         System.out.println("Average time taken per 20/80 request is: " + time3 + "ms");
     }
 
