@@ -14,17 +14,11 @@ public class ErrorMessage {
     }
 
     public void printLengthError(int size, int max) {
-
-        String unit;
-        if (size >=1024){
-            unit = size / 1024 +  "KB";
-        } else
-            unit = size + "B";
-
+        
         if (max == KEY_SIZE)
-            printError("The length of " + KEY + " cannot exceed " +unit);
+            printError("The length of " + KEY + " cannot exceed " + max / 1024 +  "KB");
         else if (max == VALUE_SIZE)
-            printError("The length of " + VALUE + " cannot exceed " + unit);
+            printError("The length of " + VALUE + " cannot exceed " + max + "B");
 
     }
 
