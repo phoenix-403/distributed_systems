@@ -92,9 +92,10 @@ public class KVClient implements IKVClient, IClientSocketListener {
                             printTerminal("Connected!");
                         } catch (NumberFormatException nfe) {
                             printError("No valid address. Port must be a number!");
-                            logger.info("Unable to parse argument <port>", nfe);
+                            logger.error("Unable to parse argument <port>", nfe);
                         } catch (Exception e) {
                             errM.printUnableToConnectError(e.getMessage());
+                            logger.error("Unable to connect - ", e);
                         }
                     } else {
                         printError("Invalid number of parameters!");
@@ -103,12 +104,14 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 case "get":
                     if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
+                        logger.warn("Not Connected");
                     } else {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
                             try {
                                 kvStoreInstance.get(tokens[1]);
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
+                                logger.warn("Connection lost!");
                             }
                         }
                     }
@@ -116,6 +119,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 case "put":
                     if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
+                        logger.warn("Not Connected");
                     } else {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
                             try {
@@ -128,6 +132,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                 kvStoreInstance.put(tokens[1], arg);
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
+                                logger.warn("Connection lost!");
                             }
                         }
                     }
@@ -137,8 +142,10 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         kvStoreInstance.disconnect();
                         kvStoreInstance = null;
                         printTerminal("Disconnected!");
+                        logger.info("Disconnected");
                     } else {
                         printTerminal("Nothing to disconnect from");
+                        logger.warn("Attempting to disconnect from nothing!");
                     }
                     break;
                 case "logLevel":
@@ -243,7 +250,6 @@ public class KVClient implements IKVClient, IClientSocketListener {
      *             Main entry point for the KV client application.
      */
     public static void main(String[] args) {
-
         KVClient app = new KVClient();
         app.run();
     }
