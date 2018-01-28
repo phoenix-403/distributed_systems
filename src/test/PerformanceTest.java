@@ -12,8 +12,8 @@ import java.util.Random;
 public class PerformanceTest extends TestCase {
 
     private KVStore kvClientFIFO, kvClientLRU, kvClientLFU;
-    private static int TOTAL_REQUESTS = 1000;
-    private static int UNIQUE_KEYS = 100;
+    private static int TOTAL_REQUESTS = 100;
+    private static int UNIQUE_KEYS = 10;
     private static Random rand = new Random();
 
     @Before
