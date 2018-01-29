@@ -72,7 +72,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPersistGet() {
-        String key = "updateThisTwice1";
+        String key = "testPersistGet";
         String value = "persistPls";
         KVMessage response = null;
         Exception ex = null;
@@ -91,7 +91,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPersistUpdate() {
-        String key = "updateThisTwice1";
+        String key = "testPersistUpdate";
         String value1 = "doNotPersist";
         String value2 = "persistPls";
         KVMessage response = null;
@@ -112,7 +112,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleUpdate() {
-        String key = "updateThisTwice";
+        String key = "testDoubleUpdate";
         String value1 = "one";
         String value2 = "two";
         String value3 = "three";
@@ -132,7 +132,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testGetNonExistant() {
-        String key = "thisDoesNotExist";
+        String key = "testGetNonExistant";
         KVMessage response = null;
         Exception ex = null;
 
@@ -147,7 +147,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testGetAfterDelete() {
-        String key = "deleteAndGet";
+        String key = "testGetAfterDelete";
         String value = "init";
         KVMessage response = null;
         Exception ex = null;
@@ -165,7 +165,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleDelete() {
-        String key = "thisDoesNotExist";
+        String key = "testDoubleDelete";
         String value ="deleteThisTwice";
         KVMessage response = null;
         Exception ex = null;
@@ -183,7 +183,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleDelete2() {
-        String key = "thisDoesNotExist";
+        String key = "testDoubleDelete2";
         String value ="deleteThisTwice";
         KVMessage response = null;
         Exception ex = null;
@@ -201,7 +201,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDeleteNonExistant() {
-        String key = "thisDoesNotExist";
+        String key = "testDeleteNonExistant";
         String value = "";
         KVMessage response = null;
         Exception ex = null;
@@ -217,7 +217,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDisconnectedPut() {
-        String key = "thisShouldNotWork";
+        String key = "testDisconnectedPut";
         String value = "123";
         Exception ex = null;
 
