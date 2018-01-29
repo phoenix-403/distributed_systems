@@ -106,6 +106,7 @@ public class Cache {
         switch (cacheStrategy) {
             case LFU:
                 if (inCache(key)){
+                    cache.put(key, value);// used incase value in cache need to be modified
                     for (int i = 0; i < keyStrategyPairArray.size(); i++) {
                         KeyStrategyPair pair = keyStrategyPairArray.get(i);
                         if (pair.getKey().equals(key)) {
@@ -132,6 +133,7 @@ public class Cache {
                 break;
             case LRU:
                 if (inCache(key)) {
+                    cache.put(key, value); // used incase value in cache need to be modified
                     for (int i = 0; i < keyStrategyPairArray.size(); i++) {
                         KeyStrategyPair pair = keyStrategyPairArray.get(i);
                         if (pair.getKey().equals(key)) {
@@ -172,6 +174,8 @@ public class Cache {
                         cache.put(key, value);
                         keyStrategyPairArray.add(new KeyStrategyPair(key, 0));
                     }
+                }else{
+                    cache.put(key, value); // used incase value in cache need to be modified
                 }
                 break;
         }
@@ -250,8 +254,13 @@ public class Cache {
         Persist.write("ab", "test1");
         System.out.println(Cache.cache.toString());
 
+        Persist.write("ab", null);
+        System.out.println(Cache.cache.toString());
+
         Persist.write("ac", "test2");
         System.out.println(Cache.cache.toString());
+
+        Cache.clearCache();
 
 //        Persist.write("ac", null);
 //        System.out.println(Cache.cache.toString());

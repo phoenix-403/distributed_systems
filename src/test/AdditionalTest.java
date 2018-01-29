@@ -91,7 +91,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPersistUpdate() {
-        String key = "updateThisTwice1";
+        String key = "updateThisTwice";
         String value1 = "doNotPersist";
         String value2 = "persistPls";
         KVMessage response = null;
@@ -112,7 +112,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleUpdate() {
-        String key = "updateThisTwice";
+        String key = "updateThisTwice3";
         String value1 = "one";
         String value2 = "two";
         String value3 = "three";
@@ -131,7 +131,7 @@ public class AdditionalTest extends TestCase {
     }
 
     @Test
-    public void testGetNonExistant() {
+    public void testGetNonExistent() {
         String key = "thisDoesNotExist";
         KVMessage response = null;
         Exception ex = null;
