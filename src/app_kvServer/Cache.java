@@ -17,7 +17,7 @@ public class Cache {
     private static Logger logger = LogManager.getLogger(Cache.class);
 
     private static int size;
-    private static CacheStrategy cacheStrategy;
+    private static CacheStrategy cacheStrategy = CacheStrategy.None;
     private static volatile HashMap<String, String> cache = new HashMap<>();
 
     private static boolean isCacheSetup = false;
