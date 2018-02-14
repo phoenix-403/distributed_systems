@@ -96,4 +96,29 @@ public interface IKVServer {
      * Gracefully stop the server, can perform any additional actions
      */
     void close();
+
+    /**
+     * ECS-related start, starts serving requests
+     */
+    void start();
+
+    /**
+     * ECS-related stop, stops serving requests
+     */
+    void stop();
+
+    /**
+     * ECS-related lock, locks the KVServer for write operations
+     */
+    void lockWrite();
+
+    /**
+     * ECS-related unlock, unlocks the KVServer for write operations
+     */
+    void unlockWrite();
+
+    /**
+     * ECS-related moveData, move the given hashRange to the server going by the targetName
+     */
+    boolean moveData(String[] hashRange, String targetName) throws Exception;
 }

@@ -29,6 +29,16 @@ public class KVServer implements IKVServer, Runnable {
     private List<Thread> clientThreads;
 
     /**
+     * Start KV Server with selected name
+     * @param name			unique name of server
+     * @param zkHostname	hostname where zookeeper is running
+     * @param zkPort		port where zookeeper is running
+     */
+    public KVServer(String name, String zkHostname, int zkPort) {
+        // TODO Auto-generated method stub
+    }
+
+    /**
      * Start KV Server at given port
      *
      * @param port      given port for storage server to operate
@@ -181,6 +191,34 @@ public class KVServer implements IKVServer, Runnable {
                     "Unable to close socket on port: " + port, e);
         }
     }
+
+
+    @Override
+    public void start() {
+        // TODO
+    }
+
+    @Override
+    public void stop() {
+        // TODO
+    }
+
+    @Override
+    public void lockWrite() {
+        // TODO
+    }
+
+    @Override
+    public void unlockWrite() {
+        // TODO
+    }
+
+    @Override
+    public boolean moveData(String[] hashRange, String targetName) throws Exception {
+        // TODO
+        return false;
+    }
+
 
     public static void main(String[] args) throws Exception {
         if (args.length != 3) {

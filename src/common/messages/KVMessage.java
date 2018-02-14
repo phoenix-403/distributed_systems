@@ -1,5 +1,7 @@
 package common.messages;
 
+import ecs.IECSNode;
+
 public interface KVMessage {
 
     enum StatusType {
@@ -19,7 +21,11 @@ public interface KVMessage {
 
         SERVER_ERROR,     /* An error occurred on server side */
         TIME_OUT,         /* client timeout */
-        CONNECTION_DROPPED
+        CONNECTION_DROPPED,
+
+        SERVER_STOPPED,         /* Server is stopped, no requests are processed */
+        SERVER_WRITE_LOCK,      /* Server locked for out, only get possible */
+        SERVER_NOT_RESPONSIBLE  /* Request not successful, server not responsible for key */
 
 
     }
@@ -41,6 +47,11 @@ public interface KVMessage {
      * response types and error types associated to the message.
      */
     StatusType getStatus();
+
+    /**
+     * @return  the responsible server node
+     */
+    IECSNode getResponsibleServer();
 
 }
 
