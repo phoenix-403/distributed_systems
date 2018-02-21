@@ -1,5 +1,7 @@
 package common.messages;
 
+import ecs.IECSNode;
+
 public class RequestResponse implements KVMessage {
 
     private long id;
@@ -31,6 +33,11 @@ public class RequestResponse implements KVMessage {
     @Override
     public StatusType getStatus() {
         return statusType;
+    }
+
+    @Override
+    public IECSNode getResponsibleServer() {
+        return null;
     }
 
     @Override
