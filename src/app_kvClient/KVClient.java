@@ -1,10 +1,8 @@
 package app_kvClient;
 
-import app_kvECS.ECSClient;
 import client.KVCommInterface;
 import client.KVStore;
 import common.messages.KVMessage;
-import ecs.IECSNode;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
@@ -14,10 +12,7 @@ import org.apache.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -27,7 +22,6 @@ public class KVClient implements IKVClient, IClientSocketListener {
     private static final String PROMPT = "KV_Client> ";
     private BufferedReader stdin;
     private KVStore kvStoreInstance = null;
-    private ECSClient ecsStoreInstance = null;
     private boolean stop = false;
     private ErrorMessage errM = new ErrorMessage();
 
@@ -85,13 +79,13 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
         if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
-                case "quit": {
+                case "quit":
                     stop = true;
                     if (kvStoreInstance != null)
                         kvStoreInstance.disconnect();
                     System.out.println(PROMPT + "Application exit!");
                     break;
-                } case "connect": {
+                case "connect":
                     if (tokens.length == 3) {
                         try {
                             newConnection(tokens[1], Integer.parseInt(tokens[2]));
@@ -107,7 +101,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         printError("Invalid number of parameters!");
                     }
                     break;
-                } case "get": {
+                case "get":
                     if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
                         logger.warn("Not Connected");
@@ -122,7 +116,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         }
                     }
                     break;
-                } case "put": {
+                case "put":
                     if (kvStoreInstance == null) {
                         errM.printNotConnectedError();
                         logger.warn("Not Connected");
@@ -143,53 +137,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         }
                     }
                     break;
-                } case "start": {
-                    checkECS();
-                    ecsStoreInstance.start();
-                    break;
-                } case "stop": {
-                    checkECS();
-                    ecsStoreInstance.stop();
-                    break;
-                } case "shutdown": {
-                    checkECS();
-                    ecsStoreInstance.shutdown();
-                    break;
-                } case "addNode": {
-                    checkECS();
-                    IECSNode node = ecsStoreInstance.addNode(tokens[1], Integer.parseInt(tokens[2]));
-                    break;
-                } case "addNodes": {
-                    checkECS();
-                    Collection<IECSNode> nodes = ecsStoreInstance.addNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
-                    break;
-                } case "setupNodes": {
-                    checkECS();
-                    Collection<IECSNode> nodes = ecsStoreInstance.setupNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
-                    break;
-                } case "awaitNodes": {
-                    checkECS();
-                    try {
-                        ecsStoreInstance.awaitNodes(Integer.parseInt(tokens[1]),Integer.parseInt(tokens[2]));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                } case "removeNodes": {
-                    checkECS();
-                    ArrayList<String> temp = new ArrayList<String>(
-                            Arrays.asList(Arrays.copyOfRange(tokens, 1, tokens.length)));
-                    ecsStoreInstance.removeNodes(temp);
-                    break;
-                } case "getNodes": {
-                    checkECS();
-                    Map<String, IECSNode> nodes = ecsStoreInstance.getNodes();
-                    break;
-                } case "getNodeByKey": {
-                    checkECS();
-                    IECSNode node = ecsStoreInstance.getNodeByKey(tokens[1]);
-                    break;
-                } case "disconnect": {
+                case "disconnect":
                     if (kvStoreInstance != null) {
                         kvStoreInstance.disconnect();
                         kvStoreInstance = null;
@@ -200,7 +148,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         logger.warn("Attempting to disconnect from nothing!");
                     }
                     break;
-                } case "logLevel": {
+                case "logLevel":
                     if (tokens.length == 2) {
                         String level = setLevel(tokens[1]);
                         if (StringUtils.isEmpty(level)) {
@@ -215,14 +163,13 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     }
 
                     break;
-                } case "help": {
+                case "help":
                     printHelp();
                     break;
-                } default: {
+                default:
                     printError("Unknown command");
                     printHelp();
                     break;
-                }
             }
         }
     }
@@ -286,11 +233,6 @@ public class KVClient implements IKVClient, IClientSocketListener {
             return Level.OFF.toString();
         }
         return null;
-    }
-
-    private void checkECS(){
-        if (ecsStoreInstance == null)
-            ecsStoreInstance = new ECSClient();
     }
 
     private void printError(String error) {
