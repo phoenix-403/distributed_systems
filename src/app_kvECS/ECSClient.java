@@ -1,20 +1,22 @@
 package app_kvECS;
 
-import app_kvClient.ErrorMessage;
-import app_kvClient.KVClient;
-import client.KVCommInterface;
-import client.KVStore;
-import common.messages.KVMessage;
+import common.helper.ZkConnector;
+import common.helper.ZkNodeTransaction;
+import ecs.ECSNode;
 import ecs.IECSNode;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -22,15 +24,62 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static common.helper.Script.runScript;
+
 public class ECSClient implements IECSClient {
 
     private static Logger logger = LogManager.getLogger(ECSClient.class);
     private static final String PROMPT = "ECS_Client> ";
-    private BufferedReader stdin;
-    private boolean stop = false;
+    private boolean stopClient = false;
 
-    private String serverAddress;
-    private int serverPort;
+    private String zkAddress;
+    private int zkPort;
+
+    private ZooKeeper zooKeeper;
+    private ZkConnector zkConnector;
+    private ZkNodeTransaction zkNodeTransaction;
+
+    private ArrayList<ECSNode> allEcsNodes;
+
+    private ECSClient() throws UnknownHostException {
+        try {
+            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        zkAddress = Inet4Address.getLocalHost().getHostAddress();
+        zkPort = 2181;
+    }
+
+    private void startZK() throws InterruptedException, IOException, KeeperException {
+        // starting zookeeper on local machine on the default port and waiting for script to finish
+        String zkStartScript = System.getProperty("user.dir") + "/src/app_kvECS/startZK.sh";
+        Process startZkProcess = runScript(zkStartScript, logger);
+        startZkProcess.waitFor();
+
+        // connecting to zookeeper
+        zkConnector = new ZkConnector();
+        zooKeeper = zkConnector.connect(zkAddress +":"+ zkPort);
+
+        setupZk();
+
+    }
+
+    private void setupZk() throws KeeperException, InterruptedException {
+        // making sure zookeeper is clean (not run before)
+        zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
+        zkNodeTransaction.delete("/");
+
+        // creating HeartBeat Node
+    }
+
+    private void stopZK() throws InterruptedException {
+        zkConnector.close();
+        String zkStopScript = System.getProperty("user.dir") + "/src/app_kvECS/stopZK.sh";
+        runScript(zkStopScript, logger);
+    }
+
 
     @Override
     public boolean start() {
@@ -53,12 +102,17 @@ public class ECSClient implements IECSClient {
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         // TODO
-        return null;
+        ArrayList<IECSNode> list = (ArrayList<IECSNode>) addNodes(1, cacheStrategy, cacheSize);
+        return list.get(0);
     }
 
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
         // TODO
+
+        // Call setupNodes()
+        // Launch the server processes
+        // call await nodes
         return null;
     }
 
@@ -92,23 +146,16 @@ public class ECSClient implements IECSClient {
         return null;
     }
 
-    public void run() {
-        try {
-            new LogSetup("logs/client/client.log", Level.ALL);
-        } catch (IOException e) {
-            System.out.println("unable to initialize client logger");
-            e.printStackTrace();
-            System.exit(-1);
-        }
-        while (!stop) {
-            stdin = new BufferedReader(new InputStreamReader(System.in));
+    private void run() {
+        while (!stopClient) {
+            BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
 
             try {
                 String cmdLine = stdin.readLine();
                 this.handleCommand(cmdLine);
             } catch (IOException e) {
-                stop = true;
+                stopClient = true;
                 printError("CLI does not respond - Application terminated ");
             }
         }
@@ -128,52 +175,62 @@ public class ECSClient implements IECSClient {
         if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
                 case "start": {
-                    
+
                     start();
                     break;
-                } case "stop": {
-                    
+                }
+                case "stopClient": {
+
                     stop();
                     break;
-                } case "shutdown": {
-                    
+                }
+                case "shutdown": {
+
                     shutdown();
                     break;
-                } case "addNode": {
-                    
+                }
+                case "addNode": {
+
                     IECSNode node = addNode(tokens[1], Integer.parseInt(tokens[2]));
                     break;
-                } case "addNodes": {
-                    
+                }
+                case "addNodes": {
+
                     Collection<IECSNode> nodes = addNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
                     break;
-                } case "setupNodes": {
-                    
+                }
+                case "setupNodes": {
+
                     Collection<IECSNode> nodes = setupNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
                     break;
-                } case "awaitNodes": {
-                    
+                }
+                case "awaitNodes": {
+
                     try {
-                        awaitNodes(Integer.parseInt(tokens[1]),Integer.parseInt(tokens[2]));
+                        awaitNodes(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                     break;
-                } case "removeNodes": {
-                    
+                }
+                case "removeNodes": {
+
                     ArrayList<String> temp = new ArrayList<String>(
                             Arrays.asList(Arrays.copyOfRange(tokens, 1, tokens.length)));
                     removeNodes(temp);
                     break;
-                } case "getNodes": {
-                    
+                }
+                case "getNodes": {
+
                     Map<String, IECSNode> nodes = getNodes();
                     break;
-                } case "getNodeByKey": {
-                    
+                }
+                case "getNodeByKey": {
+
                     IECSNode node = getNodeByKey(tokens[1]);
                     break;
-                } case "logLevel": {
+                }
+                case "logLevel": {
                     if (tokens.length == 2) {
                         String level = setLevel(tokens[1]);
                         if (StringUtils.isEmpty(level)) {
@@ -188,10 +245,15 @@ public class ECSClient implements IECSClient {
                     }
 
                     break;
-                } case "help": {
+                }
+                case "help": {
                     printHelp();
                     break;
-                } default: {
+                }
+                case "quit":
+                    stopClient = true;
+                    break;
+                default: {
                     printError("Unknown command");
                     printHelp();
                     break;
@@ -200,6 +262,7 @@ public class ECSClient implements IECSClient {
         }
     }
 
+    // todo @ Henry ... update this
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
         sb.append(PROMPT).append("ECS CLIENT HELP (Usage):\r\n");
@@ -265,17 +328,15 @@ public class ECSClient implements IECSClient {
         System.out.println(PROMPT + "Error! " + error);
     }
 
-    public void printTerminal(String msg) {
-        System.out.println(PROMPT + msg);
-        System.out.flush();
-    }
 
     /**
      * @param args contains the port number at args[0].
      *             Main entry point for the KV client application.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, InterruptedException, KeeperException {
         ECSClient app = new ECSClient();
+        app.startZK();
         app.run();
+        app.stopZK();
     }
 }
