@@ -1,5 +1,6 @@
 package app_kvECS;
 
+import common.helper.Script;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import ecs.ECSNode;
@@ -19,7 +20,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.Inet4Address;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import static app_kvECS.ECSClient.ArgType.INTEGER;
 import static app_kvECS.ECSClient.ArgType.STRING;
+import static common.helper.Script.createBashScript;
 import static common.helper.Script.runScript;
 
 public class ECSClient implements IECSClient {
@@ -59,7 +60,7 @@ public class ECSClient implements IECSClient {
         }
 
         // setting zookeeper variables
-        zkAddress = Inet4Address.getLocalHost().getHostAddress();
+        zkAddress = "localhost";
         zkPort = 2181;
 
         // reading config file
@@ -148,16 +149,38 @@ public class ECSClient implements IECSClient {
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
 
         ArrayList<IECSNode> ecsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
-        // Launch the server processes and wait for them
-        for (IECSNode ecsNode : ecsNodes) {
 
+        // Launch the server processes
+        for (IECSNode ecsNode : ecsNodes) {
+            createRunSshScript((ECSNode) ecsNode, cacheStrategy, cacheSize);
         }
 
-        // call await nodes
+        // call await nodes to wait for processes to start
         boolean success = awaitNodes(count, 60000);
-        // update node to added
+        // update node to added by setting boolean in ecs node
 
         return ecsNodes;
+    }
+
+    private void createRunSshScript(ECSNode ecsNode, String cacheStrategy, int cacheSize) {
+
+        //todo fix metadata
+        String scriptContent = "ssh -n " +
+                "abdelrahman@localhost " +
+                "nohup java -jar ~/IdeaProjects/distributed_systems/m2-server.jar " +
+                ecsNode.getNodeName() + " " +
+                zkAddress + " " +
+                zkPort + " " +
+                ecsNode.getNodePort() + " " +
+                cacheSize + " " +
+                cacheStrategy + " " +
+                "metadata " +
+                "&";
+        String scriptPath = System.getProperty("user.dir") + "/src/app_kvECS/ssh.sh";
+
+        createBashScript(scriptPath, scriptContent, logger);
+        Script.runScript(scriptPath, logger);
+
     }
 
     @Override

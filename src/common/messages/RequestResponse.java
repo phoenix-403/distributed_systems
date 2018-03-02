@@ -69,6 +69,11 @@ public class RequestResponse implements KVMessage {
                 return "(" + getId() + ")-" + getStatus().toString();
             case CONNECTION_DROPPED:
                 return "(" + getId() + ")-" + getStatus().toString() + "_OR_CLOSED. Please reconnect!";
+
+            case SERVER_STOPPED:
+                return "(" + getId() + ")-" + getStatus().toString() + "!";
+
+
         }
 
         return super.toString();

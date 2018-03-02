@@ -2,10 +2,13 @@ package app_kvServer;
 
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
+import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
@@ -29,11 +32,11 @@ public class KVServer implements IKVServer, Runnable {
 
     private ServerSocket serverSocket;
     private boolean serverRunning;
+    private boolean acceptingRequests;
 
     private ZkConnector zkConnector;
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
-
 
 
     private List<Thread> clientThreads;
@@ -66,7 +69,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    public void initKVServer(int port, String metadata, int cacheSize, String strategy) {
+    private void initKVServer(int port, String metadata, int cacheSize, String strategy) {
 
         try {
             new LogSetup("logs/server/server.log", Level.ALL);
@@ -97,6 +100,7 @@ public class KVServer implements IKVServer, Runnable {
             System.exit(-1);
         }
         serverRunning = false;
+        acceptingRequests = false;
         clientThreads = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
@@ -105,9 +109,20 @@ public class KVServer implements IKVServer, Runnable {
             }
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
 
+            // adding hb node
+            zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name, null, CreateMode.EPHEMERAL);
+
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket: " + e.getMessage());
+        } catch (InterruptedException | KeeperException e) {
+            logger.error("Server " + name + " was not added to HB in zookeeper !!!");
         }
+
+
+    }
+
+    public boolean isAcceptingRequests() {
+        return acceptingRequests;
     }
 
     @Override
@@ -241,7 +256,6 @@ public class KVServer implements IKVServer, Runnable {
         if (args.length != 7) {
             throw new Exception("Incorrect server arguments!");
         }
-
 
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
         server.initKVServer(Integer.parseInt(args[3]), args[6], Integer.parseInt(args[4]), args[5]);
