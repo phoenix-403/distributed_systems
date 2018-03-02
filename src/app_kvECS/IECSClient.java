@@ -46,7 +46,7 @@ public interface IECSClient {
      * Sets up `count` servers with the ECS (in this case Zookeeper)
      * @return  array of strings, containing unique names of servers
      */
-    Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize);
+    Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) throws EcsException;
 
     /**
      * Wait for all nodes to report status or until timeout expires
