@@ -1,28 +1,28 @@
 package app_kvECS;
 
-import com.sun.org.apache.xpath.internal.Arg;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import ecs.ECSNode;
 import ecs.IECSNode;
+import ecs.ZkStructureNodes;
 import logger.LogSetup;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Inet4Address;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.function.Predicate;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static app_kvECS.ECSClient.ArgType.INTEGER;
@@ -42,22 +42,47 @@ public class ECSClient implements IECSClient {
     private ZkConnector zkConnector;
     private ZkNodeTransaction zkNodeTransaction;
 
-    private ArrayList<ECSNode> allEcsNodes;
+    private List<ECSNode> ecsNodes = new ArrayList<>();
 
     enum ArgType {
         INTEGER,
         STRING,
     }
 
-    private ECSClient() throws UnknownHostException {
+    private ECSClient(String configFile) throws IOException, EcsException {
+
+        // setting up log
         try {
             new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        // setting zookeeper variables
         zkAddress = Inet4Address.getLocalHost().getHostAddress();
         zkPort = 2181;
+
+        // reading config file
+        configureAvailableNodes(configFile);
+    }
+
+    private void configureAvailableNodes(String configFile) throws EcsException, IOException {
+        File file = new File("src/app_kvECS/" + configFile);
+        if (!file.exists()) {
+            throw new EcsException("Config file does not exist!");
+        }
+
+        final String DELIMITER = " ";
+        final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
+
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(file.toPath());
+        for (String line : fileLines) {
+            String[] tokenizedLine = line.split(DELIMITER_PATTERN);
+            ecsNodes.add(new ECSNode(tokenizedLine[0], tokenizedLine[1], Integer.parseInt(tokenizedLine[2]), null,
+                    false));
+        }
+        System.out.println(ecsNodes);
+
     }
 
     private void startZK() throws InterruptedException, IOException, KeeperException {
@@ -68,18 +93,23 @@ public class ECSClient implements IECSClient {
 
         // connecting to zookeeper
         zkConnector = new ZkConnector();
-        zooKeeper = zkConnector.connect(zkAddress +":"+ zkPort);
+        zooKeeper = zkConnector.connect(zkAddress + ":" + zkPort);
 
+        // setting up
         setupZk();
 
     }
 
     private void setupZk() throws KeeperException, InterruptedException {
-        // making sure zookeeper is clean (not run before)
+        // making sure zookeeper is clean (haven't run before)
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
-        zkNodeTransaction.delete("/");
+        zkNodeTransaction.delete(ZkStructureNodes.ROOT.getValue());
 
-        // creating HeartBeat Node
+        // setting up structural nodes
+        zkNodeTransaction.createZNode(ZkStructureNodes.GLOBAL_STATUS.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.METADATA.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_NODES.getValue(), null, CreateMode.PERSISTENT);
     }
 
     private void stopZK() throws InterruptedException {
@@ -116,22 +146,55 @@ public class ECSClient implements IECSClient {
 
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
-        System.out.println(count + cacheStrategy + cacheSize);
-        // Call setupNodes()
-        // Launch the server processes
+
+        ArrayList<IECSNode> ecsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
+        // Launch the server processes and wait for them
+        for (IECSNode ecsNode : ecsNodes) {
+
+        }
+
         // call await nodes
-        return null;
+        boolean success = awaitNodes(count, 60000);
+        // update node to added
+
+        return ecsNodes;
     }
 
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        List<IECSNode> nodesToSetup = getUnreservedNodes();
+        int size = nodesToSetup.size();
+        if (count > size) {
+            logger.error("Trying to setup " + count + " nodes but only " + size + " available!");
+            return null;
+        }
+
+        // shuffling and removing random objects to only add required nodes
+        Collections.shuffle(nodesToSetup);
+        for (int i = 0; i < size - count; i++) {
+            nodesToSetup.remove(0);
+        }
+
+        // marking new nodes as reserved
+        for (IECSNode ecsNode : nodesToSetup) {
+            ((ECSNode) ecsNode).setReserved(true);
+        }
+        // todo m1: wait on zi input to calculate metadata using ECS_NODES not NODES TO SETUP ... m2: ecs deleted
+        // need to merge :(
+
+
+        return nodesToSetup;
     }
 
+    private ArrayList<IECSNode> getUnreservedNodes() {
+        List<IECSNode> availableNodes = new ArrayList<>(ecsNodes);
+        CollectionUtils.filter(availableNodes, ecsNode -> !((ECSNode) ecsNode).isReserved());
+        return (ArrayList<IECSNode>) availableNodes;
+    }
+
+
     @Override
-    public boolean awaitNodes(int count, int timeout) throws Exception {
+    public boolean awaitNodes(int count, int timeout) {
         // TODO
         return false;
     }
@@ -154,7 +217,7 @@ public class ECSClient implements IECSClient {
         return null;
     }
 
-    private void run() {
+    private void run() throws EcsException {
         while (!stopClient) {
             BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -169,15 +232,10 @@ public class ECSClient implements IECSClient {
         }
     }
 
-    private void handleCommand(String cmdLine) {
+    private void handleCommand(String cmdLine) throws EcsException {
         String[] tokens = cmdLine.split("\\s+");
         Arrays.stream(tokens)
-                .filter(new Predicate<String>() {
-                            @Override
-                            public boolean test(String s) {
-                                return s != null && s.length() > 0;
-                            }
-                        }
+                .filter(s -> s != null && s.length() > 0
                 ).collect(Collectors.toList()).toArray(tokens);
 
         if (tokens.length != 0 && tokens[0] != null) {
@@ -195,28 +253,28 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "addNode": {
-                    Object[] a = getArguments(tokens, new ArgType[] {STRING, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{STRING, INTEGER});
                     if (a == null)
                         return;
                     IECSNode node = addNode((String) a[0], (int) a[1]);
                     break;
                 }
                 case "addNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[] {INTEGER, STRING, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
                     if (a == null)
                         return;
                     Collection<IECSNode> nodes = addNodes((int) a[0], (String) a[1], (int) a[2]);
                     break;
                 }
                 case "setupNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[] {INTEGER, STRING, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
                     if (a == null)
                         return;
                     Collection<IECSNode> nodes = setupNodes((int) a[0], (String) a[1], (int) a[2]);
                     break;
                 }
                 case "awaitNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[] {INTEGER, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, INTEGER});
                     if (a == null)
                         return;
                     try {
@@ -227,7 +285,7 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "removeNodes": {
-                    if (tokens.length < 2){
+                    if (tokens.length < 2) {
                         printHelp();
                         return;
                     }
@@ -241,7 +299,7 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "getNodeByKey": {
-                    Object[] a = getArguments(tokens, new ArgType[] {STRING});
+                    Object[] a = getArguments(tokens, new ArgType[]{STRING});
                     if (a == null)
                         return;
                     IECSNode node = getNodeByKey((String) a[0]);
@@ -345,17 +403,17 @@ public class ECSClient implements IECSClient {
         System.out.println(PROMPT + "Error! " + error);
     }
 
-    private Object[] getArguments(String[] arguments, ArgType[] types){
+    private Object[] getArguments(String[] arguments, ArgType[] types) {
         Object[] array = new Object[types.length];
-        int i=1;
+        int i = 1;
         try {
-            for (ArgType type : types){
-                switch (type){
+            for (ArgType type : types) {
+                switch (type) {
                     case INTEGER:
-                        array[i-1] = new Integer(Integer.parseInt(arguments[i++]));
+                        array[i - 1] = new Integer(Integer.parseInt(arguments[i++]));
                         break;
                     case STRING:
-                        array[i-1] = arguments[i++];
+                        array[i - 1] = arguments[i++];
                         break;
                 }
             }
@@ -371,10 +429,15 @@ public class ECSClient implements IECSClient {
      * @param args contains the port number at args[0].
      *             Main entry point for the KV client application.
      */
-    public static void main(String[] args) throws IOException, InterruptedException, KeeperException {
-        ECSClient app = new ECSClient();
-//        app.startZK();
+    public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
+        if (args.length != 1) {
+            throw new EcsException("Incorrect # of arguments for ECS Client!");
+        }
+
+        ECSClient app = new ECSClient(args[0]);
+        app.startZK();
         app.run();
-//        app.stopZK();
+        app.stopZK();
     }
+
 }

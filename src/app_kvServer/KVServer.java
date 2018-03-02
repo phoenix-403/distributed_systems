@@ -34,6 +34,8 @@ public class KVServer implements IKVServer, Runnable {
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
 
+
+
     private List<Thread> clientThreads;
 
     /**
@@ -50,8 +52,6 @@ public class KVServer implements IKVServer, Runnable {
         zkConnector = new ZkConnector();
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
-
-        // add hb node
     }
 
     /**
@@ -242,9 +242,11 @@ public class KVServer implements IKVServer, Runnable {
             throw new Exception("Incorrect server arguments!");
         }
 
+
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
         server.initKVServer(Integer.parseInt(args[3]), args[6], Integer.parseInt(args[4]), args[5]);
-        server.run();
+        Thread thread = new Thread(server);
+        thread.start();
 
     }
 
