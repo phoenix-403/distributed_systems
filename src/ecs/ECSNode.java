@@ -1,5 +1,7 @@
 package ecs;
 
+import java.util.Arrays;
+
 public class ECSNode implements IECSNode{
 
     private String nodeName;
@@ -46,5 +48,16 @@ public class ECSNode implements IECSNode{
 
     public void setReserved(boolean reserved) {
         this.reserved = reserved;
+    }
+
+    @Override
+    public String toString() {
+        return "ECSNode{" +
+                "nodeName='" + nodeName + '\'' +
+                ", nodeHost='" + nodeHost + '\'' +
+                ", nodePort=" + nodePort +
+                ", nodeHashRange=" + Arrays.toString(nodeHashRange) +
+                ", reserved=" + reserved +
+                '}';
     }
 }

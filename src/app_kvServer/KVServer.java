@@ -1,9 +1,12 @@
 package app_kvServer;
 
+import common.helper.ZkConnector;
+import common.helper.ZkNodeTransaction;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -17,6 +20,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private static Logger logger = LogManager.getLogger(KVServer.class);
 
+    private String name;
     private int port;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
@@ -26,22 +30,35 @@ public class KVServer implements IKVServer, Runnable {
     private ServerSocket serverSocket;
     private boolean serverRunning;
 
+    private ZkConnector zkConnector;
+    private ZooKeeper zooKeeper;
+    private ZkNodeTransaction zkNodeTransaction;
+
     private List<Thread> clientThreads;
 
     /**
      * Start KV Server with selected name
-     * @param name			unique name of server
-     * @param zkHostname	hostname where zookeeper is running
-     * @param zkPort		port where zookeeper is running
+     *
+     * @param name       unique name of server
+     * @param zkHostname hostname where zookeeper is running
+     * @param zkPort     port where zookeeper is running
      */
-    public KVServer(String name, String zkHostname, int zkPort) {
-        // TODO Auto-generated method stub
+    public KVServer(String name, String zkHostname, int zkPort) throws IOException, InterruptedException {
+        this.name = name;
+
+        // connect to zoo keeper
+        zkConnector = new ZkConnector();
+        zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
+        zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
+
+        // add hb node
     }
 
     /**
      * Start KV Server at given port
      *
      * @param port      given port for storage server to operate
+     * @param metadata  initial metadata
      * @param cacheSize specifies how many key-value pairs the server is allowed
      *                  to keep in-memory
      * @param strategy  specifies the cache replacement strategy in case the cache
@@ -49,7 +66,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    public KVServer(int port, int cacheSize, String strategy) {
+    public void initKVServer(int port, String metadata, int cacheSize, String strategy) {
 
         try {
             new LogSetup("logs/server/server.log", Level.ALL);
@@ -83,7 +100,7 @@ public class KVServer implements IKVServer, Runnable {
         clientThreads = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
-            if (port == 0){
+            if (port == 0) {
                 this.port = serverSocket.getLocalPort();
             }
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
@@ -116,7 +133,7 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public boolean inStorage(String key) {
         try {
-           return Persist.checkIfExists(key);
+            return Persist.checkIfExists(key);
         } catch (IOException e) {
             logger.error("Can't check if " + key + " exists in storage: " + e.getMessage());
         }
@@ -139,7 +156,7 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     public boolean putKVWithError(String key, String value) throws IOException {
-        return Persist.write(key,value);
+        return Persist.write(key, value);
     }
 
     @Override
@@ -221,11 +238,12 @@ public class KVServer implements IKVServer, Runnable {
 
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) {
+        if (args.length != 7) {
             throw new Exception("Incorrect server arguments!");
         }
 
-        KVServer server = new KVServer(Integer.parseInt(args[0]), Integer.parseInt(args[1]), args[2]);
+        KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
+        server.initKVServer(Integer.parseInt(args[3]), args[6], Integer.parseInt(args[4]), args[5]);
         server.run();
 
     }
