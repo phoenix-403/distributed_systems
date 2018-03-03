@@ -44,6 +44,7 @@ public class ECSClient implements IECSClient {
     private ZkNodeTransaction zkNodeTransaction;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
+    List<IECSNode> nodesToSetup;
 
     enum ArgType {
         INTEGER,
@@ -148,44 +149,55 @@ public class ECSClient implements IECSClient {
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
 
-        ArrayList<IECSNode> ecsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
+        ArrayList<IECSNode> iEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
 
         // Launch the server processes
-        for (IECSNode ecsNode : ecsNodes) {
-            createRunSshScript((ECSNode) ecsNode, cacheStrategy, cacheSize);
-        }
+        createRunSshScript(iEcsNodes, cacheStrategy, cacheSize);
+
 
         // call await nodes to wait for processes to start
         boolean success = awaitNodes(count, 60000);
-        // update node to added by setting boolean in ecs node
 
-        return ecsNodes;
+        if (success) {
+            // update node to added by setting boolean in ecs node
+            for (IECSNode ecsNode : iEcsNodes) {
+                ((ECSNode) ecsNode).setReserved(true);
+            }
+            logger.info("All nodes were added");
+        } else {
+            // todo setReserved to only ones that are active.
+            logger.error("Timeout reached. servers blah,blah and blah were not added");
+        }
+
+        return iEcsNodes;
     }
 
-    private void createRunSshScript(ECSNode ecsNode, String cacheStrategy, int cacheSize) {
+    private void createRunSshScript(ArrayList<IECSNode> iEcsNodes, String cacheStrategy, int cacheSize) {
 
-        //todo fix metadata
-        String scriptContent = "ssh -n " +
-                "abdelrahman@localhost " +
-                "nohup java -jar ~/IdeaProjects/distributed_systems/m2-server.jar " +
-                ecsNode.getNodeName() + " " +
-                zkAddress + " " +
-                zkPort + " " +
-                ecsNode.getNodePort() + " " +
-                cacheSize + " " +
-                cacheStrategy + " " +
-                "metadata " +
-                "&";
+        ECSNode ecsNode;
+        StringBuilder scriptContent = new StringBuilder();
+
+        for (IECSNode iEcsNode : iEcsNodes) {
+            ecsNode = (ECSNode) iEcsNode;
+            //todo fix metadata
+            scriptContent.append("ssh -n " + "abdelrahman@localhost " + "nohup java -jar " +
+                    "~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
+                    .append
+                            (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
+                    " ").append
+                    (cacheSize).append(" ").append(cacheStrategy).append(" ").append("metadata ").append("&\n");
+        }
+
         String scriptPath = System.getProperty("user.dir") + "/src/app_kvECS/ssh.sh";
 
-        createBashScript(scriptPath, scriptContent, logger);
+        createBashScript(scriptPath, scriptContent.toString(), logger);
         Script.runScript(scriptPath, logger);
 
     }
 
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        List<IECSNode> nodesToSetup = getUnreservedNodes();
+        nodesToSetup = getUnreservedNodes();
         int size = nodesToSetup.size();
         if (count > size) {
             logger.error("Trying to setup " + count + " nodes but only " + size + " available!");
@@ -198,10 +210,6 @@ public class ECSClient implements IECSClient {
             nodesToSetup.remove(0);
         }
 
-        // marking new nodes as reserved
-        for (IECSNode ecsNode : nodesToSetup) {
-            ((ECSNode) ecsNode).setReserved(true);
-        }
         // todo m1: wait on zi input to calculate metadata using ECS_NODES not NODES TO SETUP ... m2: ecs deleted
         // need to merge :(
 
@@ -218,7 +226,24 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean awaitNodes(int count, int timeout) {
-        // TODO
+        List<ECSNode> runningNodes = new ArrayList<>(ecsNodes);
+        CollectionUtils.filter(runningNodes, ECSNode::isReserved);
+        int preexistingHrNodes = runningNodes.size();
+
+        long startTime = System.currentTimeMillis();
+
+        while (System.currentTimeMillis() - startTime <= timeout) {
+            try {
+                int numberHrNodes = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false).size();
+                if (numberHrNodes - preexistingHrNodes == count) {
+                    return true;
+                }
+            } catch (KeeperException | InterruptedException e) {
+                logger.error(e.getMessage());
+            }
+        }
+
+
         return false;
     }
 
@@ -238,6 +263,22 @@ public class ECSClient implements IECSClient {
     public IECSNode getNodeByKey(String Key) {
         // TODO
         return null;
+    }
+
+
+    /**
+     * @param args contains the port number at args[0].
+     *             Main entry point for the KV client application.
+     */
+    public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
+        if (args.length != 1) {
+            throw new EcsException("Incorrect # of arguments for ECS Client!");
+        }
+
+        ECSClient app = new ECSClient(args[0]);
+        app.startZK();
+        app.run();
+        app.stopZK();
     }
 
     private void run() throws EcsException {
@@ -445,22 +486,6 @@ public class ECSClient implements IECSClient {
             return null;
         }
         return array;
-    }
-
-
-    /**
-     * @param args contains the port number at args[0].
-     *             Main entry point for the KV client application.
-     */
-    public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
-        if (args.length != 1) {
-            throw new EcsException("Incorrect # of arguments for ECS Client!");
-        }
-
-        ECSClient app = new ECSClient(args[0]);
-        app.startZK();
-        app.run();
-        app.stopZK();
     }
 
 }

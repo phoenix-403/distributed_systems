@@ -28,7 +28,7 @@ public class Script {
         Process process;
         try {
             Runtime runtime = Runtime.getRuntime();
-            process = runtime.exec("chmod u+x " + script);
+            process = runtime.exec(script);
 
             // logging output of script
             logger.info("~~~~~" + script + " output~~~~~");
