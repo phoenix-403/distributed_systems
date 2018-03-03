@@ -16,6 +16,10 @@ public interface KVMessage {
         DELETE_SUCCESS,  /* RESP => Delete - request successful */
         DELETE_ERROR,    /* RESP => Delete - request unsuccessful */
 
+        WRITE_LOCK,
+        WRITE_UNLOCK,
+        TRANSFER_DATA,
+
         INVALID_REQUEST,  /* server can not parse string into an appropriate request */
         INVALID_RESPONSE, /* client can not parse string into an appropriate response */
 

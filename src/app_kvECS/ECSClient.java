@@ -249,7 +249,20 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO
+        for (String name : nodeNames) {
+            boolean success = removeNode(getNodeByKey(name));
+        }
+        return false;
+    }
+
+    private boolean removeNode(IECSNode node){
+        if (ecsNodes.size() > 1 && node != null) {
+            //set node to unused, and remove ref from list
+            //update metadata and ring
+            //transfer storage
+            //anything else?
+        }
+
         return false;
     }
 
