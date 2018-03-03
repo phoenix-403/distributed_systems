@@ -180,7 +180,7 @@ public class ECSClient implements IECSClient {
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
             //todo fix metadata
-            scriptContent.append("ssh -n " + "abdelrahman@localhost " + "nohup java -jar " +
+            scriptContent.append("ssh -n " + ecsNode.getNodeHost() + " " + "nohup java -jar " +
                     "~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
