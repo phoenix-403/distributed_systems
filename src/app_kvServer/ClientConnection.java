@@ -115,57 +115,64 @@ public class ClientConnection implements Runnable {
             // deserialize string into a request and pass it off to handle it
             request = gson.fromJson(reqLine, RequestResponse.class);
             if (validateRequest(request)) {
-                switch (request.getStatus()) {
-                    case PUT:
-                        try {
-                            boolean keyExistInStorage = kvServer.inStorage(request.getKey());
-                            boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
-                                    .getValue());
+                if (!kvServer.isAcceptingRequests()){
+                    return new RequestResponse(request.getId(), null, null, StatusType
+                            .SERVER_STOPPED);
+                }else {
+                    switch (request.getStatus()) {
+                        case PUT:
+                            try {
+                                boolean keyExistInStorage = kvServer.inStorage(request.getKey());
+                                boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
+                                        .getValue());
 
-                            // If the user is trying to delete
-                            if (StringUtils.isEmpty(request.getValue())) {
-                                if (writeModifyDeleteStatus) {
-                                    logger.info("delete success");
-                                    return new RequestResponse(request.getId(), request.getKey(), null, StatusType
-                                            .DELETE_SUCCESS);
-                                } else {
-                                    logger.info("delete error");
-                                    return new RequestResponse(request.getId(), request.getKey(), null, StatusType
-                                            .DELETE_ERROR);
+                                // If the user is trying to delete
+                                if (StringUtils.isEmpty(request.getValue())) {
+                                    if (writeModifyDeleteStatus) {
+                                        logger.info("delete success");
+                                        return new RequestResponse(request.getId(), request.getKey(), null, StatusType
+                                                .DELETE_SUCCESS);
+                                    } else {
+                                        logger.info("delete error");
+                                        return new RequestResponse(request.getId(), request.getKey(), null, StatusType
+                                                .DELETE_ERROR);
+                                    }
                                 }
-                            }
-                            // if user is trying to modify or write new -/- status is true when new field or false
-                            // when update
-                            if (writeModifyDeleteStatus) {
-                                logger.info("write success");
-                                return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
-                                        StatusType.PUT_SUCCESS);
-                            } else {
-                                logger.info("modify success");
-                                return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
-                                        StatusType.PUT_UPDATE);
-                            }
+                                // if user is trying to modify or write new -/- status is true when new field or false
+                                // when update
+                                if (writeModifyDeleteStatus) {
+                                    logger.info("write success");
+                                    return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
+                                            StatusType.PUT_SUCCESS);
+                                } else {
+                                    logger.info("modify success");
+                                    return new RequestResponse(request.getId(), request.getKey(), request.getValue(),
+                                            StatusType.PUT_UPDATE);
+                                }
 
 
-                        } catch (IOException e) {
-                            logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                            return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
-                        }
-
-                    case GET:
-                        try {
-                            String value = kvServer.getKV(request.getKey());
-                            if (value != null) {
-                                logger.info("get success");
-                                return new RequestResponse(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
-                            } else {
-                                logger.info("get error");
-                                return new RequestResponse(request.getId(), request.getKey(), value, StatusType.GET_ERROR);
+                            } catch (IOException e) {
+                                logger.error("Unable to get value from cache/disk - " + e.getMessage());
+                                return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
                             }
-                        } catch (IOException e) {
-                            logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                            return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
-                        }
+
+                        case GET:
+                            try {
+                                String value = kvServer.getKV(request.getKey());
+                                if (value != null) {
+                                    logger.info("get success");
+                                    return new RequestResponse(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
+
+                                } else {
+                                    logger.info("get error");
+                                    return new RequestResponse(request.getId(), request.getKey(), value, StatusType
+                                            .GET_ERROR);
+                                }
+                            } catch (IOException e) {
+                                logger.error("Unable to get value from cache/disk - " + e.getMessage());
+                                return new RequestResponse(-1, null, null, StatusType.SERVER_ERROR);
+                            }
+                    }
                 }
             }
         } catch (JsonSyntaxException jsonException) {

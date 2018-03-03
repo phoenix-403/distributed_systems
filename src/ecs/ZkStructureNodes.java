@@ -1,10 +1,11 @@
-package common.helper;
+package ecs;
 
 public enum ZkStructureNodes {
-    HEART_BEAT("HB"),
-    GLOBAL_STATUS("GS"),
-    SERVER_NODES("SN"),
-    METADATA("MD");
+    ROOT("/"),
+    HEART_BEAT("/HB"),
+    GLOBAL_STATUS("/GS"),
+    SERVER_NODES("/SN"),
+    METADATA("/MD");
 
     String value;
 
