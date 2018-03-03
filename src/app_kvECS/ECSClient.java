@@ -51,11 +51,11 @@ public class ECSClient implements IECSClient {
         STRING,
     }
 
-    private ECSClient(String configFile) throws IOException, EcsException {
+    public ECSClient(String configFile) throws IOException, EcsException {
 
         // setting up log
         try {
-            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
+            new LogSetup("logs/ecs/ecs_client.log", Level.ERROR);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -409,36 +409,36 @@ public class ECSClient implements IECSClient {
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\r\n");
         sb.append(PROMPT).append("start");
-        sb.append("\t\t\t\t Starts the storage service by calling start() on all KVServer instances " +
+        sb.append("\n\t\t\t\t Starts the storage service by calling start() on all KVServer instances " +
                 "that participate in the service.\r\n");
         sb.append(PROMPT).append("stop");
-        sb.append("\t\t\t\t Stops the service; all participating KVServers are stopped for processing client requests " +
+        sb.append("\n\t\t\t\t Stops the service; all participating KVServers are stopped for processing client requests " +
                 "but the processes remain running.\r\n");
         sb.append(PROMPT).append("addNode <Cache Size> <Replacement Strategy>");
-        sb.append("\t\t\t\t Create a new KVServer with the specified cache size and replacement strategy and " +
+        sb.append("\n\t\t\t\t Create a new KVServer with the specified cache size and replacement strategy and " +
                 "add it to the storage service at an arbitrary position.\r\n");
         sb.append(PROMPT).append("addNodes <# Nodes> <Cache Size> <Replacement Strategy>");
-        sb.append("\t\t\t\t Randomly choose <numberOfNodes> servers from the available machines and start the KVServer " +
+        sb.append("\n\t\t\t\t Randomly choose <numberOfNodes> servers from the available machines and start the KVServer " +
                 "by issuing an SSH call to the respective machine. This call launches the storage server with the " +
                 "specified cache size and replacement strategy. For simplicity, locate the KVServer.jar in the same " +
                 "directory as the ECS. All storage servers are initialized with the metadata and any persisted " +
                 "data, and remain in state stopped.\r\n");
         sb.append(PROMPT).append("setupNodes <Nodes to Wait For> <Cache Strategy> <Cache Size>");
-        sb.append("\t\t\t\t Wait for all nodes to report status or until timeout expires.\r\n");
+        sb.append("\n\t\t\t\t Wait for all nodes to report status or until timeout expires.\r\n");
         sb.append(PROMPT).append("awaitNodes <Nodes to Wait For> <Timeout>");
-        sb.append("\t\t\t\t Removes nodes with names matching the nodeNames array.\r\n");
+        sb.append("\n\t\t\t\t Removes nodes with names matching the nodeNames array.\r\n");
         sb.append(PROMPT).append("removeNodes [array of nodes] e.g. <node1> <node2> <node3> ...");
-        sb.append("\t\t\t\t Remove a server from the storage service at an arbitrary position. \r\n");
+        sb.append("\n\t\t\t\t Remove a server from the storage service at an arbitrary position. \r\n");
         sb.append(PROMPT).append("getNodes");
-        sb.append("\t\t\t\t Get a map of all nodes.\r\n");
+        sb.append("\n\t\t\t\t Get a map of all nodes.\r\n");
         sb.append(PROMPT).append("getNodeByKey <key>");
-        sb.append("\t\t\t\t Get the specific node responsible for the given key.\r\n");
+        sb.append("\n\t\t\t\t Get the specific node responsible for the given key.\r\n");
         sb.append(PROMPT).append("logLevel");
-        sb.append("\t\t\t\t changes the logLevel: ");
+        sb.append("\n\t\t\t\t changes the logLevel: ");
         sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \r\n");
 
         sb.append(PROMPT).append("quit ");
-        sb.append("\t\t\t\t exits the program");
+        sb.append("\n\t\t\t\t exits the program");
         System.out.println(sb.toString());
     }
 
