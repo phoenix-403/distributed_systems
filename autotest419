@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+
+import getpass
+import hashlib
+import os, os.path
+import shutil
+import sys
+import tempfile
+
+AUTOTEST_LOCATION = "/scr/temp/e419S18/autotest/"
+VALID_TESTS = ["m1"]
+
+def main(args):
+    if len(args) < 2:
+        sys.stderr.write("Usage: {} <m#>\n".format(args[0]))
+        return
+
+    m = args[1]
+
+    if m not in VALID_TESTS:
+        sys.stderr.write("Test selection invalid. Only following tests available:\n")
+        sys.stderr.write(" ".join(VALID_TESTS))
+
+    # Call SUID exec
+    if m == "m1":
+        dest = "/local1/tester/ece419s/1.fortesting/"
+
+        if len(args) < 3:
+            sys.stderr.write("Usage: {} <m#> <file>\n".format(args[0]))
+            return
+
+        file = args[2]
+        file_ = "m1-" + getpass.getuser() + "-" + hashlib.sha1(repr(os.urandom(150)).encode()).hexdigest() + ".jar"
+
+        if not os.path.exists(file):
+            sys.stderr.write("File `{}` does not exist\n".format(file))
+            return
+
+        # Copy file to folder
+        os.system("cp --no-preserve=ownership {} {}".format(file, os.path.join(dest, file_)))
+
+        exec = os.path.join(AUTOTEST_LOCATION, "autotest-m1")
+        cmd = " ".join([exec, getpass.getuser(), file_])
+
+        os.system(cmd)
+
+        os.unlink(os.path.join(dest, file_))
+
+if __name__ == "__main__":
+    main(sys.argv)
