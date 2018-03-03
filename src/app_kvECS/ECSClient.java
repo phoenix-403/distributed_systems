@@ -408,24 +408,37 @@ public class ECSClient implements IECSClient {
         sb.append(PROMPT);
         sb.append("::::::::::::::::::::::::::::::::");
         sb.append("::::::::::::::::::::::::::::::::\r\n");
-        sb.append(PROMPT).append("connect <host> <port>");
-        sb.append("\t establishes a connection to a server\r\n");
-        sb.append(PROMPT).append("put <key> <value>");
-        sb.append("\t\t Inserts a key-value pair into the storage server data structures.\r\n" +
-                "\t\t\t\t\t\t\t\t\t Updates (overwrites) the current value with the given value if the server " +
-                "already contains the specified key.\r\n" +
-                "\t\t\t\t\t\t\t\t\t Deletes the entry for the given key if <value> is null.\r\n");
-        sb.append(PROMPT).append("get <key>");
-        sb.append("\t\t\t\t Retrieves the value for the given key from the storage server. \r\n");
-        sb.append(PROMPT).append("disconnect");
-        sb.append("\t\t\t\t disconnects from the server \r\n");
-
+        sb.append(PROMPT).append("start");
+        sb.append("\t\t\t\t Starts the storage service by calling start() on all KVServer instances " +
+                "that participate in the service.\r\n");
+        sb.append(PROMPT).append("stop");
+        sb.append("\t\t\t\t Stops the service; all participating KVServers are stopped for processing client requests " +
+                "but the processes remain running.\r\n");
+        sb.append(PROMPT).append("addNode <Cache Size> <Replacement Strategy>");
+        sb.append("\t\t\t\t Create a new KVServer with the specified cache size and replacement strategy and " +
+                "add it to the storage service at an arbitrary position.\r\n");
+        sb.append(PROMPT).append("addNodes <# Nodes> <Cache Size> <Replacement Strategy>");
+        sb.append("\t\t\t\t Randomly choose <numberOfNodes> servers from the available machines and start the KVServer " +
+                "by issuing an SSH call to the respective machine. This call launches the storage server with the " +
+                "specified cache size and replacement strategy. For simplicity, locate the KVServer.jar in the same " +
+                "directory as the ECS. All storage servers are initialized with the metadata and any persisted " +
+                "data, and remain in state stopped.\r\n");
+        sb.append(PROMPT).append("setupNodes <Nodes to Wait For> <Cache Strategy> <Cache Size>");
+        sb.append("\t\t\t\t Wait for all nodes to report status or until timeout expires.\r\n");
+        sb.append(PROMPT).append("awaitNodes <Nodes to Wait For> <Timeout>");
+        sb.append("\t\t\t\t Removes nodes with names matching the nodeNames array.\r\n");
+        sb.append(PROMPT).append("removeNodes [array of nodes] e.g. <node1> <node2> <node3> ...");
+        sb.append("\t\t\t\t Remove a server from the storage service at an arbitrary position. \r\n");
+        sb.append(PROMPT).append("getNodes");
+        sb.append("\t\t\t\t Get a map of all nodes.\r\n");
+        sb.append(PROMPT).append("getNodeByKey <key>");
+        sb.append("\t\t\t\t Get the specific node responsible for the given key.\r\n");
         sb.append(PROMPT).append("logLevel");
-        sb.append("\t\t\t\t\t changes the logLevel: ");
+        sb.append("\t\t\t\t changes the logLevel: ");
         sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \r\n");
 
         sb.append(PROMPT).append("quit ");
-        sb.append("\t\t\t\t\t exits the program");
+        sb.append("\t\t\t\t exits the program");
         System.out.println(sb.toString());
     }
 
@@ -474,7 +487,7 @@ public class ECSClient implements IECSClient {
             for (ArgType type : types) {
                 switch (type) {
                     case INTEGER:
-                        array[i - 1] = new Integer(Integer.parseInt(arguments[i++]));
+                        array[i - 1] = Integer.parseInt(arguments[i++]);
                         break;
                     case STRING:
                         array[i - 1] = arguments[i++];
