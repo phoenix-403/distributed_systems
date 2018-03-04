@@ -10,11 +10,13 @@ public class ConsistentHash {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(preImage.getBytes("UTF-8"));
             BigInteger number = new BigInteger(1, messageDigest);
+            System.out.println("number: " + number);
             StringBuilder hashText = new StringBuilder(number.toString(16));
             // Now we need to zero pad it if you actually want the full 32 chars.
             while (hashText.length() < 32) {
                 hashText.insert(0, "0");
             }
+            System.out.println("string: " + hashText.toString());
             return hashText.toString();
         }
         catch (NoSuchAlgorithmException | UnsupportedEncodingException e){
@@ -50,20 +52,31 @@ public class ConsistentHash {
         }
     }
 
+    private static IdHashPair getServerResponsible(IdHashPair tupleHashed, ArrayList<IdHashPair> idHashPairs){
+        int index = 0;
+        for(int i = 0; i < idHashPairs.size(); i++){
+            if(tupleHashed.compareTo(idHashPairs.get(i)) < 0)
+                index = i%idHashPairs.size();
+        }
+        return idHashPairs.get(index);
+    }
+
     public static void main(String[] args) {
         ConsistentHash testHash = new ConsistentHash();
         ArrayList<IdHashPair> idHashPairs = new ArrayList<IdHashPair>();
 
-        System.out.println(testHash.getMD5("testing shit"));
+//        System.out.println(testHash.getMD5("testing shit"));
         IdHashPair test1 = new IdHashPair("server1", testHash.getMD5("test1"));
         idHashPairs.add(test1);
         IdHashPair test2 = new IdHashPair("server2", testHash.getMD5("test2"));
         idHashPairs.add(test2);
         IdHashPair test0 = new IdHashPair("server0", testHash.getMD5("test0"));
         idHashPairs.add(test0);
+//        IdHashPair tuple0 = new IdHashPair("tuple0", testHash.getMD5("test3"));
+//        idHashPairs.add(tuple0);
+        IdHashPair tuple0 = new IdHashPair("tuple0", "ffffffffffffffffffffffffffffffff");
+        idHashPairs.add(test0);
         Collections.sort(idHashPairs);
-        for(IdHashPair idHashPair : idHashPairs){
-            System.out.println(idHashPair);
-        }
+        IdHashPair serverResponsible = getServerResponsible(tuple0, idHashPairs);
     }
 }

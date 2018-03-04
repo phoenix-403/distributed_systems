@@ -2,7 +2,6 @@ package ecs;
 
 import client.KVStore;
 import com.google.gson.Gson;
-import com.sun.security.ntlm.Client;
 import common.messages.KVMessage;
 import common.messages.RequestResponse;
 import org.apache.zookeeper.server.Request;
@@ -10,6 +9,7 @@ import org.apache.zookeeper.server.Request;
 import java.io.*;
 import java.net.Socket;
 import java.util.Arrays;
+import java.security.*;
 
 public class ECSNode implements IECSNode{
 
