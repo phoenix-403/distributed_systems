@@ -141,7 +141,7 @@ public class ECSClient implements IECSClient {
 
         long startTime = System.currentTimeMillis();
         while (System.currentTimeMillis() - startTime < TIME_OUT) {
-
+            // todo
         }
 
         return false;
@@ -282,20 +282,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        for (String name : nodeNames) {
-            boolean success = removeNode(getNodeByKey(name));
-        }
-        return false;
-    }
-
-    private boolean removeNode(IECSNode node){
-        if (ecsNodes.size() > 1 && node != null) {
-            //set node to unused, and remove ref from list
-            //update metadata and ring
-            //transfer storage
-            //anything else?
-        }
-
+        // TODO
         return false;
     }
 
