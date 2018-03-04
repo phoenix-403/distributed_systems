@@ -1,8 +1,11 @@
 package app_kvECS;
 
+import com.google.gson.Gson;
 import common.helper.Script;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
+import common.messages.ZkServerCommunication;
+import common.messages.ZkToServerRequest;
 import ecs.ECSNode;
 import ecs.IECSNode;
 import ecs.ZkStructureNodes;
@@ -43,8 +46,10 @@ public class ECSClient implements IECSClient {
     private ZkConnector zkConnector;
     private ZkNodeTransaction zkNodeTransaction;
 
+    //zookeeper communication timeout
+    private static final int TIME_OUT = 30000;
+
     private List<ECSNode> ecsNodes = new ArrayList<>();
-    List<IECSNode> nodesToSetup;
 
     enum ArgType {
         INTEGER,
@@ -108,10 +113,11 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.delete(ZkStructureNodes.ROOT.getValue());
 
         // setting up structural nodes
-        zkNodeTransaction.createZNode(ZkStructureNodes.GLOBAL_STATUS.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.METADATA.getValue(), null, CreateMode.PERSISTENT);
-        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_NODES.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_COMMANDS.getValue(), null, CreateMode.PERSISTENT);
     }
 
     private void stopZK() throws InterruptedException {
@@ -122,13 +128,27 @@ public class ECSClient implements IECSClient {
 
 
     @Override
-    public boolean start() {
-        // TODO
+    public boolean start() throws EcsException, KeeperException, InterruptedException {
+        // Sending request via zookeeper
+        ZkToServerRequest request = new ZkToServerRequest(ZkServerCommunication.Request.START);
+        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + ZkStructureNodes.REQUEST
+                .getValue(), new Gson().toJson(request, ZkToServerRequest.class).getBytes(), CreateMode
+                .EPHEMERAL_SEQUENTIAL);
+
+
+        // receiving response
+
+
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < TIME_OUT) {
+
+        }
+
         return false;
     }
 
     @Override
-    public boolean stop() {
+    public boolean stop() throws EcsException {
         // TODO
         return false;
     }
@@ -154,19 +174,34 @@ public class ECSClient implements IECSClient {
         // Launch the server processes
         createRunSshScript(iEcsNodes, cacheStrategy, cacheSize);
 
-
         // call await nodes to wait for processes to start
-        boolean success = awaitNodes(count, 60000);
+        boolean success = awaitNodes(count, TIME_OUT);
 
         if (success) {
             // update node to added by setting boolean in ecs node
             for (IECSNode ecsNode : iEcsNodes) {
-                ((ECSNode) ecsNode).setReserved(true);
+                ecsNodes.get(ecsNodes.indexOf(ecsNode)).setReserved(true);
             }
             logger.info("All nodes were added");
         } else {
-            // todo setReserved to only ones that are active.
-            logger.error("Timeout reached. servers blah,blah and blah were not added");
+            List<String> failedServers = new ArrayList<>();
+            try {
+                List<String> activeServers = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+                for (IECSNode ecsNode : iEcsNodes) {
+                    if (activeServers.contains(ecsNode.getNodeName())) {
+                        ecsNodes.get(ecsNodes.indexOf(ecsNode)).setReserved(true);
+                    } else {
+                        failedServers.add(ecsNode.getNodeName());
+                    }
+                }
+                if (failedServers.size() > 0) {
+                    logger.error("Timeout reached. Servers:" + failedServers + "were not added");
+                    //todo re-update metadata
+                }
+
+            } catch (KeeperException | InterruptedException e) {
+                logger.error(e.getMessage());
+            }
         }
 
         return iEcsNodes;
@@ -197,7 +232,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        nodesToSetup = getUnreservedNodes();
+        List<IECSNode> nodesToSetup = getUnreservedNodes();
         int size = nodesToSetup.size();
         if (count > size) {
             logger.error("Trying to setup " + count + " nodes but only " + size + " available!");
@@ -210,8 +245,7 @@ public class ECSClient implements IECSClient {
             nodesToSetup.remove(0);
         }
 
-        // todo m1: wait on zi input to calculate metadata using ECS_NODES not NODES TO SETUP ... m2: ecs deleted
-        // need to merge :(
+        // todo calculate metadata using ECS_NODES reserved true AND NODES TO SETUP all
 
 
         return nodesToSetup;
@@ -234,15 +268,14 @@ public class ECSClient implements IECSClient {
 
         while (System.currentTimeMillis() - startTime <= timeout) {
             try {
-                int numberHrNodes = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false).size();
-                if (numberHrNodes - preexistingHrNodes == count) {
+                int numberHrChildrenNodes = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false).size();
+                if (numberHrChildrenNodes - preexistingHrNodes == count) {
                     return true;
                 }
             } catch (KeeperException | InterruptedException e) {
                 logger.error(e.getMessage());
             }
         }
-
 
         return false;
     }
@@ -274,7 +307,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public IECSNode getNodeByKey(String Key) {
-        // TODO
+        // TODO - use metadata
         return null;
     }
 
@@ -294,7 +327,7 @@ public class ECSClient implements IECSClient {
         app.stopZK();
     }
 
-    private void run() throws EcsException {
+    private void run() throws EcsException, KeeperException, InterruptedException {
         while (!stopClient) {
             BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -309,7 +342,7 @@ public class ECSClient implements IECSClient {
         }
     }
 
-    private void handleCommand(String cmdLine) throws EcsException {
+    private void handleCommand(String cmdLine) throws EcsException, KeeperException, InterruptedException {
         String[] tokens = cmdLine.split("\\s+");
         Arrays.stream(tokens)
                 .filter(s -> s != null && s.length() > 0
