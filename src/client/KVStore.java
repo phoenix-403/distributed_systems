@@ -3,6 +3,7 @@ package client;
 import app_kvClient.IClientSocketListener;
 import com.google.gson.Gson;
 import common.messages.KVMessage;
+import common.messages.Metadata;
 import common.messages.RequestResponse;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -26,6 +27,7 @@ public class KVStore implements KVCommInterface {
     private InputStream inputStream;
     private InputStreamReader inputStreamReader;
     private BufferedReader bufferedInputStream;
+    private Metadata metadata;
 
     private int requestId = 0;
 
@@ -41,7 +43,6 @@ public class KVStore implements KVCommInterface {
         inputStreamReader = new InputStreamReader(inputStream);
         bufferedInputStream = new BufferedReader(inputStreamReader);
         outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
-
     }
 
     @Override
@@ -57,7 +58,7 @@ public class KVStore implements KVCommInterface {
     @Override
     public boolean isConnected() {
         // TODO Auto-generated method stub
-        return false;
+        return clientSocket.isConnected();
     }
 
     private void tearDownConnection() throws IOException {

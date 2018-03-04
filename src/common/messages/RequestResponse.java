@@ -1,5 +1,6 @@
 package common.messages;
 
+import com.google.gson.Gson;
 import ecs.IECSNode;
 
 public class RequestResponse implements KVMessage {
@@ -37,6 +38,8 @@ public class RequestResponse implements KVMessage {
 
     @Override
     public IECSNode getResponsibleServer() {
+        //TODO @abdel this is meant for ECS? Aren't there alternatives other than
+        //TODO returning IECSNodes to KVClient?
         return null;
     }
 
