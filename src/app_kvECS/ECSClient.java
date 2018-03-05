@@ -6,6 +6,7 @@ import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.ZkServerCommunication;
 import common.messages.ZkToServerRequest;
+import common.messages.ZkToServerResponse;
 import ecs.ECSNode;
 import ecs.IECSNode;
 import ecs.ZkStructureNodes;
@@ -47,6 +48,7 @@ public class ECSClient implements IECSClient {
     private ZkNodeTransaction zkNodeTransaction;
 
     //zookeeper communication timeout
+    private int reqResId = 0;
     private static final int TIME_OUT = 30000;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
@@ -128,40 +130,78 @@ public class ECSClient implements IECSClient {
 
 
     @Override
-    public boolean start() throws EcsException, KeeperException, InterruptedException {
+    public boolean start() throws KeeperException, InterruptedException, EcsException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START);
+        List<ZkToServerResponse> responses = processReqResp(request);
+
+        if(noActiveServers == responses.size()){
+            for (ZkToServerResponse response:responses){
+                response.getZkSvrResponse();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean stop() throws KeeperException, InterruptedException {
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP);
+        List<ZkToServerResponse> responses = processReqResp(request);
+
+
+        return false;
+    }
+
+    @Override
+    public boolean shutdown() throws KeeperException, InterruptedException {
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN);
+        List<ZkToServerResponse> responses = processReqResp(request);
+        return false;
+    }
+
+    private List<ZkToServerResponse> processReqResp(ZkToServerRequest request) throws KeeperException, InterruptedException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
         // Sending request via zookeeper
-        ZkToServerRequest request = new ZkToServerRequest(ZkServerCommunication.Request.START);
+        int reqId = request.getId();
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + ZkStructureNodes.REQUEST
                 .getValue(), new Gson().toJson(request, ZkToServerRequest.class).getBytes(), CreateMode
                 .EPHEMERAL_SEQUENTIAL);
 
-
-        // receiving response
-
+        List<ZkToServerResponse> responses = new ArrayList<>();
 
         long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < TIME_OUT) {
-            // todo
+        while (System.currentTimeMillis() - startTime < TIME_OUT && responses.size() != noActiveServers) {
+            // receiving response
+            findResponseId(reqId, responses);
         }
 
-        return false;
+        return responses;
     }
 
-    @Override
-    public boolean stop() throws EcsException {
-        // TODO
-        return false;
-    }
+    private List<ZkToServerResponse> findResponseId(int reqId, List<ZkToServerResponse> responses) throws KeeperException, InterruptedException {
 
-    @Override
-    public boolean shutdown() {
-        // TODO
-        return false;
+        ZkToServerResponse response;
+        List<String> respNodePaths = zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), false);
+        for(String nodePath: respNodePaths){
+            response = new Gson().fromJson(
+                    new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath)),
+                    ZkToServerResponse.class);
+            if(response != null && response.getId() ==  reqId){
+                responses.add(response);
+                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath);
+            }
+        }
+        return responses;
     }
 
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        // TODO
         ArrayList<IECSNode> list = (ArrayList<IECSNode>) addNodes(1, cacheStrategy, cacheSize);
         return list.get(0);
     }
@@ -220,7 +260,7 @@ public class ECSClient implements IECSClient {
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
                     " ").append
-                    (cacheSize).append(" ").append(cacheStrategy).append(" ").append("metadata ").append("&\n");
+                    (cacheSize).append(" ").append(cacheStrategy).append(" ").append("&\n");
         }
 
         String scriptPath = System.getProperty("user.dir") + "/src/app_kvECS/ssh.sh";
@@ -232,7 +272,7 @@ public class ECSClient implements IECSClient {
 
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        List<IECSNode> nodesToSetup = getUnreservedNodes();
+        List<IECSNode> nodesToSetup = getNodesWithStatus(false);
         int size = nodesToSetup.size();
         if (count > size) {
             logger.error("Trying to setup " + count + " nodes but only " + size + " available!");
@@ -251,9 +291,9 @@ public class ECSClient implements IECSClient {
         return nodesToSetup;
     }
 
-    private ArrayList<IECSNode> getUnreservedNodes() {
+    private ArrayList<IECSNode> getNodesWithStatus(boolean reserved) {
         List<IECSNode> availableNodes = new ArrayList<>(ecsNodes);
-        CollectionUtils.filter(availableNodes, ecsNode -> !((ECSNode) ecsNode).isReserved());
+        CollectionUtils.filter(availableNodes, ecsNode -> ((ECSNode) ecsNode).isReserved() == reserved);
         return (ArrayList<IECSNode>) availableNodes;
     }
 
@@ -434,7 +474,6 @@ public class ECSClient implements IECSClient {
         }
     }
 
-    // todo @ Henry ... update this
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
         sb.append(PROMPT).append("ECS CLIENT HELP (Usage):\r\n");
@@ -445,13 +484,15 @@ public class ECSClient implements IECSClient {
         sb.append("\n\t\t\t\t Starts the storage service by calling start() on all KVServer instances " +
                 "that participate in the service.\r\n");
         sb.append(PROMPT).append("stop");
-        sb.append("\n\t\t\t\t Stops the service; all participating KVServers are stopped for processing client requests " +
+        sb.append("\n\t\t\t\t Stops the service; all participating KVServers are stopped for processing client " +
+                "requests " +
                 "but the processes remain running.\r\n");
         sb.append(PROMPT).append("addNode <Cache Size> <Replacement Strategy>");
         sb.append("\n\t\t\t\t Create a new KVServer with the specified cache size and replacement strategy and " +
                 "add it to the storage service at an arbitrary position.\r\n");
         sb.append(PROMPT).append("addNodes <# Nodes> <Cache Size> <Replacement Strategy>");
-        sb.append("\n\t\t\t\t Randomly choose <numberOfNodes> servers from the available machines and start the KVServer " +
+        sb.append("\n\t\t\t\t Randomly choose <numberOfNodes> servers from the available machines and start the " +
+                "KVServer " +
                 "by issuing an SSH call to the respective machine. This call launches the storage server with the " +
                 "specified cache size and replacement strategy. For simplicity, locate the KVServer.jar in the same " +
                 "directory as the ECS. All storage servers are initialized with the metadata and any persisted " +

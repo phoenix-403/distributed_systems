@@ -61,7 +61,6 @@ public class KVServer implements IKVServer, Runnable {
      * Start KV Server at given port
      *
      * @param port      given port for storage server to operate
-     * @param metadata  initial metadata
      * @param cacheSize specifies how many key-value pairs the server is allowed
      *                  to keep in-memory
      * @param strategy  specifies the cache replacement strategy in case the cache
@@ -69,7 +68,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port, String metadata, int cacheSize, String strategy) {
+    private void initKVServer(int port,  int cacheSize, String strategy) {
 
         try {
             new LogSetup("logs/server/server.log", Level.ALL);
@@ -228,6 +227,7 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void start() {
         // TODO
+        // get the latest copy of metadata
     }
 
     @Override
@@ -253,12 +253,12 @@ public class KVServer implements IKVServer, Runnable {
 
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 7) {
+        if (args.length != 6) {
             throw new Exception("Incorrect server arguments!");
         }
 
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
-        server.initKVServer(Integer.parseInt(args[3]), args[6], Integer.parseInt(args[4]), args[5]);
+        server.initKVServer(Integer.parseInt(args[3]), Integer.parseInt(args[4]), args[5]);
         Thread thread = new Thread(server);
         thread.start();
 
