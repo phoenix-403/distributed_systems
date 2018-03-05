@@ -3,6 +3,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.*;
 import java.math.*;
 import java.util.*;
+import common.helper.IDHashPair;
 
 public class ConsistentHash {
     public String getMD5(String preImage) {
@@ -25,34 +26,7 @@ public class ConsistentHash {
     }
 
 
-    private static class IdHashPair implements Comparable<IdHashPair> {
-        private String id;
-        private String hashVal;
-        public IdHashPair(String id, String hashVal) {
-            this.id = id;
-            this.hashVal = hashVal;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public String getHashVal() {
-            return hashVal;
-        }
-
-        @Override
-        public int compareTo(IdHashPair o) {
-            if (this.getHashVal().compareTo(o.getHashVal()) < 0) {
-                return -1;
-            } else if (this.getHashVal().compareTo(o.getHashVal()) > 0) {
-                return 1;
-            }
-            return 0;
-        }
-    }
-
-    private static IdHashPair getServerResponsible(IdHashPair tupleHashed, ArrayList<IdHashPair> idHashPairs){
+    public static IDHashPair getServerResponsible(IDHashPair tupleHashed, ArrayList<IDHashPair> idHashPairs){
         int index = 0;
         for(int i = 0; i < idHashPairs.size(); i++){
             if(tupleHashed.compareTo(idHashPairs.get(i)) < 0)
@@ -63,20 +37,23 @@ public class ConsistentHash {
 
     public static void main(String[] args) {
         ConsistentHash testHash = new ConsistentHash();
-        ArrayList<IdHashPair> idHashPairs = new ArrayList<IdHashPair>();
+        ArrayList<IDHashPair> idHashPairs = new ArrayList<IDHashPair>();
 
 //        System.out.println(testHash.getMD5("testing shit"));
-        IdHashPair test1 = new IdHashPair("server1", testHash.getMD5("test1"));
+        IDHashPair test1 = new IDHashPair("server1", testHash.getMD5("test1"));
         idHashPairs.add(test1);
-        IdHashPair test2 = new IdHashPair("server2", testHash.getMD5("test2"));
+        IDHashPair test2 = new IDHashPair("server2", testHash.getMD5("test2"));
         idHashPairs.add(test2);
-        IdHashPair test0 = new IdHashPair("server0", testHash.getMD5("test0"));
+        IDHashPair test0 = new IDHashPair("server0", testHash.getMD5("test0"));
         idHashPairs.add(test0);
-//        IdHashPair tuple0 = new IdHashPair("tuple0", testHash.getMD5("test3"));
+//        IDHashPair tuple0 = new IDHashPair("tuple0", testHash.getMD5("test3"));
 //        idHashPairs.add(tuple0);
-        IdHashPair tuple0 = new IdHashPair("tuple0", "ffffffffffffffffffffffffffffffff");
-        idHashPairs.add(test0);
+        IDHashPair tuple0 = new IDHashPair("tuple0", "f1ffffffffffffffffffffffffffffff");
+        idHashPairs.add(tuple0);
         Collections.sort(idHashPairs);
-        IdHashPair serverResponsible = getServerResponsible(tuple0, idHashPairs);
+        IDHashPair serverResponsible = getServerResponsible(tuple0, idHashPairs);
+        idHashPairs.remove(test0);
+        Collections.sort(idHashPairs);
+        IDHashPair serverResponsible2 = getServerResponsible(tuple0, idHashPairs);
     }
 }
