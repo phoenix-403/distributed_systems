@@ -1,15 +1,15 @@
 package app_kvServer;
 
+import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
+import common.messages.Metadata;
 import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -38,6 +38,7 @@ public class KVServer implements IKVServer, Runnable {
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
 
+    private Metadata metadata;
 
     private List<Thread> clientThreads;
 
@@ -68,7 +69,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port,  int cacheSize, String strategy) {
+    private void initKVServer(int port,  int cacheSize, String strategy) throws KeeperException, InterruptedException {
 
         try {
             new LogSetup("logs/server/server.log", Level.ALL);
@@ -98,6 +99,10 @@ public class KVServer implements IKVServer, Runnable {
             // if persist is not available exit server.. cant live without persist but can live without cache
             System.exit(-1);
         }
+        //setup the metaData
+        updateMetadata();
+        addMetadataWatch();
+
         serverRunning = false;
         acceptingRequests = false;
         clientThreads = new ArrayList<>();
@@ -119,6 +124,26 @@ public class KVServer implements IKVServer, Runnable {
 
 
     }
+
+    private void addMetadataWatch() throws KeeperException, InterruptedException {
+        zooKeeper.exists(ZkStructureNodes.METADATA.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
+                try {
+                    updateMetadata();
+                    addMetadataWatch();
+                } catch (KeeperException|InterruptedException e) {
+                    logger.fatal("Metadata update failed!");
+                    System.exit(-1);
+                }
+            }
+        });
+    }
+
+    private void updateMetadata() throws KeeperException, InterruptedException {
+        String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
+        metadata = new Gson().fromJson(data,Metadata.class);
+    }
+
 
     public boolean isAcceptingRequests() {
         return acceptingRequests;
@@ -142,6 +167,10 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public int getCacheSize() {
         return cacheSize;
+    }
+
+    public Metadata getMetadata(){
+        return this.metadata;
     }
 
     @Override
@@ -250,6 +279,7 @@ public class KVServer implements IKVServer, Runnable {
         // TODO
         return false;
     }
+
 
 
     public static void main(String[] args) throws Exception {

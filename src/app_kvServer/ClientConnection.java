@@ -107,7 +107,7 @@ public class ClientConnection implements Runnable {
      */
     private RequestResponse handleRequest(String reqLine) throws IOException {
 
-        RequestResponse request = null;
+        RequestResponse request;
         RequestResponse response;
 
         Gson gson = new Gson();
