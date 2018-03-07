@@ -1,15 +1,16 @@
 package common.helper;
 import java.io.UnsupportedEncodingException;
-import java.security.*;
-import java.math.*;
-import java.util.*;
-import common.helper.IDHashPair;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class ConsistentHash {
-    public String getMD5(String preImage) {
+    public String getMD5(String key) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] messageDigest = md.digest(preImage.getBytes("UTF-8"));
+            byte[] messageDigest = md.digest(key.getBytes("UTF-8"));
             BigInteger number = new BigInteger(1, messageDigest);
             System.out.println("number: " + number);
             StringBuilder hashText = new StringBuilder(number.toString(16));

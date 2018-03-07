@@ -137,8 +137,8 @@ public class ECSClient implements IECSClient {
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START);
         List<ZkToServerResponse> responses = processReqResp(request);
 
-        if(noActiveServers == responses.size()){
-            for (ZkToServerResponse response:responses){
+        if (noActiveServers == responses.size()) {
+            for (ZkToServerResponse response : responses) {
                 response.getZkSvrResponse();
             }
             return true;
@@ -164,7 +164,8 @@ public class ECSClient implements IECSClient {
         return false;
     }
 
-    private List<ZkToServerResponse> processReqResp(ZkToServerRequest request) throws KeeperException, InterruptedException {
+    private List<ZkToServerResponse> processReqResp(ZkToServerRequest request) throws KeeperException,
+            InterruptedException {
         int noActiveServers = getNodesWithStatus(true).size();
 
         // Sending request via zookeeper
@@ -184,15 +185,16 @@ public class ECSClient implements IECSClient {
         return responses;
     }
 
-    private List<ZkToServerResponse> findResponseId(int reqId, List<ZkToServerResponse> responses) throws KeeperException, InterruptedException {
+    private List<ZkToServerResponse> findResponseId(int reqId, List<ZkToServerResponse> responses) throws
+            KeeperException, InterruptedException {
 
         ZkToServerResponse response;
         List<String> respNodePaths = zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), false);
-        for(String nodePath: respNodePaths){
+        for (String nodePath : respNodePaths) {
             response = new Gson().fromJson(
                     new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath)),
                     ZkToServerResponse.class);
-            if(response != null && response.getId() ==  reqId){
+            if (response != null && response.getId() == reqId) {
                 responses.add(response);
                 zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath);
             }
@@ -328,13 +330,20 @@ public class ECSClient implements IECSClient {
 
     @Override
     public Map<String, IECSNode> getNodes() {
-        // TODO
-        return null;
+        Map<String, IECSNode> map = new HashMap<>();
+
+        for (ECSNode ecsNode : ecsNodes) {
+            if (ecsNode.isReserved()) {
+                map.put(ecsNode.getNodeName(), ecsNode);
+            }
+        }
+
+        return map;
     }
 
     @Override
-    public IECSNode getNodeByKey(String Key) {
-        // TODO - use metadata
+    public IECSNode getNodeByKey(String key) {
+
         return null;
     }
 

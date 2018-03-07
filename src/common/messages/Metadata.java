@@ -1,68 +1,32 @@
 package common.messages;
 
-import app_kvECS.EcsException;
-import client.KVStore;
+import ecs.ECSNode;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.regex.Pattern;
+import java.util.List;
 
 public class Metadata {
 
-    TreeMap<String,MetadataEntry> map = new TreeMap<String,MetadataEntry>();
+    List<ECSNode> ecsNodes;
 
 
-    public Metadata (String json) {
-        //TODO
+    public Metadata (List<ECSNode> ecsNodes) {
+        this.ecsNodes = ecsNodes;
     }
 
-    public TreeMap<String, MetadataEntry> getMap() {
-        return map;
+
+    public List<ECSNode> getEcsNodes() {
+        return ecsNodes;
     }
 
-    public void setMap(TreeMap<String, MetadataEntry> map) {
-        this.map = map;
+    public void addNodes(List<ECSNode> ecsNodes){
+
     }
 
-    public class MetadataEntry {
-        String host;
-        int port;
-        String hashRange;
-        MetadataEntry(String host, int port, String hashRange) {
-            this.host = host;
-            this.port = port;
-            this.hashRange = hashRange;
-        }
+    public void removeNodes(List<ECSNode> ecsNodes){
 
-        public String getHost() {
-            return host;
-        }
-
-        public void setHost(String host) {
-            this.host = host;
-        }
-
-        public int getPort() {
-            return port;
-        }
-
-        public void setPort(int port) {
-            this.port = port;
-        }
-
-        public String getHashRange() {
-            return hashRange;
-        }
-
-        public void setHashRange(String hashRange) {
-            this.hashRange = hashRange;
-        }
     }
 
-    public MetadataEntry getServer(String key) {
+    public ECSNode getServer(String key) {
 //        MetadataEntry closest= map.get(0);
 //        for(Map.Entry<String,MetadataEntry> entry : map.entrySet()) {
 //            if (key.compareTo(closest.getHashRange()) >= 0

@@ -1,18 +1,11 @@
 package test;
 
-import app_kvECS.EcsException;
-import client.KVStore;
 import app_kvECS.ECSClient;
-import common.messages.KVMessage;
-import common.messages.KVMessage.StatusType;
 import ecs.IECSNode;
-import junit.framework.TestCase;
-import org.junit.After;
+import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
@@ -34,7 +27,7 @@ public class ECSClientTest {
         }
     }
 
-    public void tearDown() {
+    public void tearDown() throws KeeperException, InterruptedException {
         ecsClient.shutdown();
     }
 
