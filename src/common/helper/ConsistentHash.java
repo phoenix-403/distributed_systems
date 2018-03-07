@@ -67,7 +67,6 @@ public class ConsistentHash {
         TreeMap<String, String []> serverHashRange = new TreeMap<String, String []>();
         ArrayList<IDHashPair> idHashPairs = new ArrayList<IDHashPair>();
 
-//        System.out.println(testHash.getMD5("testing shit"));
         IDHashPair test1 = new IDHashPair("server1", testHash.getMD5("test1"));
         idHashPairs.add(test1);
 
