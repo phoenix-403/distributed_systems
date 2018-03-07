@@ -4,7 +4,7 @@ import app_kvClient.IClientSocketListener;
 import com.google.gson.Gson;
 import common.messages.KVMessage;
 import common.messages.Metadata;
-import common.messages.RequestResponse;
+import common.messages.ClientServerRequestResponse;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -76,10 +76,10 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage put(String key, String value) throws IOException {
-        RequestResponse req = new RequestResponse(requestId++, key, value, KVMessage.StatusType.PUT);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, value, KVMessage.StatusType.PUT);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
             if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
                 throw new IOException("Connection Dropped");
             return response;
@@ -91,10 +91,10 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage get(String key) throws IOException {
-        RequestResponse req = new RequestResponse(requestId++, key, null, KVMessage.StatusType.GET);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.GET);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
             if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
                 throw new IOException("Connection Dropped");
             return response;
@@ -103,9 +103,9 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    private boolean sendRequest(RequestResponse req) {
+    private boolean sendRequest(ClientServerRequestResponse req) {
         try {
-            outputStreamWriter.write(new Gson().toJson(req, RequestResponse.class) + "\r\n");
+            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
             outputStreamWriter.flush();
             return true;
         } catch (IOException e) {
@@ -114,9 +114,9 @@ public class KVStore implements KVCommInterface {
     }
 
 
-    private RequestResponse getResponse() {
+    private ClientServerRequestResponse getResponse() {
         try {
-            RequestResponse response;
+            ClientServerRequestResponse response;
 
             long startTime = System.currentTimeMillis();
 
@@ -125,7 +125,7 @@ public class KVStore implements KVCommInterface {
                     && (respLine = bufferedInputStream.readLine()) != null) {
 
                 Gson gson = new Gson();
-                response = gson.fromJson(respLine, RequestResponse.class);
+                response = gson.fromJson(respLine, ClientServerRequestResponse.class);
                 if (clientSocketListener != null) {
                     clientSocketListener.printTerminal(response.toString());
                     logResponse(response);
@@ -134,7 +134,7 @@ public class KVStore implements KVCommInterface {
 
             }
 
-            response = new RequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT);
+            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT);
             if (clientSocketListener != null) {
                 clientSocketListener.printTerminal(response.toString());
                 logResponse(response);
@@ -146,7 +146,7 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    private void logResponse(RequestResponse response){
+    private void logResponse(ClientServerRequestResponse response){
         if(response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.PUT_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.DELETE_ERROR)
@@ -156,8 +156,8 @@ public class KVStore implements KVCommInterface {
             logger.info(response.toString());
     }
 
-    private RequestResponse connectionDropped() {
-        RequestResponse response = new RequestResponse(-1, null, null,
+    private ClientServerRequestResponse connectionDropped() {
+        ClientServerRequestResponse response = new ClientServerRequestResponse(-1, null, null,
                 KVMessage.StatusType.CONNECTION_DROPPED);
         if (clientSocketListener != null)
             clientSocketListener.printTerminal(response.toString());

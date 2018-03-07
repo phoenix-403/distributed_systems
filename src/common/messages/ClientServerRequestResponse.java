@@ -1,9 +1,8 @@
 package common.messages;
 
-import com.google.gson.Gson;
 import ecs.IECSNode;
 
-public class RequestResponse implements KVMessage {
+public class ClientServerRequestResponse implements KVMessage {
 
     private long id;
 
@@ -11,7 +10,7 @@ public class RequestResponse implements KVMessage {
     private String value;
     private StatusType statusType;
 
-    public RequestResponse(long id, String key, String value, StatusType statusType) {
+    public ClientServerRequestResponse(long id, String key, String value, StatusType statusType) {
         this.key = key;
         this.value = value;
         this.statusType = statusType;
@@ -38,8 +37,7 @@ public class RequestResponse implements KVMessage {
 
     @Override
     public IECSNode getResponsibleServer() {
-        //TODO @abdel this is meant for ECS? Aren't there alternatives other than
-        //TODO returning IECSNodes to KVClient?
+        //TODO @abdel get it from metadata object
         return null;
     }
 

@@ -6,7 +6,6 @@ import client.KVStore;
 import com.google.gson.Gson;
 import common.messages.KVMessage;
 import common.messages.Metadata;
-import ecs.ECSNode;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
@@ -21,7 +20,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -81,12 +79,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
     private void handleCommand(String cmdLine) {
         String[] tokens = cmdLine.split("\\s+");
         Arrays.stream(tokens)
-                .filter(new Predicate<String>() {
-                            @Override
-                            public boolean test(String s) {
-                                return s != null && s.length() > 0;
-                            }
-                        }
+                .filter(s -> s != null && s.length() > 0
                 ).collect(Collectors.toList()).toArray(tokens);
 
         if (tokens.length != 0 && tokens[0] != null) {
@@ -126,11 +119,11 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
                             try {
                                 KVMessage msg = kvStoreInstance.get(tokens[1]);
-                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)
-                                        && !msg.getValue().equals(null)) {
+                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
                                     updateMetadata(msg.getValue());
-                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
-                                    msg = allKVStores.get(metadataEntry.getHost()).get(tokens[1]);
+                                    // todo henry metadata got updated
+//                                    Metadata.MetadataEntry metadataEntry = metadata.getResponsibleServer(tokens[1]);
+//                                    msg = allKVStores.get(metadataEntry.getHost()).get(tokens[1]);
                                 }
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
@@ -153,11 +146,11 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                     }
                                 }
                                 KVMessage msg = kvStoreInstance.put(tokens[1], arg);
-                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)
-                                        && !msg.getValue().equals(null)) {
+                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
                                     updateMetadata(msg.getValue());
-                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
-                                    msg = allKVStores.get(metadataEntry.getHost()).put(tokens[1], arg);
+                                    // todo henry metadata got updated
+//                                    Metadata.MetadataEntry metadataEntry = metadata.getResponsibleServer(tokens[1]);
+//                                    msg = allKVStores.get(metadataEntry.getHost()).put(tokens[1], arg);
                                 }
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
@@ -234,7 +227,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
         if (allKVStores == null)
             return false;
 
-        return allKVStores.get(metadata.getServer(key).getHost()).isConnected();
+        return allKVStores.get(metadata.getResponsibleServer(key).getNodeHost()).isConnected();
     }
 
     private void updateMetadata(String jsonData) {

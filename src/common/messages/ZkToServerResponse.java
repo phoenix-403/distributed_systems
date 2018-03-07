@@ -16,23 +16,13 @@ public class ZkToServerResponse {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getServerName() {
         return serverName;
     }
 
-    public void setServerName(String serverName) {
-        this.serverName = serverName;
-    }
 
     public ZkServerCommunication.Response getZkSvrResponse() {
         return zkSvrResponse;
     }
 
-    public void setZkSvrResponse(ZkServerCommunication.Response zkSvrResponse) {
-        this.zkSvrResponse = zkSvrResponse;
-    }
 }
