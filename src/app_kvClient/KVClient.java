@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -114,10 +115,12 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     }
                     break;
                 case "connectAll":
+                    allKVStores = new HashMap<>();
                     connectAll();
                     break;
                 case "get":
-                    if (!preliminaryCheck(tokens[1])) {
+//                    if (!preliminaryCheck(tokens[1])) {
+                    if (!true) {
                         errM.printNotConnectedError();
                         logger.warn("Not Connected to Responsible Server");
                         logger.info("Updating Connections and Metadata ...");
@@ -129,8 +132,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                 while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)
                                         && !msg.getValue().equals(null)) {
                                     updateMetadata(msg.getValue());
-                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
-                                    msg = allKVStores.get(metadataEntry.getHost()).get(tokens[1]);
+//                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
+//                                    msg = allKVStores.get(metadataEntry.getHost()).get(tokens[1]);
                                 }
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
@@ -138,6 +141,14 @@ public class KVClient implements IKVClient, IClientSocketListener {
                             }
                         }
                     }
+                    break;
+                case "test" :
+                    for (int i =0; i<allKVStores.size(); i++)
+                        try {
+                            allKVStores.get("server"+i).testMetadata();
+                        } catch (Exception e) {
+
+                        }
                     break;
                 case "put":
                     if (kvStoreInstance == null) {
@@ -156,8 +167,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                 while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)
                                         && !msg.getValue().equals(null)) {
                                     updateMetadata(msg.getValue());
-                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
-                                    msg = allKVStores.get(metadataEntry.getHost()).put(tokens[1], arg);
+//                                    Metadata.MetadataEntry metadataEntry = metadata.getServer(tokens[1]);
+//                                    msg = allKVStores.get(metadataEntry.getHost()).put(tokens[1], arg);
                                 }
                             } catch (Exception e) {
                                 errM.printUnableToConnectError(e.getMessage());
@@ -204,38 +215,42 @@ public class KVClient implements IKVClient, IClientSocketListener {
     }
 
     private void connectAll () {
-        try {
+
             File file = new File("src/app_kvECS/" + configFile);
-            if (!file.exists()) {
-                throw new EcsException("Config file does not exist!");
-            }
 
             final String DELIMITER = " ";
             final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
 
-            ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(file.toPath());
-            for (String line : fileLines) {
-                String[] tokenizedLine = line.split(DELIMITER_PATTERN);
-                allKVStores.put(tokenizedLine[1],
-                        new KVStore(tokenizedLine[1], Integer.parseInt(tokenizedLine[2])));
-                allKVStores.get(tokenizedLine[1]).connect();
-            }
-        } catch (NumberFormatException nfe) {
-            printError("No valid address. Port must be a number!");
-            logger.error("Unable to parse argument <port>", nfe);
-        } catch (Exception e) {
-            errM.printUnableToConnectError(e.getMessage());
-            logger.error("Unable to connect - ", e);
+        ArrayList<String> fileLines = null;
+        try {
+            fileLines = (ArrayList<String>) Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        for (String line : fileLines) {
+                String[] tokenizedLine = line.split(DELIMITER_PATTERN);
+                try {
+                    KVStore store = new KVStore(tokenizedLine[1], Integer.parseInt(tokenizedLine[2]));
+                    store.connect();
+                    allKVStores.put(tokenizedLine[0],
+                            store);
+                    printTerminal("Connected to " + tokenizedLine[0]);
+                } catch (NumberFormatException nfe) {
+                    printError("No valid address. Port must be a number!");
+                    logger.error("Unable to parse argument <port>", nfe);
+                } catch (Exception e) {
+                    printTerminal("Cannot Connect to " + tokenizedLine[0]);
+                }
+            }
     }
 
 
-    private boolean preliminaryCheck(String key) {
-        if (allKVStores == null)
-            return false;
-
-        return allKVStores.get(metadata.getServer(key).getHost()).isConnected();
-    }
+//    private boolean preliminaryCheck(String key) {
+//        if (allKVStores == null)
+//            return false;
+//
+//        return allKVStores.get(metadata.getServer(key).getHost()).isConnected();
+//    }
 
     private void updateMetadata(String jsonData) {
         metadata = new Gson().fromJson(jsonData, Metadata.class);

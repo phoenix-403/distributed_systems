@@ -140,8 +140,13 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void updateMetadata() throws KeeperException, InterruptedException {
-        String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
-        metadata = new Gson().fromJson(data,Metadata.class);
+        byte[] json = zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue());
+        try {
+//            String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue();
+            metadata = new Gson().fromJson(json.toString(), Metadata.class);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 
