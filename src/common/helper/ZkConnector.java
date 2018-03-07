@@ -1,11 +1,13 @@
 package common.helper;
 
-import org.apache.zookeeper.WatchedEvent;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+
 
 public class ZkConnector {
 
@@ -14,14 +16,13 @@ public class ZkConnector {
 
 
     public ZooKeeper connect(String host) throws IOException, InterruptedException {
-        zooKeeper = new ZooKeeper(host, 30000, new Watcher() {
-            public void process(WatchedEvent watchedEvent) {
-                if (watchedEvent.getState() == Event.KeeperState.SyncConnected){
-                    countDownLatch.countDown();
-                }
+        zooKeeper = new ZooKeeper(host, 30000, watchedEvent -> {
+            if (watchedEvent.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                countDownLatch.countDown();
             }
         });
         countDownLatch.await();
+        Logger.getLogger("org.apache.zookeeper.ZooKeeper").setLevel(Level.ERROR);
         return zooKeeper;
     }
 

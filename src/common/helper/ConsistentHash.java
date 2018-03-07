@@ -52,13 +52,13 @@ public class ConsistentHash {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(preImage.getBytes("UTF-8"));
             BigInteger number = new BigInteger(1, messageDigest);
-            System.out.println("number: " + number);
+//            System.out.println("number: " + number);
             StringBuilder hashText = new StringBuilder(number.toString(16));
             // Now we need to zero pad it if you actually want the full 32 chars.
             while (hashText.length() < 32) {
                 hashText.insert(0, "0");
             }
-            System.out.println("string: " + hashText.toString());
+//            System.out.println("string: " + hashText.toString());
             return hashText.toString();
         } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
             throw new RuntimeException(e);

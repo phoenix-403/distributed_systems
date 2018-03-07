@@ -51,7 +51,7 @@ public class ECSClient implements IECSClient {
 
     //zookeeper communication timeout
     private int reqResId = 0;
-    private static final int TIME_OUT = 30000;
+    private static final int TIME_OUT = 10000;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
     private Metadata metadata;
@@ -65,7 +65,7 @@ public class ECSClient implements IECSClient {
 
         // setting up log
         try {
-            new LogSetup("logs/ecs/ecs_client.log", Level.ERROR);
+            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -320,17 +320,21 @@ public class ECSClient implements IECSClient {
             List<String> failedServers = new ArrayList<>();
             try {
                 List<String> activeServers = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
-                for (IECSNode newEcsNode : newEcsNodes) {
+
+                Iterator<IECSNode> newEcsNodeIterator = newEcsNodes.iterator();
+                while (newEcsNodeIterator.hasNext()) {
+                    IECSNode newEcsNode = newEcsNodeIterator.next();
                     if (activeServers.contains(newEcsNode.getNodeName())) {
                         ecsNodes.get(ecsNodes.indexOf(newEcsNode)).setReserved(true);
                         ((ECSNode) newEcsNode).setReserved(true);
                     } else {
                         failedServers.add(newEcsNode.getNodeName());
-                        newEcsNodes.remove(newEcsNode);
+                        newEcsNodeIterator.remove();
                     }
                 }
+
                 if (failedServers.size() > 0) {
-                    logger.error("Timeout reached. Servers:" + failedServers + "were not added");
+                    logger.error("Timeout reached. Servers: " + failedServers + " was/were not added");
                 }
 
             } catch (KeeperException | InterruptedException e) {
@@ -467,8 +471,7 @@ public class ECSClient implements IECSClient {
 
 
     /**
-     * @param args contains the port number at args[0].
-     *             Main entry point for the KV client application.
+     * @param args config file
      */
     public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
         if (args.length != 1) {
@@ -505,15 +508,15 @@ public class ECSClient implements IECSClient {
         if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
                 case "start": {
-                    System.out.println(start() + "\n" + PROMPT);
+                    System.out.print(PROMPT + start());
                     break;
                 }
                 case "stopClient": {
-                    System.out.println(stop() + "\n" + PROMPT);
+                    System.out.print(PROMPT + stop());
                     break;
                 }
                 case "shutdown": {
-                    System.out.println(shutdown() + "\n" + PROMPT);
+                    System.out.print(PROMPT + shutdown());
                     break;
                 }
                 case "addNode": {
@@ -522,9 +525,9 @@ public class ECSClient implements IECSClient {
                         return;
                     IECSNode node = addNode((String) a[0], (int) a[1]);
                     if (node == null) {
-                        System.out.println("No nodes added!\n" + PROMPT);
+                        System.out.print(PROMPT + "No nodes added!");
                     } else {
-                        System.out.println(node.getNodeName() + "started!\n" + PROMPT);
+                        System.out.print(PROMPT + node.getNodeName() + "started!");
                     }
                     break;
                 }
@@ -535,15 +538,13 @@ public class ECSClient implements IECSClient {
                     Collection<IECSNode> nodes = addNodes((int) a[0], (String) a[1], (int) a[2]);
 
                     if (nodes.isEmpty()) {
-                        System.out.println("No nodes added!\n" + PROMPT);
+                        System.out.println(PROMPT + "No nodes added!");
                     } else {
                         for (IECSNode node : nodes) {
-                            System.out.println(node.getNodeName() + " ");
+                            System.out.println(node);
                         }
-                        System.out.println("were added!\n" + PROMPT);
+                        System.out.print(" was/were added!");
                     }
-
-
                     break;
                 }
 //                case "setupNodes": {
