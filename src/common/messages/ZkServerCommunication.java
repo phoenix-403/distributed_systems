@@ -22,15 +22,10 @@ public class ZkServerCommunication {
 
 
     // response
-    enum Response {
-        START_SUCCESS(""),
-        START_FAIL_fzz(""),
-
-        STOP_SUCCESS(""),
-        STOP_FAIL(""),
-
-        SHUTDOWN_SUCCESS(""),
-        SHUTDOWN_FAIL("");
+    public enum Response {
+        START_SUCCESS("STS"),
+        STOP_SUCCESS("SPS"),
+        SHUTDOWN_SUCCESS("SDS");
 
         String value;
 

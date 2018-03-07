@@ -1,15 +1,12 @@
 package ecs;
 
-import client.KVStore;
 import com.google.gson.Gson;
 import common.messages.KVMessage;
-import common.messages.RequestResponse;
-import org.apache.zookeeper.server.Request;
+import common.messages.ClientServerRequestResponse;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.Arrays;
-import java.security.*;
 
 public class ECSNode implements IECSNode{
 
@@ -77,35 +74,35 @@ public class ECSNode implements IECSNode{
     }
 
     public void lockWrite(String key) {
-        RequestResponse req = new RequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_LOCK);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_LOCK);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
         }
     }
 
     public void unLockWrite(String key) {
-        RequestResponse req = new RequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_UNLOCK);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_UNLOCK);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
         }
     }
 
     public void transferData(String key) {
-        RequestResponse req = new RequestResponse(requestId++, key, null, KVMessage.StatusType.TRANSFER_DATA);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.TRANSFER_DATA);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
         }
     }
 
-    public boolean sendRequest(RequestResponse req) {
+    public boolean sendRequest(ClientServerRequestResponse req) {
         Socket socket;
         try {
             socket = new Socket(nodeHost, nodePort);
             outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
-            outputStreamWriter.write(new Gson().toJson(req, RequestResponse.class) + "\r\n");
+            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return false;
@@ -113,7 +110,7 @@ public class ECSNode implements IECSNode{
         return true;
     }
 
-    private RequestResponse getResponse() {
+    private ClientServerRequestResponse getResponse() {
         return null;
     }
 }

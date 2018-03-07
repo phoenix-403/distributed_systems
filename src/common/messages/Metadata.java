@@ -1,16 +1,23 @@
 package common.messages;
 
+import common.helper.ConsistentHash;
 import ecs.ECSNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Metadata {
 
-    List<ECSNode> ecsNodes;
+    private List<ECSNode> ecsNodes = new ArrayList<>();
 
 
-    public Metadata (List<ECSNode> ecsNodes) {
-        this.ecsNodes = ecsNodes;
+    public Metadata(List<ECSNode> ecsNodes) {
+        List<ECSNode> temp = new ArrayList<>(ecsNodes);
+        for (ECSNode ecsNode : temp) {
+            if (ecsNode.isReserved()) {
+                this.ecsNodes.add(ecsNode);
+            }
+        }
     }
 
 
@@ -18,29 +25,16 @@ public class Metadata {
         return ecsNodes;
     }
 
-    public void addNodes(List<ECSNode> ecsNodes){
 
-    }
-
-    public void removeNodes(List<ECSNode> ecsNodes){
-
-    }
-
-    public ECSNode getServer(String key) {
-//        MetadataEntry closest= map.get(0);
-//        for(Map.Entry<String,MetadataEntry> entry : map.entrySet()) {
-//            if (key.compareTo(closest.getHashRange()) >= 0
-//                    && (entry.getValue().getHashRange().compareTo(closest.getHashRange()) -
-//                    entry.getValue().getHashRange().compareTo(closest.getHashRange())) > 0
-//            ) {
-//
-//            }
-//            Integer value = entry.getValue();
-//
-//            System.out.println(key + " => " + value);
-//        }
-//        return closest;
-        //TODO after Chewbaka finishes wrap around
+    public ECSNode getResponsibleServer(String key) {
+        String hashKey = ConsistentHash.getMD5(key);
+        for (ECSNode ecsNode : ecsNodes) {
+            if (hashKey.compareTo(ecsNode.getNodeHashRange()[0]) <= 0
+                    && hashKey.compareTo(ecsNode.getNodeHashRange()[1]) >= 0) {
+                return ecsNode;
+            }
+        }
+        // we should never reach here !!!!
         return null;
     }
 

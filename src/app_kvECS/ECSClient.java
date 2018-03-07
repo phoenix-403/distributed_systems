@@ -1,9 +1,11 @@
 package app_kvECS;
 
 import com.google.gson.Gson;
+import common.helper.ConsistentHash;
 import common.helper.Script;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
+import common.messages.Metadata;
 import common.messages.ZkServerCommunication;
 import common.messages.ZkToServerRequest;
 import common.messages.ZkToServerResponse;
@@ -49,9 +51,10 @@ public class ECSClient implements IECSClient {
 
     //zookeeper communication timeout
     private int reqResId = 0;
-    private static final int TIME_OUT = 30000;
+    private static final int TIME_OUT = 10000;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
+    private Metadata metadata;
 
     enum ArgType {
         INTEGER,
@@ -62,7 +65,7 @@ public class ECSClient implements IECSClient {
 
         // setting up log
         try {
-            new LogSetup("logs/ecs/ecs_client.log", Level.ERROR);
+            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -139,29 +142,110 @@ public class ECSClient implements IECSClient {
 
         if (noActiveServers == responses.size()) {
             for (ZkToServerResponse response : responses) {
-                response.getZkSvrResponse();
+                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.START_SUCCESS)) {
+                    throw new EcsException("An unexpected response to start command!!");
+                }
             }
             return true;
+        } else {
+            StringBuilder failedServers = new StringBuilder();
+
+            ArrayList<IECSNode> runningNodes = getNodesWithStatus(true);
+
+            boolean serverResponded;
+
+            for (IECSNode iecsNode : runningNodes) {
+                serverResponded = false;
+                for (ZkToServerResponse response : responses) {
+                    if (iecsNode.getNodeName().equals(response.getServerName())) {
+                        serverResponded = true;
+                        break;
+                    }
+                }
+
+                if (!serverResponded) {
+                    failedServers.append(iecsNode.getNodeName()).append(" ");
+                }
+
+            }
+
+            logger.error(failedServers + "did not start or timed out!");
+            return false;
         }
-        return false;
+
     }
 
     @Override
-    public boolean stop() throws KeeperException, InterruptedException {
+    public boolean stop() throws KeeperException, InterruptedException, EcsException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
         int reqId = reqResId++;
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP);
         List<ZkToServerResponse> responses = processReqResp(request);
 
+        if (noActiveServers == responses.size()) {
+            for (ZkToServerResponse response : responses) {
+                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.STOP_SUCCESS)) {
+                    throw new EcsException("An unexpected response to stop command!!");
+                }
+            }
+            return true;
+        } else {
+            StringBuilder failedServers = new StringBuilder();
 
-        return false;
+            ArrayList<IECSNode> runningNodes = getNodesWithStatus(true);
+
+            boolean serverResponded;
+
+            for (IECSNode iecsNode : runningNodes) {
+                serverResponded = false;
+                for (ZkToServerResponse response : responses) {
+                    if (iecsNode.getNodeName().equals(response.getServerName())) {
+                        serverResponded = true;
+                        break;
+                    }
+                }
+
+                if (!serverResponded) {
+                    failedServers.append(iecsNode.getNodeName()).append(" ");
+                }
+
+            }
+
+            logger.error(failedServers + "did not stop or timed out!");
+            return false;
+        }
+
+
     }
 
     @Override
-    public boolean shutdown() throws KeeperException, InterruptedException {
+    public boolean shutdown() throws KeeperException, InterruptedException, EcsException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
         int reqId = reqResId++;
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN);
         List<ZkToServerResponse> responses = processReqResp(request);
-        return false;
+
+        if (noActiveServers == responses.size()) {
+            for (ZkToServerResponse response : responses) {
+                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.SHUTDOWN_SUCCESS)) {
+                    throw new EcsException("An unexpected response to shutdown command!!");
+                }
+            }
+            return true;
+        } else {
+            List<String> activeServers =
+                    zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+
+            if (activeServers.size() == 0) {
+                return true;
+            }
+            logger.error(activeServers + "did not shutdown!");
+            return false;
+        }
+
+
     }
 
     private List<ZkToServerResponse> processReqResp(ZkToServerRequest request) throws KeeperException,
@@ -185,7 +269,7 @@ public class ECSClient implements IECSClient {
         return responses;
     }
 
-    private List<ZkToServerResponse> findResponseId(int reqId, List<ZkToServerResponse> responses) throws
+    private void findResponseId(int reqId, List<ZkToServerResponse> responses) throws
             KeeperException, InterruptedException {
 
         ZkToServerResponse response;
@@ -199,46 +283,58 @@ public class ECSClient implements IECSClient {
                 zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath);
             }
         }
-        return responses;
     }
 
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ArrayList<IECSNode> list = (ArrayList<IECSNode>) addNodes(1, cacheStrategy, cacheSize);
+
+        if (list.size() == 0) {
+            return null;
+        }
         return list.get(0);
     }
 
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
+        if (count == 0) {
+            return new ArrayList<>();
+        }
 
-        ArrayList<IECSNode> iEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
+        ArrayList<IECSNode> newEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
 
         // Launch the server processes
-        createRunSshScript(iEcsNodes, cacheStrategy, cacheSize);
+        createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
 
         // call await nodes to wait for processes to start
         boolean success = awaitNodes(count, TIME_OUT);
 
         if (success) {
             // update node to added by setting boolean in ecs node
-            for (IECSNode ecsNode : iEcsNodes) {
-                ecsNodes.get(ecsNodes.indexOf(ecsNode)).setReserved(true);
+            for (IECSNode newEcsNode : newEcsNodes) {
+                ecsNodes.get(ecsNodes.indexOf(newEcsNode)).setReserved(true);
+                ((ECSNode) newEcsNode).setReserved(true);
             }
             logger.info("All nodes were added");
         } else {
             List<String> failedServers = new ArrayList<>();
             try {
                 List<String> activeServers = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
-                for (IECSNode ecsNode : iEcsNodes) {
-                    if (activeServers.contains(ecsNode.getNodeName())) {
-                        ecsNodes.get(ecsNodes.indexOf(ecsNode)).setReserved(true);
+
+                Iterator<IECSNode> newEcsNodeIterator = newEcsNodes.iterator();
+                while (newEcsNodeIterator.hasNext()) {
+                    IECSNode newEcsNode = newEcsNodeIterator.next();
+                    if (activeServers.contains(newEcsNode.getNodeName())) {
+                        ecsNodes.get(ecsNodes.indexOf(newEcsNode)).setReserved(true);
+                        ((ECSNode) newEcsNode).setReserved(true);
                     } else {
-                        failedServers.add(ecsNode.getNodeName());
+                        failedServers.add(newEcsNode.getNodeName());
+                        newEcsNodeIterator.remove();
                     }
                 }
+
                 if (failedServers.size() > 0) {
-                    logger.error("Timeout reached. Servers:" + failedServers + "were not added");
-                    //todo re-update metadata
+                    logger.error("Timeout reached. Servers: " + failedServers + " was/were not added");
                 }
 
             } catch (KeeperException | InterruptedException e) {
@@ -246,7 +342,28 @@ public class ECSClient implements IECSClient {
             }
         }
 
-        return iEcsNodes;
+        // did not start with metadata to account for failures so ding them at the end
+        ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
+        consistentHash.hash();
+
+        // updating data
+        for (IECSNode newEcsNode : newEcsNodes) {
+            for (ECSNode ecsNode : ecsNodes) {
+                if (newEcsNode.getNodeName().equals(ecsNode.getNodeName())) {
+                    ((ECSNode) newEcsNode).setNodeHashRange(ecsNode.getNodeHashRange());
+                }
+            }
+        }
+
+        metadata = new Metadata(ecsNodes);
+        try {
+            zkNodeTransaction.update(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata.class)
+                    .getBytes());
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Metadata was not updated! " + e.getMessage());
+        }
+
+        return newEcsNodes;
     }
 
     private void createRunSshScript(ArrayList<IECSNode> iEcsNodes, String cacheStrategy, int cacheSize) {
@@ -256,7 +373,6 @@ public class ECSClient implements IECSClient {
 
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
-            //todo fix metadata
             scriptContent.append("ssh -n " + ecsNode.getNodeHost() + " " + "nohup java -jar " +
                     "~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
                     .append
@@ -286,9 +402,6 @@ public class ECSClient implements IECSClient {
         for (int i = 0; i < size - count; i++) {
             nodesToSetup.remove(0);
         }
-
-        // todo calculate metadata using ECS_NODES reserved true AND NODES TO SETUP all
-
 
         return nodesToSetup;
     }
@@ -343,14 +456,22 @@ public class ECSClient implements IECSClient {
 
     @Override
     public IECSNode getNodeByKey(String key) {
+        try {
+            Metadata metadata = new Gson().fromJson(
+                    new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue())),
+                    Metadata.class);
 
+            return metadata.getResponsibleServer(key);
+
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e.getMessage());
+        }
         return null;
     }
 
 
     /**
-     * @param args contains the port number at args[0].
-     *             Main entry point for the KV client application.
+     * @param args config file
      */
     public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
         if (args.length != 1) {
@@ -387,15 +508,15 @@ public class ECSClient implements IECSClient {
         if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
                 case "start": {
-                    start();
+                    System.out.print(PROMPT + start());
                     break;
                 }
                 case "stopClient": {
-                    stop();
+                    System.out.print(PROMPT + stop());
                     break;
                 }
                 case "shutdown": {
-                    shutdown();
+                    System.out.print(PROMPT + shutdown());
                     break;
                 }
                 case "addNode": {
@@ -403,6 +524,11 @@ public class ECSClient implements IECSClient {
                     if (a == null)
                         return;
                     IECSNode node = addNode((String) a[0], (int) a[1]);
+                    if (node == null) {
+                        System.out.print(PROMPT + "No nodes added!");
+                    } else {
+                        System.out.print(PROMPT + node.getNodeName() + "started!");
+                    }
                     break;
                 }
                 case "addNodes": {
@@ -410,26 +536,35 @@ public class ECSClient implements IECSClient {
                     if (a == null)
                         return;
                     Collection<IECSNode> nodes = addNodes((int) a[0], (String) a[1], (int) a[2]);
-                    break;
-                }
-                case "setupNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
-                    if (a == null)
-                        return;
-                    Collection<IECSNode> nodes = setupNodes((int) a[0], (String) a[1], (int) a[2]);
-                    break;
-                }
-                case "awaitNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, INTEGER});
-                    if (a == null)
-                        return;
-                    try {
-                        awaitNodes((int) a[0], (int) a[1]);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+
+                    if (nodes.isEmpty()) {
+                        System.out.println(PROMPT + "No nodes added!");
+                    } else {
+                        for (IECSNode node : nodes) {
+                            System.out.println(node);
+                        }
+                        System.out.print(" was/were added!");
                     }
                     break;
                 }
+//                case "setupNodes": {
+//                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
+//                    if (a == null)
+//                        return;
+//                    Collection<IECSNode> nodes = setupNodes((int) a[0], (String) a[1], (int) a[2]);
+//                    break;
+//                }
+//                case "awaitNodes": {
+//                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, INTEGER});
+//                    if (a == null)
+//                        return;
+//                    try {
+//                        awaitNodes((int) a[0], (int) a[1]);
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
+//                    break;
+//                }
                 case "removeNodes": {
                     if (tokens.length < 2) {
                         printHelp();

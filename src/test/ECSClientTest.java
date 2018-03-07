@@ -1,6 +1,7 @@
 package test;
 
 import app_kvECS.ECSClient;
+import app_kvECS.EcsException;
 import ecs.IECSNode;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
@@ -27,7 +28,7 @@ public class ECSClientTest {
         }
     }
 
-    public void tearDown() throws KeeperException, InterruptedException {
+    public void tearDown() throws KeeperException, InterruptedException, EcsException {
         ecsClient.shutdown();
     }
 
