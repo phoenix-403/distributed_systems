@@ -53,6 +53,7 @@ public class KVServer implements IKVServer, Runnable {
         this.name = name;
 
         // connect to zoo keeper
+//        logger.setLevel(Level.OFF);
         zkConnector = new ZkConnector();
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
@@ -140,18 +141,22 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void updateMetadata() throws KeeperException, InterruptedException {
-        byte[] json = zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue());
+        //todo remove trycatch after communing with big god abdul
         try {
-//            String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue();
-            metadata = new Gson().fromJson(json.toString(), Metadata.class);
+            String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
+            metadata = new Gson().fromJson(data, Metadata.class);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.info("Probably first server ever");
         }
     }
 
 
     public boolean isAcceptingRequests() {
         return acceptingRequests;
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override

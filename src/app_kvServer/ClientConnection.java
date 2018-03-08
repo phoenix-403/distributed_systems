@@ -115,10 +115,13 @@ public class ClientConnection implements Runnable {
             // deserialize string into a request and pass it off to handle it
             request = gson.fromJson(reqLine, ClientServerRequestResponse.class);
             if (validateRequest(request)) {
-                if (!kvServer.isAcceptingRequests()){
+                if (!kvServer.isAcceptingRequests()) {
                     return new ClientServerRequestResponse(request.getId(), null, null, StatusType
                             .SERVER_STOPPED);
-                }else {
+                } else if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName())) {
+                    return new ClientServerRequestResponse(request.getId(), null, null, StatusType
+                            .SERVER_NOT_RESPONSIBLE);
+                } else {
                     switch (request.getStatus()) {
                         case PUT:
                             try {
@@ -173,8 +176,8 @@ public class ClientConnection implements Runnable {
                                 return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR);
                             }
                         case TEST_METADATA:
-                            return new RequestResponse(request.getId(), null,
-                                    new Gson().toJson(kvServer.getMetadata()), StatusType.TEST_METADATA);
+                            return new ClientServerRequestResponse(request.getId(), null,
+                                    (new Gson().toJson(kvServer.getMetadata())), StatusType.TEST_METADATA);
 //                            return new RequestResponse(request.getId(), null,
 //                                    "{data}", StatusType.TEST_METADATA);
                     }

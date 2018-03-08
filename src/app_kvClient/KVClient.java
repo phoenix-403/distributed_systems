@@ -4,8 +4,10 @@ import app_kvECS.EcsException;
 import client.KVCommInterface;
 import client.KVStore;
 import com.google.gson.Gson;
+import common.messages.ClientServerRequestResponse;
 import common.messages.KVMessage;
 import common.messages.Metadata;
+import ecs.ECSNode;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
@@ -17,10 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -59,6 +58,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
         try {
             new LogSetup("logs/client/client.log", Level.ALL);
+            connectAll();
         } catch (IOException e) {
             System.out.println("unable to initialize client logger");
             e.printStackTrace();
@@ -108,68 +108,21 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         printError("Invalid number of parameters!");
                     }
                     break;
-                case "connectAll":
-                    allKVStores = new HashMap<>();
-                    connectAll();
-                    break;
                 case "get":
 //                    if (!preliminaryCheck(tokens[1])) {
-                    if (!true) {
-                        errM.printNotConnectedError();
-                        logger.warn("Not Connected to Responsible Server");
-                        logger.info("Updating Connections and Metadata ...");
-                        connectAll();
-                    } else {
-                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
-                            try {
-                                KVMessage msg = kvStoreInstance.get(tokens[1]);
-                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
-                                    updateMetadata(msg.getValue());
-                                    // todo henry metadata got updated
-//                                    Metadata.MetadataEntry metadataEntry = metadata.getResponsibleServer(tokens[1]);
-//                                    msg = allKVStores.get(metadataEntry.getHost()).get(tokens[1]);
-                                }
-                            } catch (Exception e) {
-                                errM.printUnableToConnectError(e.getMessage());
-                                logger.warn("Connection lost!");
-                            }
-                        }
-                    }
+                    get(tokens);
                     break;
-                case "test" :
-                    for (int i =0; i<allKVStores.size(); i++)
+                case "test":
+                    Iterator it = allKVStores.entrySet().iterator();
+                    while (it.hasNext())
                         try {
-                            allKVStores.get("server"+i).testMetadata();
+                            ((KVStore) ((Map.Entry) it.next()).getValue()).testMetadata();
                         } catch (Exception e) {
 
                         }
                     break;
                 case "put":
-                    if (kvStoreInstance == null) {
-                        errM.printNotConnectedError();
-                        logger.warn("Not Connected");
-                    } else {
-                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
-                            try {
-                                String arg = tokens.length <= 2 ? null : tokens[2];
-                                if (arg != null) {
-                                    for (int i = 3; i < tokens.length; i++) {
-                                        arg += (" " + tokens[i]);
-                                    }
-                                }
-                                KVMessage msg = kvStoreInstance.put(tokens[1], arg);
-                                while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
-                                    updateMetadata(msg.getValue());
-                                    // todo henry metadata got updated
-//                                    Metadata.MetadataEntry metadataEntry = metadata.getResponsibleServer(tokens[1]);
-//                                    msg = allKVStores.get(metadataEntry.getHost()).put(tokens[1], arg);
-                                }
-                            } catch (Exception e) {
-                                errM.printUnableToConnectError(e.getMessage());
-                                logger.warn("Connection lost!");
-                            }
-                        }
-                    }
+                    put(tokens);
                     break;
                 case "disconnect":
                     if (kvStoreInstance != null) {
@@ -208,12 +161,77 @@ public class KVClient implements IKVClient, IClientSocketListener {
         }
     }
 
-    private void connectAll () {
+    private void checkConnections(ECSNode node){
+        if (node == null) {
+            logger.error("No Servers Running");
+        } else if (allKVStores.get(node.getNodeName()) == null) {
+            connectAll();
+        } else if (!allKVStores.get(node.getNodeName()).isConnected()) {
+            connectAll();
+        }
+    }
 
-            File file = new File("src/app_kvECS/" + configFile);
+    private void put(String[] tokens) {
+        if (kvStoreInstance == null) {
+            errM.printNotConnectedError();
+            logger.warn("Not Connected");
+        } else {
+            if (errM.validateServerCommand(tokens, KVMessage.StatusType.PUT)) {
+                try {
+                    String arg = tokens.length <= 2 ? null : tokens[2];
+                    if (arg != null) {
+                        for (int i = 3; i < tokens.length; i++) {
+                            arg += (" " + tokens[i]);
+                        }
+                    }
+                    KVMessage msg = new ClientServerRequestResponse(0 , null, null,
+                            KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+                    while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
+                        ECSNode node = metadata.getResponsibleServer(tokens[1]);
+                        checkConnections(node);
+                        msg = allKVStores.get(node.getNodeName()).put(tokens[1], arg);
+                        updateMetadata(msg.getValue());
+                    }
+                } catch (Exception e) {
+                    errM.printUnableToConnectError(e.getMessage());
+                    logger.warn("Connection lost!");
+                }
+            }
+        }
+    }
 
-            final String DELIMITER = " ";
-            final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
+    private void get(String[] tokens) {
+        if (!true) {
+            errM.printNotConnectedError();
+            logger.warn("Not Connected to Responsible Server");
+            logger.info("Updating Connections and Metadata ...");
+            connectAll();
+        } else {
+            if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                try {
+                    KVMessage msg = new ClientServerRequestResponse(0 , null, null,
+                            KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+                    while (msg.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
+                        ECSNode node = metadata.getResponsibleServer(tokens[1]);
+                        checkConnections(node);
+                        msg = allKVStores.get(node.getNodeName()).get(tokens[1]);
+                        updateMetadata(msg.getValue());
+                    }
+                } catch (Exception e) {
+                    errM.printUnableToConnectError(e.getMessage());
+                    logger.warn("Connection lost!");
+                }
+            }
+        }
+    }
+
+    private void connectAll() {
+        allKVStores = new HashMap<>();
+
+        File file = new File("src/app_kvECS/" + configFile);
+
+        final String DELIMITER = " ";
+        final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
 
         ArrayList<String> fileLines = null;
         try {
@@ -222,25 +240,25 @@ public class KVClient implements IKVClient, IClientSocketListener {
             e.printStackTrace();
         }
         for (String line : fileLines) {
-                String[] tokenizedLine = line.split(DELIMITER_PATTERN);
-                try {
-                    KVStore store = new KVStore(tokenizedLine[1], Integer.parseInt(tokenizedLine[2]));
-                    store.connect();
-                    allKVStores.put(tokenizedLine[0],
-                            store);
-                    printTerminal("Connected to " + tokenizedLine[0]);
-                } catch (NumberFormatException nfe) {
-                    printError("No valid address. Port must be a number!");
-                    logger.error("Unable to parse argument <port>", nfe);
-                } catch (Exception e) {
-                    printTerminal("Cannot Connect to " + tokenizedLine[0]);
-                }
+            String[] tokenizedLine = line.split(DELIMITER_PATTERN);
+            try {
+                KVStore store = new KVStore(tokenizedLine[1], Integer.parseInt(tokenizedLine[2]));
+                store.connect();
+                allKVStores.put(tokenizedLine[0],
+                        store);
+                logger.info("Connected to " + tokenizedLine[0]);
+            } catch (NumberFormatException nfe) {
+                printError("No valid address. Port must be a number!");
+                logger.error("Unable to parse argument <port>", nfe);
+            } catch (Exception e) {
+                logger.info("Unable to Reach " + tokenizedLine[0]);
             }
+        }
     }
 
 
-        return allKVStores.get(metadata.getResponsibleServer(key).getNodeHost()).isConnected();
-    }
+//        return allKVStores.get(metadata.getResponsibleServer(key).getNodeHost()).isConnected();
+//    }
 
     private void updateMetadata(String jsonData) {
         metadata = new Gson().fromJson(jsonData, Metadata.class);

@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -39,6 +40,8 @@ import static common.helper.Script.runScript;
 public class ECSClient implements IECSClient {
 
     private static Logger logger = LogManager.getLogger(ECSClient.class);
+    private static Logger loggerCnxn = LogManager.getLogger(ClientCnxn.class);
+
     private static final String PROMPT = "ECS_Client> ";
     private boolean stopClient = false;
 
@@ -73,6 +76,9 @@ public class ECSClient implements IECSClient {
         // setting zookeeper variables
         zkAddress = "localhost";
         zkPort = 2181;
+
+        //disable ClientCnxn messages
+        loggerCnxn.setLevel(Level.OFF);
 
         // reading config file
         configureAvailableNodes(configFile);
@@ -374,7 +380,7 @@ public class ECSClient implements IECSClient {
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
             scriptContent.append("ssh -n " + ecsNode.getNodeHost() + " " + "nohup java -jar " +
-                    "~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
+                    "~/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
                     " ").append

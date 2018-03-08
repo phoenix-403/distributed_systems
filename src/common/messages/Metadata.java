@@ -25,6 +25,17 @@ public class Metadata {
         return ecsNodes;
     }
 
+    public boolean isWithinRange(String key, String nodeName) {
+        String hashKey = ConsistentHash.getMD5(key);
+        for (ECSNode ecsNode : ecsNodes) {
+            if (nodeName.equals(ecsNode.getNodeName())
+                    && hashKey.compareTo(ecsNode.getNodeHashRange()[0]) <= 0
+                    && hashKey.compareTo(ecsNode.getNodeHashRange()[1]) >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public ECSNode getResponsibleServer(String key) {
         String hashKey = ConsistentHash.getMD5(key);

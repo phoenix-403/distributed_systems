@@ -165,9 +165,9 @@ public class KVStore implements KVCommInterface {
     }
 
     public void testMetadata(){
-        RequestResponse req = new RequestResponse(requestId++, null, null, KVMessage.StatusType.TEST_METADATA);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, "yolo", null, KVMessage.StatusType.TEST_METADATA);
         boolean status = sendRequest(req);
-        RequestResponse response = getResponse();
+        ClientServerRequestResponse response = getResponse();
         System.out.println(new Gson().toJson(response));
     }
 
