@@ -25,7 +25,7 @@ public class ZkNodeTransaction {
     }
 
 
-    public void update(String path, byte[] data) throws KeeperException, InterruptedException {
+    public void write(String path, byte[] data) throws KeeperException, InterruptedException {
         zooKeeper.setData(path, data, zooKeeper.exists(path, true).getVersion());
     }
 

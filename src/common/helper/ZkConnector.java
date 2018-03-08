@@ -1,7 +1,5 @@
 package common.helper;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -22,7 +20,6 @@ public class ZkConnector {
             }
         });
         countDownLatch.await();
-        Logger.getLogger("org.apache.zookeeper.ZooKeeper").setLevel(Level.ERROR);
         return zooKeeper;
     }
 

@@ -129,6 +129,11 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_COMMANDS.getValue(), null, CreateMode.PERSISTENT);
+
+        // writing an empty metadata
+        metadata = new Metadata(new ArrayList<>());
+        zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(),
+                new Gson().toJson(metadata, Metadata.class).getBytes());
     }
 
     private void stopZK() throws InterruptedException {
@@ -316,7 +321,7 @@ public class ECSClient implements IECSClient {
         boolean success = awaitNodes(count, TIME_OUT);
 
         if (success) {
-            // update node to added by setting boolean in ecs node
+            // write node to added by setting boolean in ecs node
             for (IECSNode newEcsNode : newEcsNodes) {
                 ecsNodes.get(ecsNodes.indexOf(newEcsNode)).setReserved(true);
                 ((ECSNode) newEcsNode).setReserved(true);
@@ -340,7 +345,7 @@ public class ECSClient implements IECSClient {
                 }
 
                 if (failedServers.size() > 0) {
-                    logger.error("Timeout reached. Servers: " + failedServers + " was/were not added");
+                    logger.error("Timeout reached. Servers: " + failedServers + " might not has/have added");
                 }
 
             } catch (KeeperException | InterruptedException e) {
@@ -348,7 +353,7 @@ public class ECSClient implements IECSClient {
             }
         }
 
-        // did not start with metadata to account for failures so ding them at the end
+        // did not start with metadata to account for failures so doing them at the end
         ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
         consistentHash.hash();
 
@@ -363,7 +368,7 @@ public class ECSClient implements IECSClient {
 
         metadata = new Metadata(ecsNodes);
         try {
-            zkNodeTransaction.update(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata.class)
+            zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata.class)
                     .getBytes());
         } catch (KeeperException | InterruptedException e) {
             logger.error("Metadata was not updated! " + e.getMessage());
@@ -379,8 +384,9 @@ public class ECSClient implements IECSClient {
 
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
-            scriptContent.append("ssh -n " + ecsNode.getNodeHost() + " " + "nohup java -jar " +
-                    "~/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append(" ")
+            scriptContent.append("ssh -n ").append(ecsNode.getNodeHost()).append(" ").append("nohup java -jar ")
+                    .append("~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append
+                    (" ")
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
                     " ").append
@@ -549,7 +555,7 @@ public class ECSClient implements IECSClient {
                         for (IECSNode node : nodes) {
                             System.out.println(node);
                         }
-                        System.out.print(" was/were added!");
+                        System.out.println("was/were added!");
                     }
                     break;
                 }

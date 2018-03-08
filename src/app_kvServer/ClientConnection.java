@@ -29,6 +29,10 @@ public class ClientConnection implements Runnable {
     private Socket clientSocket;
     private boolean clientSocketOpen;
 
+    public void close(){
+        clientSocketOpen = false;
+    }
+
     /**
      * Constructs a new ClientConnection object for a given TCP socket.
      *
@@ -105,7 +109,7 @@ public class ClientConnection implements Runnable {
      *
      * @return Response to send back to server
      */
-    private ClientServerRequestResponse handleRequest(String reqLine) throws IOException {
+    private ClientServerRequestResponse handleRequest(String reqLine) {
 
         ClientServerRequestResponse request;
         ClientServerRequestResponse response;
@@ -124,6 +128,7 @@ public class ClientConnection implements Runnable {
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
+                            // todo - dont do it is server is in write lock
                             try {
                                 boolean keyExistInStorage = kvServer.inStorage(request.getKey());
                                 boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
@@ -142,7 +147,7 @@ public class ClientConnection implements Runnable {
                                     }
                                 }
                                 // if user is trying to modify or write new -/- status is true when new field or false
-                                // when update
+                                // when write
                                 if (writeModifyDeleteStatus) {
                                     logger.info("write success");
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),

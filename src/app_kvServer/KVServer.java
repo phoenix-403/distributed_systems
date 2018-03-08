@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
+import common.messages.ZkServerCommunication;
+import common.messages.ZkToServerRequest;
+import common.messages.ZkToServerResponse;
 import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
@@ -17,6 +20,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class KVServer implements IKVServer, Runnable {
@@ -33,6 +37,7 @@ public class KVServer implements IKVServer, Runnable {
     private ServerSocket serverSocket;
     private boolean serverRunning;
     private boolean acceptingRequests;
+    private boolean acceptingWriteRequests;
 
     private ZkConnector zkConnector;
     private ZooKeeper zooKeeper;
@@ -40,7 +45,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private Metadata metadata;
 
-    private List<Thread> clientThreads;
+    private List<ClientConnection> clientConnections;
 
     /**
      * Start KV Server with selected name
@@ -53,7 +58,6 @@ public class KVServer implements IKVServer, Runnable {
         this.name = name;
 
         // connect to zoo keeper
-//        logger.setLevel(Level.OFF);
         zkConnector = new ZkConnector();
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
@@ -70,7 +74,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port,  int cacheSize, String strategy) throws KeeperException, InterruptedException {
+    private void initKVServer(int port, int cacheSize, String strategy) throws KeeperException, InterruptedException {
 
         try {
             new LogSetup("logs/server/server.log", Level.ALL);
@@ -106,7 +110,11 @@ public class KVServer implements IKVServer, Runnable {
 
         serverRunning = false;
         acceptingRequests = false;
-        clientThreads = new ArrayList<>();
+        acceptingWriteRequests = true; // don't worry overridden bt accepting req but write should be on by default
+        // accept ecs commands
+        addEcsCommandsWatch();
+
+        clientConnections = new ArrayList<>();
         try {
             serverSocket = new ServerSocket(port);
             if (port == 0) {
@@ -115,14 +123,63 @@ public class KVServer implements IKVServer, Runnable {
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
 
             // adding hb node
-            zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name, null, CreateMode.EPHEMERAL);
+            zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name, null, CreateMode
+                    .EPHEMERAL);
 
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket: " + e.getMessage());
         } catch (InterruptedException | KeeperException e) {
             logger.error("Server " + name + " was not added to HB in zookeeper !!!");
         }
+    }
 
+    private void addEcsCommandsWatch() throws KeeperException, InterruptedException {
+
+        zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
+                try {
+                    List<String> requestIds =
+                            zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), false);
+                    processRequest(requestIds);
+                    addEcsCommandsWatch();
+                } catch (KeeperException | InterruptedException e) {
+                    logger.error(e.getMessage());
+                }
+            }
+        });
+
+    }
+
+    private void processRequest(List<String> requestIds) throws KeeperException, InterruptedException {
+        Collections.sort(requestIds);
+
+        String reqData;
+        String requestId = requestIds.get(requestIds.size()); // process latest request
+        reqData = zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + requestId).toString();
+        ZkToServerRequest request = new Gson().fromJson(reqData, ZkToServerRequest.class);
+
+        ZkServerCommunication.Response responseState = null;
+        switch (request.getZkSvrRequest()) {
+            case START:
+                start();
+                responseState = ZkServerCommunication.Response.START_SUCCESS;
+                break;
+            case STOP:
+                stop();
+                responseState = ZkServerCommunication.Response.STOP_SUCCESS;
+                break;
+            case SHUTDOWN:
+                close();
+                responseState = ZkServerCommunication.Response.SHUTDOWN_SUCCESS;
+                break;
+            default:
+                logger.error("Unknown ECS request!!");
+        }
+
+        ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
+        zkNodeTransaction.createZNode(
+                ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
+                new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
 
     }
 
@@ -132,8 +189,8 @@ public class KVServer implements IKVServer, Runnable {
                 try {
                     updateMetadata();
                     addMetadataWatch();
-                } catch (KeeperException|InterruptedException e) {
-                    logger.fatal("Metadata update failed!");
+                } catch (KeeperException | InterruptedException e) {
+                    logger.fatal("Metadata write failed!");
                     System.exit(-1);
                 }
             }
@@ -141,13 +198,12 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void updateMetadata() throws KeeperException, InterruptedException {
-        //todo remove trycatch after communing with big god abdul
-        try {
-            String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
-            metadata = new Gson().fromJson(data, Metadata.class);
-        } catch (Exception e) {
-            logger.info("Probably first server ever");
-        }
+        String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
+        metadata = new Gson().fromJson(data, Metadata.class);
+
+        // todo - initiate key transtion if your own metadata changed
+        // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
+
     }
 
 
@@ -179,7 +235,7 @@ public class KVServer implements IKVServer, Runnable {
         return cacheSize;
     }
 
-    public Metadata getMetadata(){
+    public Metadata getMetadata() {
         return this.metadata;
     }
 
@@ -231,9 +287,9 @@ public class KVServer implements IKVServer, Runnable {
                 try {
                     Socket client = serverSocket.accept();
                     ClientConnection connection = new ClientConnection(this, client);
+                    clientConnections.add(connection);
                     Thread clientThread = new Thread(connection);
                     clientThread.start();
-                    clientThreads.add(clientThread);
 
                     logger.info("Connected to " + client.getInetAddress().getHostName() + " on port " + client
                             .getPort());
@@ -254,6 +310,10 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void close() {
         serverRunning = false;
+        for (ClientConnection connection : clientConnections) {
+            connection.close();
+        }
+
         try {
             serverSocket.close();
         } catch (IOException e) {
@@ -265,13 +325,12 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void start() {
-        // TODO
-        // get the latest copy of metadata
+        acceptingRequests = true;
     }
 
     @Override
     public void stop() {
-        // TODO
+        acceptingRequests = false;
     }
 
     @Override
@@ -289,7 +348,6 @@ public class KVServer implements IKVServer, Runnable {
         // TODO
         return false;
     }
-
 
 
     public static void main(String[] args) throws Exception {

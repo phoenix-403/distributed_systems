@@ -2,9 +2,8 @@ package client;
 
 import app_kvClient.IClientSocketListener;
 import com.google.gson.Gson;
-import common.messages.KVMessage;
-import common.messages.Metadata;
 import common.messages.ClientServerRequestResponse;
+import common.messages.KVMessage;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -27,7 +26,6 @@ public class KVStore implements KVCommInterface {
     private InputStream inputStream;
     private InputStreamReader inputStreamReader;
     private BufferedReader bufferedInputStream;
-    private Metadata metadata;
 
     private int requestId = 0;
 
@@ -57,7 +55,6 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public boolean isConnected() {
-        // TODO Auto-generated method stub
         return clientSocket.isConnected();
     }
 
