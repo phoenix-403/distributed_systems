@@ -169,18 +169,25 @@ public class KVServer implements IKVServer, Runnable {
                 responseState = ZkServerCommunication.Response.STOP_SUCCESS;
                 break;
             case SHUTDOWN:
-                close();
+                // for shutdown, i have to respond before closing the server
                 responseState = ZkServerCommunication.Response.SHUTDOWN_SUCCESS;
+                ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
+                zkNodeTransaction.createZNode(
+                        ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
+                        new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
+                                .EPHEMERAL_SEQUENTIAL);
+                close();
                 break;
             default:
                 logger.error("Unknown ECS request!!");
         }
 
-        ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
-        zkNodeTransaction.createZNode(
-                ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
-                new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
-
+        if (!request.getZkSvrRequest().equals(ZkServerCommunication.Request.SHUTDOWN)) {
+            ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
+            zkNodeTransaction.createZNode(
+                    ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
+                    new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
+        }
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {

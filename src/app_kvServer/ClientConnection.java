@@ -31,6 +31,11 @@ public class ClientConnection implements Runnable {
 
     public void close() {
         clientSocketOpen = false;
+        try {
+            clientSocket.close();
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
     }
 
     /**

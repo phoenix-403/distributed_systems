@@ -54,7 +54,7 @@ public class ECSClient implements IECSClient {
 
     //zookeeper communication timeout
     private int reqResId = 0;
-    private static final int TIME_OUT = 10000;
+    private static final int TIME_OUT = 20000;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
     private Metadata metadata;
@@ -243,6 +243,14 @@ public class ECSClient implements IECSClient {
                 if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.SHUTDOWN_SUCCESS)) {
                     throw new EcsException("An unexpected response to shutdown command!!");
                 }
+
+                for(ECSNode ecsNode: ecsNodes){
+                    if (ecsNode.getNodeName().equals(response.getServerName())){
+                        ecsNode.setReserved(false);
+                    }
+                }
+
+
             }
             return true;
         } else {
