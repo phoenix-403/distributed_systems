@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import client.KVStore;
 import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
@@ -7,6 +8,7 @@ import common.messages.Metadata;
 import common.messages.ZkServerCommunication;
 import common.messages.ZkToServerRequest;
 import common.messages.ZkToServerResponse;
+import ecs.ECSNode;
 import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
@@ -74,7 +76,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port, int cacheSize, String strategy) throws KeeperException, InterruptedException {
+    private void initKVServer(int port, int cacheSize, String strategy) throws Exception {
 
         try {
             new LogSetup("ds_data/" + name + "/logs/server.log", Level.ALL);
@@ -144,6 +146,8 @@ public class KVServer implements IKVServer, Runnable {
                     addEcsCommandsWatch();
                 } catch (KeeperException | InterruptedException e) {
                     logger.error(e.getMessage());
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
                 }
             }
         });
@@ -151,7 +155,7 @@ public class KVServer implements IKVServer, Runnable {
     }
 
 
-    private void processRequest(List<String> requestIds) throws KeeperException, InterruptedException {
+    private void processRequest(List<String> requestIds) throws Exception {
         Collections.sort(requestIds);
 
         String reqData;
@@ -183,6 +187,8 @@ public class KVServer implements IKVServer, Runnable {
                     // note this is the update when nodes deleted
                     // recalculate metadata - metadata not changed yet to keep serving read requests
                     //todo - server lock -> call handoff keys
+                    ECSNode nextNode = metadata.getNextServer(name, targetNode);
+                    moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
 
                     responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                     respond(request.getId(),responseState);
@@ -213,30 +219,42 @@ public class KVServer implements IKVServer, Runnable {
                 } catch (KeeperException | InterruptedException e) {
                     logger.fatal("Metadata write failed!");
                     System.exit(-1);
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
                 }
             }
         });
     }
 
-    private void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException {
+    private void updateMetadata(boolean firstRun) throws Exception {
+        Metadata prevMetadata = metadata;
         String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
         metadata = new Gson().fromJson(data, Metadata.class);
 
         if (!firstRun) {
-            // todo - initiate key transtion if your own metadata changed
-            // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
-            // todo check if i was removed from the list... if so
-            // put yourself in wrinting lock mode
-            // note this is the update when nodes are added
-
+            if (metadata.getRange(name) == null) {
+                // todo check if i was removed from the list... if so
+                // put yourself in wrinting lock mode
+                // note this is the update when nodes are added
+                ECSNode target = metadata.getResponsibleServer(metadata.getRange(name)[1]);
+                moveData(target.getNodeHashRange(), target.getNodeName());
+            } else if (prevMetadata.getRange(name)[0].compareTo(prevMetadata.getRange(name)[1])
+                        > metadata.getRange(name)[0].compareTo(metadata.getRange(name)[1])) {
+                // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
+                    ECSNode target = metadata.getResponsibleServer(name);
+                    moveData(target.getNodeHashRange(), target.getNodeName());
+            }
         }
-
-
     }
+
 
 
     public boolean isAcceptingRequests() {
         return acceptingRequests;
+    }
+
+    public boolean isAcceptingWriteRequests() {
+        return acceptingWriteRequests;
     }
 
     public String getName() {
@@ -363,17 +381,23 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void lockWrite() {
-        // TODO
+        acceptingWriteRequests=false;
     }
 
     @Override
     public void unlockWrite() {
-        // TODO
+        acceptingWriteRequests=true;
     }
 
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws Exception {
-        // TODO
+        lockWrite();
+        // get all keys
+        //check if within range
+        //KVStore target = new KVStore(null, metadata.getResponsibleServer(hashRange[1]).getNodeHost(),
+        //                metadata.getResponsibleServer(hashRange[1]).getNodePort());
+        //        target.put("", "");
+        unlockWrite();
         return false;
     }
 

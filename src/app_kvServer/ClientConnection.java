@@ -133,7 +133,10 @@ public class ClientConnection implements Runnable {
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
-                            // todo - don't do it if server is in write lock
+                            if (!kvServer.isAcceptingWriteRequests()) {
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
+                                        StatusType.SERVER_WRITE_LOCK, null);
+                            }
                             try {
                                 boolean keyExistInStorage = kvServer.inStorage(request.getKey());
                                 boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
@@ -194,8 +197,6 @@ public class ClientConnection implements Runnable {
                         case TEST_METADATA:
                             return new ClientServerRequestResponse(request.getId(), null,
                                     (new Gson().toJson(kvServer.getMetadata())), StatusType.TEST_METADATA, null);
-//                            return new RequestResponse(request.getId(), null,
-//                                    "{data}", StatusType.TEST_METADATA);
                     }
                 }
             }
