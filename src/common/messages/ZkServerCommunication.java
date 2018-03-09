@@ -7,7 +7,8 @@ public class ZkServerCommunication {
 
         START("STR"),
         STOP("STP"),
-        SHUTDOWN("SHD");
+        SHUTDOWN("SHD"),
+        REMOVE_NODES("RMS");
 
         String value;
 
@@ -25,7 +26,8 @@ public class ZkServerCommunication {
     public enum Response {
         START_SUCCESS("STS"),
         STOP_SUCCESS("SPS"),
-        SHUTDOWN_SUCCESS("SDS");
+        SHUTDOWN_SUCCESS("SDS"),
+        REMOVE_NODES_SUCCESS("RNS");
 
         String value;
 

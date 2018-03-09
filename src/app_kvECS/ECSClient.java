@@ -148,8 +148,8 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START);
-        List<ZkToServerResponse> responses = processReqResp(request);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START, null);
+        List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         if (noActiveServers == responses.size()) {
             for (ZkToServerResponse response : responses) {
@@ -191,8 +191,8 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP);
-        List<ZkToServerResponse> responses = processReqResp(request);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP, null);
+        List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         if (noActiveServers == responses.size()) {
             for (ZkToServerResponse response : responses) {
@@ -235,8 +235,8 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN);
-        List<ZkToServerResponse> responses = processReqResp(request);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN, null);
+        List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         for (ZkToServerResponse response : responses) {
             if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.SHUTDOWN_SUCCESS)) {
@@ -262,10 +262,9 @@ public class ECSClient implements IECSClient {
 
     }
 
-    private List<ZkToServerResponse> processReqResp(ZkToServerRequest request) throws KeeperException,
+    private List<ZkToServerResponse> processReqResp(int noOfResponses, ZkToServerRequest request) throws
+            KeeperException,
             InterruptedException {
-        int noActiveServers = getNodesWithStatus(true).size();
-
         // Sending request via zookeeper
         int reqId = request.getId();
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + ZkStructureNodes.REQUEST
@@ -275,7 +274,7 @@ public class ECSClient implements IECSClient {
         List<ZkToServerResponse> responses = new ArrayList<>();
 
         long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < TIME_OUT && responses.size() != noActiveServers) {
+        while (System.currentTimeMillis() - startTime < TIME_OUT && responses.size() != noOfResponses) {
             // receiving response
             findResponseId(reqId, responses);
         }
@@ -452,12 +451,64 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO
+        boolean found;
+        for (String nodeName : nodeNames) {
+            found = false;
+            for (ECSNode ecsNode : ecsNodes) {
+                if (nodeName.equals(ecsNode.getNodeName()) && ecsNode.isReserved()) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                logger.error("Trying to remove node that are not active or do not exist");
+                return false;
+            }
+        }
+
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.REMOVE_NODES, (List
+                <String>) nodeNames);
+        List<ZkToServerResponse> responses;
+        try {
+            responses = processReqResp(nodeNames.size(), request);
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e.getMessage());
+            return false;
+        }
 
 
+        if (nodeNames.size() == responses.size()) {
+            for (ZkToServerResponse response : responses) {
+                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.REMOVE_NODES_SUCCESS)) {
+                    logger.error("Received a response of wrong type for a Remove_nodes req ");
+                    return false;
+                }
+            }
+
+            for (ECSNode ecsNode : ecsNodes) {
+                if (nodeNames.contains(ecsNode.getNodeName())) {
+                    ecsNode.setNodeHashRange(new String[2]);
+                    ecsNode.setReserved(false);
+                }
+            }
 
 
+            ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
+            consistentHash.hash();
 
+            metadata = new Metadata(ecsNodes);
+            try {
+                zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata
+                        .class)
+                        .getBytes());
+            } catch (KeeperException | InterruptedException e) {
+                logger.error("Metadata was not updated when removing nodes! " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
+
+        logger.error("Some Nodes may have been removed or none were removed!");
         return false;
     }
 
@@ -592,7 +643,7 @@ public class ECSClient implements IECSClient {
                     }
                     ArrayList<String> temp = new ArrayList<String>(
                             Arrays.asList(Arrays.copyOfRange(tokens, 1, tokens.length)));
-                    removeNodes(temp);
+                    System.out.println(PROMPT + removeNodes(temp));
                     break;
                 }
                 case "getNodes": {

@@ -105,7 +105,7 @@ public class KVServer implements IKVServer, Runnable {
             System.exit(-1);
         }
         //setup the metaData
-        updateMetadata();
+        updateMetadata(true);
         addMetadataWatch();
 
         serverRunning = false;
@@ -150,7 +150,7 @@ public class KVServer implements IKVServer, Runnable {
 
     }
 
-    // todo - put every watch in a thread
+
     private void processRequest(List<String> requestIds) throws KeeperException, InterruptedException {
         Collections.sort(requestIds);
 
@@ -159,43 +159,56 @@ public class KVServer implements IKVServer, Runnable {
         reqData = new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + "/" + requestId));
         ZkToServerRequest request = new Gson().fromJson(reqData, ZkToServerRequest.class);
 
-        ZkServerCommunication.Response responseState = null;
+        ZkServerCommunication.Response responseState;
         switch (request.getZkSvrRequest()) {
             case START:
                 start();
                 responseState = ZkServerCommunication.Response.START_SUCCESS;
+                respond(request.getId(),responseState);
                 break;
             case STOP:
                 stop();
                 responseState = ZkServerCommunication.Response.STOP_SUCCESS;
+                respond(request.getId(),responseState);
                 break;
             case SHUTDOWN:
                 // for shutdown, i have to respond before closing the server
                 responseState = ZkServerCommunication.Response.SHUTDOWN_SUCCESS;
-                ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
-                zkNodeTransaction.createZNode(
-                        ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
-                        new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
-                                .EPHEMERAL_SEQUENTIAL);
+                respond(request.getId(),responseState);
                 close();
                 break;
+            case REMOVE_NODES:
+                List<String> targetNode = request.getNodes();
+                if (targetNode.contains(name)) {
+                    // note this is the update when nodes deleted
+                    // recalculate metadata - metadata not changed yet to keep serving read requests
+                    //todo - server lock -> call handoff keys
+
+                    responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
+                    respond(request.getId(),responseState);
+                    close();
+                }
+                break;
             default:
+                // will never reach here unless enum is updated
                 logger.error("Unknown ECS request!!");
         }
+    }
 
-        if (!request.getZkSvrRequest().equals(ZkServerCommunication.Request.SHUTDOWN)) {
-            ZkToServerResponse response = new ZkToServerResponse(request.getId(), name, responseState);
-            zkNodeTransaction.createZNode(
-                    ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
-                    new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
-        }
+    private void respond(int reqId, ZkServerCommunication.Response responseState) throws KeeperException,
+            InterruptedException {
+        ZkToServerResponse response = new ZkToServerResponse(reqId, name, responseState);
+        zkNodeTransaction.createZNode(
+                ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
+                new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
+                        .EPHEMERAL_SEQUENTIAL);
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {
         zooKeeper.exists(ZkStructureNodes.METADATA.getValue(), event -> {
             if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
                 try {
-                    updateMetadata();
+                    updateMetadata(false);
                     addMetadataWatch();
                 } catch (KeeperException | InterruptedException e) {
                     logger.fatal("Metadata write failed!");
@@ -205,12 +218,19 @@ public class KVServer implements IKVServer, Runnable {
         });
     }
 
-    private void updateMetadata() throws KeeperException, InterruptedException {
+    private void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException {
         String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
         metadata = new Gson().fromJson(data, Metadata.class);
 
-        // todo - initiate key transtion if your own metadata changed
-        // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
+        if (!firstRun) {
+            // todo - initiate key transtion if your own metadata changed
+            // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
+            // todo check if i was removed from the list... if so
+            // put yourself in wrinting lock mode
+            // note this is the update when nodes are added
+
+        }
+
 
     }
 
