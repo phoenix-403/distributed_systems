@@ -508,6 +508,7 @@ public class ECSClient implements IECSClient {
             return true;
         }
 
+        // todo - update metadata depending on responses
         logger.error("Some Nodes may have been removed or none were removed!");
         return false;
     }
