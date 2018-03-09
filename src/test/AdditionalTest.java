@@ -238,7 +238,7 @@ public class AdditionalTest extends TestCase {
     public void testKeyFileLookUp() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
         // testing private method
-        assert (init());
+        assert (init(""));
 
         Method method = Persist.class.getDeclaredMethod("getFileKeyStoredIn", String.class);
         method.setAccessible(true);

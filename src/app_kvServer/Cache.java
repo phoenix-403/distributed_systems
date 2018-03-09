@@ -249,7 +249,7 @@ public class Cache {
         new LogSetup("logs/server/server.log", Level.ALL);
 
         Cache.setup(3, CacheStrategy.LFU);
-        Persist.init();
+        Persist.init("");
 
         Persist.write("ab", "test1");
         System.out.println(Cache.cache.toString());

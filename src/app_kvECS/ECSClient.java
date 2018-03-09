@@ -453,6 +453,11 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
         // TODO
+
+
+
+
+
         return false;
     }
 

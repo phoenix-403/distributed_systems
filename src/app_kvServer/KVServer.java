@@ -77,7 +77,7 @@ public class KVServer implements IKVServer, Runnable {
     private void initKVServer(int port, int cacheSize, String strategy) throws KeeperException, InterruptedException {
 
         try {
-            new LogSetup("logs/server/server.log", Level.ALL);
+            new LogSetup("ds_data/" + name + "/logs/server.log", Level.ALL);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -99,7 +99,7 @@ public class KVServer implements IKVServer, Runnable {
         // setting up cache
         Cache.setup(cacheSize, cacheStrategy);
         // setting up Database
-        if (!Persist.init()) {
+        if (!Persist.init("/" + name)) {
             logger.fatal("Can't start a server without a database!");
             // if persist is not available exit server.. cant live without persist but can live without cache
             System.exit(-1);
@@ -150,6 +150,7 @@ public class KVServer implements IKVServer, Runnable {
 
     }
 
+    // todo - put every watch in a thread
     private void processRequest(List<String> requestIds) throws KeeperException, InterruptedException {
         Collections.sort(requestIds);
 

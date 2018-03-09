@@ -19,8 +19,9 @@ public class Persist {
 
     // Save data into multiple DB_FILES - 1 for each letter and 1 extra for all other
     // TODO -optional- lock one file
+    private static String ROOT_PATH = "ds_data";
     private static volatile File[] DB_FILES = new File[27];
-    private static final String DB_FILE_PATH = "db/";
+    private static final String DB_FILE_PATH = "/db";
 
     private static final String DELIMITER = "~*~*";
     private static final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
@@ -33,13 +34,14 @@ public class Persist {
     /**
      * Initiates directory and DB_FILES on the server to allow persisting
      *
+     * @param serverName
      * @return true if it server is ready to persist data, false otherwise
      */
-    public static boolean init() {
+    public static boolean init(String serverName) {
         int name = 97;
 
         // creating directory if needed
-        File directory = new File(DB_FILE_PATH);
+        File directory = new File(ROOT_PATH + serverName + DB_FILE_PATH);
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 logger.error("Unable to create required directory to save DB_FILES");
@@ -51,7 +53,7 @@ public class Persist {
         try {
             int index = 0;
             for (File file : DB_FILES) {
-                file = new File(DB_FILE_PATH + (name++) + ".db");
+                file = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + (name++) + ".db");
                 file.createNewFile();
                 DB_FILES[index++] = file;
             }
@@ -170,7 +172,7 @@ public class Persist {
         logger.info("Cleared Persisted files. Reinitializing it...");
 
         // reinitializing storage
-        init();
+        init("");
 
         // clearing cache
         Cache.clearCache();
@@ -192,7 +194,7 @@ public class Persist {
 
     public static void main(String[] args) throws IOException {
         new LogSetup("logs/server/server.log", Level.ALL);
-        if (init()) {
+        if (init("")) {
 //            System.out.println(read("hi"));
 //            System.out.println(read("acd"));
 //            System.out.println(read("ax~~"));

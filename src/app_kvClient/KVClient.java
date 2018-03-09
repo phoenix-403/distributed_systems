@@ -127,8 +127,12 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                     kvStore.get(tokens[1]);
                                 }
                             } catch (Exception e) {
-                                errM.printUnableToConnectError(e.getMessage());
-                                logger.warn("Connection lost!");
+                                if (e instanceof NullPointerException) {
+                                    errM.printUnableToConnectError("Unable to connect to the required KV_store!");
+                                } else {
+                                    errM.printUnableToConnectError(e.getMessage());
+                                    logger.warn("Connection lost!");
+                                }
                             }
                         }
                     }

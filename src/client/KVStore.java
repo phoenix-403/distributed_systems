@@ -160,9 +160,16 @@ public class KVStore implements KVCommInterface {
     private void updateMetadata(Metadata metadata) {
         kvClient.setMetadata(metadata);
         HashMap<String, KVStore> kvStoreHashMap = new HashMap<>();
+        KVStore kvStore;
         for (ECSNode ecsNode : metadata.getEcsNodes()) {
-            kvStoreHashMap.put(ecsNode.getNodeName(), new KVStore(kvClient, ecsNode.getNodeHost(), ecsNode
-                    .getNodePort()));
+            kvStore = new KVStore(kvClient, ecsNode.getNodeHost(), ecsNode.getNodePort());
+            try {
+                kvStore.connect();
+                kvStore.set(kvClient);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+            kvStoreHashMap.put(ecsNode.getNodeName(), kvStore);
         }
         kvClient.setAllKVStores(kvStoreHashMap);
     }
