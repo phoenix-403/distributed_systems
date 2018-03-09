@@ -28,7 +28,7 @@ public class Script {
         }
     }
 
-    // todo add doc
+
     public static Process runScript(String script, Logger logger) {
         // changing file permissions
         Set<PosixFilePermission> perms = new HashSet<>();
@@ -72,7 +72,7 @@ public class Script {
         return process;
     }
 
-    // todo add doc
+
     private static void log(BufferedReader bufferedReader, Logger logger) throws IOException {
         if (logger != null) {
             String log;

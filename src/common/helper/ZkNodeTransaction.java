@@ -7,7 +7,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 import java.util.List;
 
-// todo add doc
+
 public class ZkNodeTransaction {
 
     private ZooKeeper zooKeeper;
@@ -44,7 +44,7 @@ public class ZkNodeTransaction {
             }
             if (!path.equals("/")) {
                 zooKeeper.delete(path, zooKeeper.exists(path, true).getVersion());
-                System.out.println("deleted: " + path); //todo delete this line
+//                System.out.println("deleted: " + path);
             }
         }
 

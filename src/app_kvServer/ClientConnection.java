@@ -133,7 +133,7 @@ public class ClientConnection implements Runnable {
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
-                            // todo - don't do it is server is in write lock
+                            // todo - don't do it if server is in write lock
                             try {
                                 boolean keyExistInStorage = kvServer.inStorage(request.getKey());
                                 boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
