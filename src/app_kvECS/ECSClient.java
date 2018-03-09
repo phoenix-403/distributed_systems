@@ -287,11 +287,11 @@ public class ECSClient implements IECSClient {
         List<String> respNodePaths = zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), false);
         for (String nodePath : respNodePaths) {
             response = new Gson().fromJson(
-                    new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath)),
+                    new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath)),
                     ZkToServerResponse.class);
             if (response != null && response.getId() == reqId) {
                 responses.add(response);
-                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + nodePath);
+                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath);
             }
         }
     }
@@ -520,15 +520,15 @@ public class ECSClient implements IECSClient {
         if (tokens.length != 0 && tokens[0] != null) {
             switch (tokens[0]) {
                 case "start": {
-                    System.out.print(PROMPT + start());
+                    System.out.println(PROMPT + start());
                     break;
                 }
-                case "stopClient": {
-                    System.out.print(PROMPT + stop());
+                case "stop": {
+                    System.out.println(PROMPT + stop());
                     break;
                 }
                 case "shutdown": {
-                    System.out.print(PROMPT + shutdown());
+                    System.out.println(PROMPT + shutdown());
                     break;
                 }
                 case "addNode": {
@@ -537,9 +537,9 @@ public class ECSClient implements IECSClient {
                         return;
                     IECSNode node = addNode((String) a[0], (int) a[1]);
                     if (node == null) {
-                        System.out.print(PROMPT + "No nodes added!");
+                        System.out.println(PROMPT + "No nodes added!");
                     } else {
-                        System.out.print(PROMPT + node.getNodeName() + "started!");
+                        System.out.println(PROMPT + node.getNodeName() + " started!");
                     }
                     break;
                 }

@@ -1,10 +1,12 @@
 package ecs;
 
 import com.google.gson.Gson;
-import common.messages.KVMessage;
 import common.messages.ClientServerRequestResponse;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Arrays;
 
@@ -73,29 +75,29 @@ public class ECSNode implements IECSNode{
                 '}';
     }
 
-    public void lockWrite(String key) {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_LOCK);
-        boolean status = sendRequest(req);
-        if (status) {
-            ClientServerRequestResponse response = getResponse();
-        }
-    }
-
-    public void unLockWrite(String key) {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_UNLOCK);
-        boolean status = sendRequest(req);
-        if (status) {
-            ClientServerRequestResponse response = getResponse();
-        }
-    }
-
-    public void transferData(String key) {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.TRANSFER_DATA);
-        boolean status = sendRequest(req);
-        if (status) {
-            ClientServerRequestResponse response = getResponse();
-        }
-    }
+//    public void lockWrite(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_LOCK, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
+//
+//    public void unLockWrite(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_UNLOCK, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
+//
+//    public void transferData(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.TRANSFER_DATA, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
 
     public boolean sendRequest(ClientServerRequestResponse req) {
         Socket socket;

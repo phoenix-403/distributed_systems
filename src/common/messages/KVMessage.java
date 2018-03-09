@@ -16,9 +16,9 @@ public interface KVMessage {
         DELETE_SUCCESS,  /* RESP => Delete - request successful */
         DELETE_ERROR,    /* RESP => Delete - request unsuccessful */
 
-        WRITE_LOCK,
-        WRITE_UNLOCK,
-        TRANSFER_DATA,
+//        WRITE_LOCK,
+//        WRITE_UNLOCK,
+//        TRANSFER_DATA,
 
         INVALID_REQUEST,  /* server can not parse string into an appropriate request */
         INVALID_RESPONSE, /* client can not parse string into an appropriate response */
@@ -27,7 +27,7 @@ public interface KVMessage {
         TIME_OUT,         /* client timeout */
         CONNECTION_DROPPED,
 
-        TEST_METADATA,
+        TEST_METADATA, // todo to be deleted
 
         SERVER_STOPPED,         /* Server is stopped, no requests are processed */
         SERVER_WRITE_LOCK,      /* Server locked for out, only get possible */
@@ -55,7 +55,7 @@ public interface KVMessage {
     StatusType getStatus();
 
     /**
-     * @return  the responsible server node
+     * @return the responsible server node
      */
     IECSNode getResponsibleServer();
 

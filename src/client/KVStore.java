@@ -1,14 +1,18 @@
 package client;
 
 import app_kvClient.IClientSocketListener;
+import app_kvClient.KVClient;
 import com.google.gson.Gson;
 import common.messages.ClientServerRequestResponse;
 import common.messages.KVMessage;
+import common.messages.Metadata;
+import ecs.ECSNode;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 
 public class KVStore implements KVCommInterface {
 
@@ -20,6 +24,8 @@ public class KVStore implements KVCommInterface {
 
     private static final int TIMEOUT = 4 * 1000;
 
+    private KVClient kvClient;
+
     private Socket clientSocket;
     private IClientSocketListener clientSocketListener;
     private OutputStreamWriter outputStreamWriter;
@@ -29,7 +35,8 @@ public class KVStore implements KVCommInterface {
 
     private int requestId = 0;
 
-    public KVStore(String address, int port) {
+    public KVStore(KVClient kvClient, String address, int port) {
+        this.kvClient = kvClient;
         this.address = address;
         this.port = port;
     }
@@ -49,7 +56,7 @@ public class KVStore implements KVCommInterface {
         try {
             tearDownConnection();
         } catch (IOException ioe) {
-            logger.error("Unable to close connection properly! - " + ioe.getMessage() );
+            logger.error("Unable to close connection properly! - " + ioe.getMessage());
         }
     }
 
@@ -73,7 +80,8 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage put(String key, String value) throws IOException {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, value, KVMessage.StatusType.PUT);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, value, KVMessage
+                .StatusType.PUT, null);
         boolean status = sendRequest(req);
         if (status) {
             ClientServerRequestResponse response = getResponse();
@@ -88,7 +96,8 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage get(String key) throws IOException {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.GET);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage
+                .StatusType.GET, null);
         boolean status = sendRequest(req);
         if (status) {
             ClientServerRequestResponse response = getResponse();
@@ -123,6 +132,11 @@ public class KVStore implements KVCommInterface {
 
                 Gson gson = new Gson();
                 response = gson.fromJson(respLine, ClientServerRequestResponse.class);
+                // updating metadata if needed
+                if (response.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
+                    updateMetadata(response.getMetadata());
+                }
+                // sending response to terminal
                 if (clientSocketListener != null) {
                     clientSocketListener.printTerminal(response.toString());
                     logResponse(response);
@@ -131,7 +145,7 @@ public class KVStore implements KVCommInterface {
 
             }
 
-            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT);
+            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT, null);
             if (clientSocketListener != null) {
                 clientSocketListener.printTerminal(response.toString());
                 logResponse(response);
@@ -143,8 +157,18 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    private void logResponse(ClientServerRequestResponse response){
-        if(response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
+    private void updateMetadata(Metadata metadata) {
+        kvClient.setMetadata(metadata);
+        HashMap<String, KVStore> kvStoreHashMap = new HashMap<>();
+        for (ECSNode ecsNode : metadata.getEcsNodes()) {
+            kvStoreHashMap.put(ecsNode.getNodeName(), new KVStore(kvClient, ecsNode.getNodeHost(), ecsNode
+                    .getNodePort()));
+        }
+        kvClient.setAllKVStores(kvStoreHashMap);
+    }
+
+    private void logResponse(ClientServerRequestResponse response) {
+        if (response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.PUT_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.DELETE_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.SERVER_ERROR))
@@ -155,20 +179,21 @@ public class KVStore implements KVCommInterface {
 
     private ClientServerRequestResponse connectionDropped() {
         ClientServerRequestResponse response = new ClientServerRequestResponse(-1, null, null,
-                KVMessage.StatusType.CONNECTION_DROPPED);
+                KVMessage.StatusType.CONNECTION_DROPPED, null);
         if (clientSocketListener != null)
             clientSocketListener.printTerminal(response.toString());
         return response;
     }
 
-    public void testMetadata(){
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, "yolo", null, KVMessage.StatusType.TEST_METADATA);
+    public void testMetadata() {
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, "yolo", null, KVMessage
+                .StatusType.TEST_METADATA, null);
         boolean status = sendRequest(req);
         ClientServerRequestResponse response = getResponse();
         System.out.println(new Gson().toJson(response));
     }
 
     public void set(IClientSocketListener listener) {
-            clientSocketListener = listener;
+        clientSocketListener = listener;
     }
 }

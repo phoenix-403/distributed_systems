@@ -154,8 +154,8 @@ public class KVServer implements IKVServer, Runnable {
         Collections.sort(requestIds);
 
         String reqData;
-        String requestId = requestIds.get(requestIds.size()); // process latest request
-        reqData = zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + requestId).toString();
+        String requestId = requestIds.get(requestIds.size() - 1); // process latest request
+        reqData = new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + "/" + requestId));
         ZkToServerRequest request = new Gson().fromJson(reqData, ZkToServerRequest.class);
 
         ZkServerCommunication.Response responseState = null;

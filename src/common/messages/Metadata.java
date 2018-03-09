@@ -10,8 +10,8 @@ public class Metadata {
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
 
-    private final String MAX = "ffffffffffffffffffffffffffffffff";
-    private final String MIN = "00000000000000000000000000000000";
+    public static final String MAX_MD5 = "ffffffffffffffffffffffffffffffff";
+    public static final String MIN_MD5 = "00000000000000000000000000000000";
 
 
     public Metadata(List<ECSNode> ecsNodes) {
@@ -34,10 +34,10 @@ public class Metadata {
             if (nodeName.equals(ecsNode.getNodeName())) {
                 if (ecsNode.getNodeHashRange()[0].compareTo(ecsNode.getNodeHashRange()[1]) > 0) {
                     if ((hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
-                            && hashKey.compareTo(MAX) <= 0) ||
+                            && hashKey.compareTo(MAX_MD5) <= 0) ||
 
                             (hashKey.compareTo(ecsNode.getNodeHashRange()[1]) <= 0
-                                    && hashKey.compareTo(MIN) >= 0)) {
+                                    && hashKey.compareTo(MIN_MD5) >= 0)) {
                         return true;
                     }
                 } else {
@@ -51,15 +51,16 @@ public class Metadata {
         return false;
     }
 
+    // used for testing
     public boolean isHashWithinRange(String hashKey, String nodeName) {
         for (ECSNode ecsNode : ecsNodes) {
             if (nodeName.equals(ecsNode.getNodeName())) {
                 if (ecsNode.getNodeHashRange()[0].compareTo(ecsNode.getNodeHashRange()[1]) > 0) {
                     if ((hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
-                            && hashKey.compareTo(MAX) <= 0) ||
+                            && hashKey.compareTo(MAX_MD5) <= 0) ||
 
                             (hashKey.compareTo(ecsNode.getNodeHashRange()[1]) <= 0
-                                    && hashKey.compareTo(MIN) >= 0)) {
+                                    && hashKey.compareTo(MIN_MD5) >= 0)) {
                         return true;
                     }
                 } else {
@@ -79,10 +80,10 @@ public class Metadata {
         for (ECSNode ecsNode : ecsNodes) {
             if (ecsNode.getNodeHashRange()[0].compareTo(ecsNode.getNodeHashRange()[1]) > 0) {
                 if ((hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
-                        && hashKey.compareTo(MAX) <= 0) ||
+                        && hashKey.compareTo(MAX_MD5) <= 0) ||
 
                         (hashKey.compareTo(ecsNode.getNodeHashRange()[1]) <= 0
-                                && hashKey.compareTo(MIN) >= 0)) {
+                                && hashKey.compareTo(MIN_MD5) >= 0)) {
                     return ecsNode;
                 }
             } else {

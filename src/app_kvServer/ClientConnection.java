@@ -29,14 +29,14 @@ public class ClientConnection implements Runnable {
     private Socket clientSocket;
     private boolean clientSocketOpen;
 
-    public void close(){
+    public void close() {
         clientSocketOpen = false;
     }
 
     /**
      * Constructs a new ClientConnection object for a given TCP socket.
      *
-     * @param kvServer server
+     * @param kvServer     server
      * @param clientSocket the Socket object for the client connection.
      */
     ClientConnection(KVServer kvServer, Socket clientSocket) {
@@ -120,15 +120,15 @@ public class ClientConnection implements Runnable {
             request = gson.fromJson(reqLine, ClientServerRequestResponse.class);
             if (validateRequest(request)) {
                 if (!kvServer.isAcceptingRequests()) {
-                    return new ClientServerRequestResponse(request.getId(), null, null, StatusType
-                            .SERVER_STOPPED);
+                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
+                            StatusType.SERVER_STOPPED, null);
                 } else if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName())) {
-                    return new ClientServerRequestResponse(request.getId(), null, null, StatusType
-                            .SERVER_NOT_RESPONSIBLE);
+                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
+                            StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata());
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
-                            // todo - dont do it is server is in write lock
+                            // todo - don't do it is server is in write lock
                             try {
                                 boolean keyExistInStorage = kvServer.inStorage(request.getKey());
                                 boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
@@ -138,30 +138,34 @@ public class ClientConnection implements Runnable {
                                 if (StringUtils.isEmpty(request.getValue())) {
                                     if (writeModifyDeleteStatus) {
                                         logger.info("delete success");
-                                        return new ClientServerRequestResponse(request.getId(), request.getKey(), null, StatusType
-                                                .DELETE_SUCCESS);
+                                        return new ClientServerRequestResponse(request.getId(), request.getKey(),
+                                                null, StatusType
+                                                .DELETE_SUCCESS, null);
                                     } else {
                                         logger.info("delete error");
-                                        return new ClientServerRequestResponse(request.getId(), request.getKey(), null, StatusType
-                                                .DELETE_ERROR);
+                                        return new ClientServerRequestResponse(request.getId(), request.getKey(),
+                                                null, StatusType
+                                                .DELETE_ERROR, null);
                                     }
                                 }
                                 // if user is trying to modify or write new -/- status is true when new field or false
                                 // when write
                                 if (writeModifyDeleteStatus) {
                                     logger.info("write success");
-                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                                            StatusType.PUT_SUCCESS);
+                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request
+                                            .getValue(),
+                                            StatusType.PUT_SUCCESS, null);
                                 } else {
                                     logger.info("modify success");
-                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                                            StatusType.PUT_UPDATE);
+                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request
+                                            .getValue(),
+                                            StatusType.PUT_UPDATE, null);
                                 }
 
 
                             } catch (IOException e) {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR);
+                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null);
                             }
 
                         case GET:
@@ -169,20 +173,22 @@ public class ClientConnection implements Runnable {
                                 String value = kvServer.getKV(request.getKey());
                                 if (value != null) {
                                     logger.info("get success");
-                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), value, StatusType.GET_SUCCESS);
+                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), value,
+                                            StatusType.GET_SUCCESS, null);
 
                                 } else {
                                     logger.info("get error");
-                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), value, StatusType
-                                            .GET_ERROR);
+                                    return new ClientServerRequestResponse(request.getId(), request.getKey(), value,
+                                            StatusType
+                                                    .GET_ERROR, null);
                                 }
                             } catch (IOException e) {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR);
+                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null);
                             }
                         case TEST_METADATA:
                             return new ClientServerRequestResponse(request.getId(), null,
-                                    (new Gson().toJson(kvServer.getMetadata())), StatusType.TEST_METADATA);
+                                    (new Gson().toJson(kvServer.getMetadata())), StatusType.TEST_METADATA, null);
 //                            return new RequestResponse(request.getId(), null,
 //                                    "{data}", StatusType.TEST_METADATA);
                     }
@@ -191,7 +197,7 @@ public class ClientConnection implements Runnable {
         } catch (JsonSyntaxException jsonException) {
             logger.error("Unable to parse JSON Request");
         } finally {
-            response = new ClientServerRequestResponse(-1, null, null, StatusType.INVALID_REQUEST);
+            response = new ClientServerRequestResponse(-1, null, null, StatusType.INVALID_REQUEST, null);
         }
 
         return response;

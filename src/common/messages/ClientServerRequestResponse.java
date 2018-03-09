@@ -1,6 +1,7 @@
 package common.messages;
 
 import ecs.IECSNode;
+import org.apache.commons.lang3.StringUtils;
 
 public class ClientServerRequestResponse implements KVMessage {
 
@@ -9,11 +10,13 @@ public class ClientServerRequestResponse implements KVMessage {
     private String key;
     private String value;
     private StatusType statusType;
+    private Metadata metadata;
 
-    public ClientServerRequestResponse(long id, String key, String value, StatusType statusType) {
+    public ClientServerRequestResponse(long id, String key, String value, StatusType statusType, Metadata metadata) {
         this.key = key;
         this.value = value;
         this.statusType = statusType;
+        this.metadata = metadata;
     }
 
     public long getId() {
@@ -39,6 +42,10 @@ public class ClientServerRequestResponse implements KVMessage {
     public IECSNode getResponsibleServer() {
         //TODO @abdel get it from metadata object
         return null;
+    }
+
+    public Metadata getMetadata() {
+        return metadata;
     }
 
     @Override
@@ -73,7 +80,14 @@ public class ClientServerRequestResponse implements KVMessage {
 
             case SERVER_STOPPED:
                 return "(" + getId() + ")-" + getStatus().toString() + "!";
-
+            case SERVER_NOT_RESPONSIBLE:
+                if (StringUtils.isEmpty(getKey())) {
+                    return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
+                } else {
+                    return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
+                }
+            case SERVER_WRITE_LOCK:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
 
         }
 

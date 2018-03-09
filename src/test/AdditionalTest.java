@@ -22,7 +22,7 @@ public class AdditionalTest extends TestCase {
 
     @Before
     public void setUp() {
-        kvClient = new KVStore("localhost", 50000);
+        kvClient = new KVStore(null, "localhost", 50000);
         try {
             kvClient.connect();
         } catch (Exception e) {
@@ -41,7 +41,7 @@ public class AdditionalTest extends TestCase {
 
         try {
             for (int i=0; i < CLIENT_CONNECTIONS; i++) {
-                KVStore kvClient = new KVStore("localhost", 50000);
+                KVStore kvClient = new KVStore(null, "localhost", 50000);
                 kvClient.disconnect();
                 kvClient.connect();
             }
@@ -59,7 +59,7 @@ public class AdditionalTest extends TestCase {
 
         try {
             for (int i=0; i < CLIENT_CONNECTIONS; i++) {
-                KVStore kvClient = new KVStore("localhost", 50000);
+                KVStore kvClient = new KVStore(null, "localhost", 50000);
                 kvClient.connect();
             }
 
