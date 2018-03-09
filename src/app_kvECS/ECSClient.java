@@ -238,29 +238,24 @@ public class ECSClient implements IECSClient {
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN);
         List<ZkToServerResponse> responses = processReqResp(request);
 
-        if (noActiveServers == responses.size()) {
-            for (ZkToServerResponse response : responses) {
-                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.SHUTDOWN_SUCCESS)) {
-                    throw new EcsException("An unexpected response to shutdown command!!");
-                }
-
-                for(ECSNode ecsNode: ecsNodes){
-                    if (ecsNode.getNodeName().equals(response.getServerName())){
-                        ecsNode.setReserved(false);
-                    }
-                }
-
-
+        for (ZkToServerResponse response : responses) {
+            if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.SHUTDOWN_SUCCESS)) {
+                throw new EcsException("An unexpected response to shutdown command!!");
             }
+
+            for (ECSNode ecsNode : ecsNodes) {
+                if (ecsNode.getNodeName().equals(response.getServerName())) {
+                    ecsNode.setReserved(false);
+                }
+            }
+
+
+        }
+
+        if (noActiveServers == responses.size()) {
             return true;
         } else {
-            List<String> activeServers =
-                    zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
-
-            if (activeServers.size() == 0) {
-                return true;
-            }
-            logger.error(activeServers + "did not shutdown!");
+            logger.error("Shutdown was not successful or was partially successful!");
             return false;
         }
 
