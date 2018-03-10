@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
+import common.messages.server_server.SrvSrvRequest;
+import common.messages.server_server.SrvSrvResponse;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -23,9 +25,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
+import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
+import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
+import static ecs.ZkStructureNodes.SERVER_SERVER_RESPONSE;
 
 public class KVServer implements IKVServer, Runnable {
 
@@ -111,6 +115,7 @@ public class KVServer implements IKVServer, Runnable {
         //setup the metaData
         updateMetadata(true);
         addMetadataWatch();
+        addServerRequestWatch();
 
         serverRunning = false;
         acceptingRequests = false;
@@ -208,6 +213,45 @@ public class KVServer implements IKVServer, Runnable {
                 ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
                 new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
                         .EPHEMERAL_SEQUENTIAL);
+    }
+
+    private void addServerRequestWatch() throws KeeperException, InterruptedException {
+        zooKeeper.exists(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
+                try {
+                    handleServerRequest();
+                    addServerRequestWatch();
+                } catch (KeeperException | InterruptedException e) {
+                    logger.fatal("Metadata write failed!");
+                    System.exit(-1);
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handleServerRequest() throws Exception {
+        String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
+        Gson gson = new Gson();
+        //todo gson to object
+            SrvSrvRequest req = gson.fromJson(data, SrvSrvRequest.class);
+            if (req.getTargetServer().equals(name)){
+                HashMap<String, String> newDataPairs = req.getKvToImport();
+                Iterator it = newDataPairs.entrySet().iterator();
+                while(it.hasNext()){
+                    Map.Entry next = (Map.Entry) it.next();
+                    if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
+                        logger.error("Write Not Successful!");
+                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                        zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue(), gson.toJson(response).getBytes());
+                    }
+                }
+                logger.error("Write Successful!");
+                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
+                zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue(), gson.toJson(response).getBytes());
+            }
+        //todo
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {
