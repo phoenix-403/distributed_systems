@@ -283,7 +283,7 @@
         private void updateMetadata(boolean firstRun) throws Exception {
             String[] prevRange = null;
 
-            if (!firstRun && metadata.getRange(name) != null) {
+            if (!firstRun && metadata.getEcsNodes().size()>0) {
                 prevRange = new String[2];
                 System.arraycopy(metadata.getRange(name), 0, prevRange, 0 , 2);
             }
@@ -291,7 +291,7 @@
             String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
             metadata = new Gson().fromJson(data, Metadata.class);
 
-            if (!firstRun && metadata.getRange(name) != null) {
+            if (!firstRun  && prevRange!=null){
                 int prevRangeInt = prevRange[1].compareTo(prevRange[0]) < 0 ? prevRange[1].compareTo(prevRange[0]) :
                         prevRange[1].compareTo(prevRange[0]) + MAX_MD5.compareTo(MIN_MD5);
                 int currRangeInt = metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) < 0 ?
