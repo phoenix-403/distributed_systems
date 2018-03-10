@@ -453,6 +453,9 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
         boolean found;
+        boolean success = true;
+
+        // checking that node you are trying to delete exist and server is active
         for (String nodeName : nodeNames) {
             found = false;
             for (ECSNode ecsNode : ecsNodes) {
@@ -466,6 +469,7 @@ public class ECSClient implements IECSClient {
             }
         }
 
+        // requesting delete nodes
         int reqId = reqResId++;
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.REMOVE_NODES, (List
                 <String>) nodeNames);
@@ -477,41 +481,48 @@ public class ECSClient implements IECSClient {
             return false;
         }
 
-
+        // processing response - removing node for nodes not to be deleted if it failed or did not respond
         if (nodeNames.size() == responses.size()) {
             for (ZkToServerResponse response : responses) {
-                if (!response.getZkSvrResponse().equals(ZkServerCommunication.Response.REMOVE_NODES_SUCCESS)) {
-                    logger.error("Received a response of wrong type for a Remove_nodes req ");
-                    return false;
+                if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.REMOVE_NODES_FAIL)) {
+                    logger.error(response.getServerName() + " responded with a fail  Node");
+                    success = false;
+                    nodeNames.remove(response.getServerName());
                 }
             }
-
-            for (ECSNode ecsNode : ecsNodes) {
-                if (nodeNames.contains(ecsNode.getNodeName())) {
-                    ecsNode.setNodeHashRange(new String[2]);
-                    ecsNode.setReserved(false);
+        } else {
+            for (ZkToServerResponse response : responses) {
+                if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.REMOVE_NODES_FAIL)) {
+                    logger.error(response.getServerName() + " responded with a fail  Node");
+                    nodeNames.remove(response.getServerName());
                 }
             }
-
-
-            ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
-            consistentHash.hash();
-
-            metadata = new Metadata(ecsNodes);
-            try {
-                zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata
-                        .class)
-                        .getBytes());
-            } catch (KeeperException | InterruptedException e) {
-                logger.error("Metadata was not updated when removing nodes! " + e.getMessage());
-                return false;
-            }
-            return true;
+            success = false;
         }
 
-        // todo - update metadata depending on responses
-        logger.error("Some Nodes may have been removed or none were removed!");
-        return false;
+        for (ECSNode ecsNode : ecsNodes) {
+            if (nodeNames.contains(ecsNode.getNodeName())) {
+                ecsNode.setNodeHashRange(new String[2]);
+                ecsNode.setReserved(false);
+            }
+        }
+
+
+        ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
+        consistentHash.hash();
+
+        metadata = new Metadata(ecsNodes);
+        try {
+            zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata
+                    .class)
+                    .getBytes());
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Metadata was not updated when removing nodes! " + e.getMessage());
+            return false;
+        }
+
+
+        return success;
     }
 
     @Override

@@ -146,7 +146,6 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void addEcsCommandsWatch() throws KeeperException, InterruptedException {
-
         zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUEST.getValue(), event -> {
             if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
                 try {
@@ -159,7 +158,6 @@ public class KVServer implements IKVServer, Runnable {
                 }
             }
         });
-
     }
 
 
@@ -190,16 +188,17 @@ public class KVServer implements IKVServer, Runnable {
                 close();
                 break;
             case REMOVE_NODES:
+                boolean success;
                 List<String> targetNode = request.getNodes();
                 if (targetNode.contains(name)) {
 
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
-                    boolean isSuccessful = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
-
-                    if (isSuccessful)
+                    success = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
+                    if (success){
                         responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
-                    else
+                    }else{
                         responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
+                    }
                     respond(request.getId(),responseState);
                     close();
                 }
@@ -296,8 +295,6 @@ public class KVServer implements IKVServer, Runnable {
             }
         }
     }
-
-
 
     public boolean isAcceptingRequests() {
         return acceptingRequests;
