@@ -87,8 +87,6 @@ public class Metadata {
         List<ECSNode> sortedNodes = sortNodes(ecsNodes);
         for (ECSNode ecsNode : sortedNodes) {
             if (ecsNode.getNodeName().equals(id)) {
-                if (before != null)
-                    return before;
                 currentPassed = true;
                 continue;
             }
@@ -97,7 +95,10 @@ public class Metadata {
             if (!removed.contains(ecsNode.getNodeName()) && after == null && currentPassed == true)
                 after = ecsNode;
         }
-        return after;
+        if (after!=null) {
+            return after;
+        } else
+            return before;
     }
 
     public ECSNode getResponsibleServer(String key) {
