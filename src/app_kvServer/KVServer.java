@@ -27,6 +27,8 @@
     import java.net.UnknownHostException;
     import java.util.*;
 
+    import static common.messages.Metadata.MAX_MD5;
+    import static common.messages.Metadata.MIN_MD5;
     import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
     import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
     import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
@@ -279,14 +281,24 @@
 
 
         private void updateMetadata(boolean firstRun) throws Exception {
-            Metadata prevMetadata = metadata;
+            String[] prevRange = null;
+
+            if (metadata!=null) {
+                prevRange = new String[2];
+                System.arraycopy(metadata.getRange(name), 0, prevRange, 0 , 2);
+            }
+
             String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
             metadata = new Gson().fromJson(data, Metadata.class);
 
             if (!firstRun) {
-                if (prevMetadata.getRange(name)[0].compareTo(prevMetadata.getRange(name)[1])
-                            > metadata.getRange(name)[0].compareTo(metadata.getRange(name)[1])) {
-                    List<ECSNode> withinRangeNodes = metadata.getWithinRange(prevMetadata.getRange(name));
+                int prevRangeInt = prevRange[1].compareTo(prevRange[0]) < 0 ? prevRange[1].compareTo(prevRange[0]) :
+                        prevRange[1].compareTo(prevRange[0]) + MAX_MD5.compareTo(MIN_MD5);
+                int currRangeInt = metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) < 0 ?
+                        metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) :
+                        metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) + MAX_MD5.compareTo(MIN_MD5);
+                if (prevRangeInt > currRangeInt) {
+                    List<ECSNode> withinRangeNodes = metadata.getWithinRange(prevRange);
                     for (ECSNode withinRangeNode : withinRangeNodes)
                      moveData(withinRangeNode.getNodeHashRange(), withinRangeNode.getNodeName());
                 }
