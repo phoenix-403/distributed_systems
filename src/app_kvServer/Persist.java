@@ -98,9 +98,9 @@ public class Persist {
     }
 
     /**
-     * reads value from database given a key; cache get updated from cach
+     * reads value from database given a range
      *
-     * @return value if key-value pair is found else null
+     * @return key-value pairs within range
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
     public static synchronized HashMap<String, String> readRange(String[] range) throws IOException {
@@ -111,7 +111,7 @@ public class Persist {
         for (String keyValue : fileLines) {
             if (keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[1]) <= 0
                     && keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[0]) >= 0)
-            valuePairs.put(keyValue.split(DELIMITER_PATTERN)[0], keyValue.split(DELIMITER_PATTERN)[1]);
+                valuePairs.put(keyValue.split(DELIMITER_PATTERN)[0], keyValue.split(DELIMITER_PATTERN)[1]);
         }
 
         return valuePairs;
@@ -120,8 +120,7 @@ public class Persist {
     /**
      * writes value into database given a key; updates cache as well
      *
-     * @return true if it is a new value, false if it updated an existing one;
-     * true if deleted false if not
+     * @return true if all is deleted false if not
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
     public static synchronized boolean write(String key, String value) throws IOException {
@@ -164,6 +163,31 @@ public class Persist {
         logger.info("Modified key: " + key + " with value of: " + value);
         Cache.updateCache(key, value);
         return false;
+    }
+
+
+    /**
+     * deletes values over a range
+     *
+     * @return true if it is a new value, false if it updated an existing one;
+     * true if deleted false if not
+     * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
+     */
+    public static synchronized boolean deleteRange(String[] range) throws IOException {
+
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
+        int i = 0;
+        for (String keyValue : fileLines) {
+            if (keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[1]) <= 0
+                    && keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[0]) >= 0) {
+                String key = keyValue.split(DELIMITER_PATTERN)[0];
+                fileLines.remove(i++);
+                Cache.remove(key);
+            }
+        }
+        Files.write(dbFile.toPath(), fileLines);
+        logger.info("deleted keys within range: " + range[0] +"-" + range[1]);
+        return true;
     }
 
 

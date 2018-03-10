@@ -470,6 +470,7 @@ public class KVServer implements IKVServer, Runnable {
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
+                    Persist.deleteRange(hashRange);
                     unlockWrite();
                     return resp.getResponse().equals(TRANSFERE_SUCCESS);
                 }

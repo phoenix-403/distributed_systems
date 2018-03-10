@@ -1,5 +1,8 @@
 package test;
 
+import app_kvECS.ECSClient;
+import app_kvECS.EcsException;
+import app_kvServer.KVServer;
 import app_kvServer.Persist;
 import client.KVStore;
 import common.messages.client_server.KVMessage;
@@ -10,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -17,11 +21,21 @@ import static app_kvServer.Persist.init;
 
 public class AdditionalTest extends TestCase {
 
+    private ECSClient ecsClient;
     private KVStore kvClient;
+    private KVServer kvServer;
     private static int CLIENT_CONNECTIONS = 50;
 
     @Before
     public void setUp() {
+        try {
+            ecsClient = new ECSClient("ecs.config");
+            ecsClient.addNodes(10, "LRU", 10);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (EcsException e) {
+            e.printStackTrace();
+        }
         kvClient = new KVStore(null, "localhost", 50000);
         try {
             kvClient.connect();
