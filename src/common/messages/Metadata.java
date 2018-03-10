@@ -70,6 +70,10 @@ public class Metadata {
         return (hashKey.compareTo(range[1])) <= 0 && (hashKey.compareTo(range[0])) >=0;
     }
 
+    public boolean isHashWithinRange(String hashKey, String [] range) {
+        return (hashKey.compareTo(range[1])) <= 0 && (hashKey.compareTo(range[0])) >=0;
+    }
+
     public String[] getRange(String name) {
         for (ECSNode ecsNode : ecsNodes) {
             if (ecsNode.getNodeName().equals(name)) {
@@ -77,6 +81,16 @@ public class Metadata {
             }
         }
         return null;
+    }
+
+    public List<ECSNode> getWithinRange(String[] range) {
+        List<ECSNode> withinRange = new ArrayList<>();
+        for (ECSNode ecsNode : ecsNodes) {
+            if (isHashWithinRange(ecsNode.getNodeHashRange()[0], range)) {
+                withinRange.add(ecsNode);
+            }
+        }
+        return withinRange;
     }
 
     public ECSNode getNextServer(String id, List<String> removed) {
