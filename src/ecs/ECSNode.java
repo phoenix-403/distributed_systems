@@ -1,13 +1,9 @@
 package ecs;
 
-import com.google.gson.Gson;
-import common.messages.client_server.ClientServerRequestResponse;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.util.Arrays;
 
 public class ECSNode implements IECSNode{
@@ -99,20 +95,20 @@ public class ECSNode implements IECSNode{
 //        }
 //    }
 
-    public boolean sendRequest(ClientServerRequestResponse req) {
-        Socket socket;
-        try {
-            socket = new Socket(nodeHost, nodePort);
-            outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
-            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    private ClientServerRequestResponse getResponse() {
-        return null;
-    }
+//    public boolean sendRequest(ClientServerRequestResponse req) {
+//        Socket socket;
+//        try {
+//            socket = new Socket(nodeHost, nodePort);
+//            outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
+//            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//            return false;
+//        }
+//        return true;
+//    }
+//
+//    private ClientServerRequestResponse getResponse() {
+//        return null;
+//    }
 }

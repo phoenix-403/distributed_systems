@@ -196,15 +196,26 @@ public class KVServer implements IKVServer, Runnable {
                 if (targetNode.contains(name)) {
 
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
-                    success = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
-                    if (success) {
+                    if (nextNode != null) {
+                        success = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
+
+                        if (success) {
+                            responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
+                            respond(request.getId(), responseState);
+                            Thread.sleep(2000);
+                            close();
+                        } else {
+                            responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
+                            respond(request.getId(), responseState);
+                        }
+                    }else{
+                        // if you come here it means u r removing yourself and no other nodes exist
+                        // or you are removing all nodes!
+                        logger.info("No servers to move data to");
                         responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                         respond(request.getId(), responseState);
                         Thread.sleep(2000);
                         close();
-                    } else {
-                        responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
-                        respond(request.getId(), responseState);
                     }
 
                 }
@@ -454,7 +465,16 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws Exception {
         lockWrite();
-        HashMap<String, String> myKeyValues = Persist.readRange(hashRange);
+
+        //handling wraparound case
+        HashMap<String, String> myKeyValues = new HashMap<>();
+        if(hashRange[0].compareTo(hashRange[1]) > 0){
+            myKeyValues.putAll(Persist.readRange(new String[]{hashRange[0],Metadata.MAX_MD5}));
+            myKeyValues.putAll(Persist.readRange(new String[]{Metadata.MIN_MD5,hashRange[1]}));
+        }else{
+            myKeyValues.putAll(Persist.readRange(hashRange));
+        }
+
         SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
         zkNodeTransaction.createZNode(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
                 new Gson().toJson(request).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
