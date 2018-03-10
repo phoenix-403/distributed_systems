@@ -216,12 +216,13 @@ public class KVServer implements IKVServer, Runnable {
                         .EPHEMERAL_SEQUENTIAL);
     }
 
-    private void addServerRequestWatch() throws KeeperException, InterruptedException {
-        zooKeeper.exists(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), event -> {
-            if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
+    private synchronized void addServerRequestWatch() throws KeeperException, InterruptedException {
+        zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
                 try {
-                    handleServerRequest();
+                    List<String> reqNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(),false);
                     addServerRequestWatch();
+                    handleServerRequest(reqNodes);
                 } catch (KeeperException | InterruptedException e) {
                     logger.fatal("Metadata write failed!");
                     System.exit(-1);
@@ -232,11 +233,14 @@ public class KVServer implements IKVServer, Runnable {
         });
     }
 
-    private void handleServerRequest() throws Exception {
-        String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
-        Gson gson = new Gson();
-        //todo gson to object
-            SrvSrvRequest req = gson.fromJson(data, SrvSrvRequest.class);
+    private void handleServerRequest(List<String> reqNodes) throws Exception {
+        String reqJson;
+        for(String reqNode : reqNodes) {
+            reqJson = new String(zkNodeTransaction.read(
+                    ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+            Gson gson = new Gson();
+            //todo gson to object
+            SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)){
                 HashMap<String, String> newDataPairs = req.getKvToImport();
                 Iterator it = newDataPairs.entrySet().iterator();
@@ -254,6 +258,7 @@ public class KVServer implements IKVServer, Runnable {
                 zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                         gson.toJson(response).getBytes());
             }
+        }
         //todo
     }
 
@@ -441,6 +446,7 @@ public class KVServer implements IKVServer, Runnable {
         SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
         zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
                 new Gson().toJson(request).getBytes());
+
         unlockWrite();
         return false;
     }
