@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
+import common.messages.server_server.SrvSrvRequest;
+import common.messages.server_server.SrvSrvResponse;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -23,9 +25,12 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
+import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
+import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
+import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
+import static ecs.ZkStructureNodes.*;
 
 public class KVServer implements IKVServer, Runnable {
 
@@ -46,6 +51,8 @@ public class KVServer implements IKVServer, Runnable {
     private ZkConnector zkConnector;
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
+
+    private int TIMEOUT = 20000;
 
     private Metadata metadata;
 
@@ -111,6 +118,7 @@ public class KVServer implements IKVServer, Runnable {
         //setup the metaData
         updateMetadata(true);
         addMetadataWatch();
+        addServerRequestWatch();
 
         serverRunning = false;
         acceptingRequests = false;
@@ -193,7 +201,6 @@ public class KVServer implements IKVServer, Runnable {
                     }else{
                         responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
                     }
-
                     respond(request.getId(),responseState);
                     close();
                 }
@@ -211,6 +218,51 @@ public class KVServer implements IKVServer, Runnable {
                 ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
                 new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
                         .EPHEMERAL_SEQUENTIAL);
+    }
+
+    private synchronized void addServerRequestWatch() throws KeeperException, InterruptedException {
+        zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
+                try {
+                    List<String> reqNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(),false);
+                    addServerRequestWatch();
+                    handleServerRequest(reqNodes);
+                } catch (KeeperException | InterruptedException e) {
+                    logger.fatal("Metadata write failed!");
+                    System.exit(-1);
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void handleServerRequest(List<String> reqNodes) throws Exception {
+        String reqJson;
+        for(String reqNode : reqNodes) {
+            reqJson = new String(zkNodeTransaction.read(
+                    ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+            Gson gson = new Gson();
+            //todo gson to object
+            SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
+            if (req.getTargetServer().equals(name)){
+                HashMap<String, String> newDataPairs = req.getKvToImport();
+                Iterator it = newDataPairs.entrySet().iterator();
+                while(it.hasNext()){
+                    Map.Entry next = (Map.Entry) it.next();
+                    if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
+                        logger.error("Write Not Successful!");
+                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                        zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                                gson.toJson(response).getBytes());
+                    }
+                }
+                logger.error("Write Successful!");
+                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
+                zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                        gson.toJson(response).getBytes());
+            }
+        }
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {
@@ -242,7 +294,8 @@ public class KVServer implements IKVServer, Runnable {
             } else if (prevMetadata.getRange(name)[0].compareTo(prevMetadata.getRange(name)[1])
                         > metadata.getRange(name)[0].compareTo(metadata.getRange(name)[1])) {
                 // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
-                    ECSNode target = metadata.getResponsibleServer(name);
+                //todo for multi servers
+                    ECSNode target = metadata.getResponsibleServer(null);
                     moveData(target.getNodeHashRange(), target.getNodeName());
             }
         }
@@ -391,11 +444,26 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws Exception {
         lockWrite();
-        // get all keys
-        //check if within range
-        //KVStore target = new KVStore(null, metadata.getResponsibleServer(hashRange[1]).getNodeHost(),
-        //                metadata.getResponsibleServer(hashRange[1]).getNodePort());
-        //        target.put("", "");
+        HashMap<String, String> myKeyValues = Persist.readRange(hashRange);
+        SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
+        zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
+                new Gson().toJson(request).getBytes());
+        long startTime = System.currentTimeMillis();
+        while ((System.currentTimeMillis() - startTime) < TIMEOUT) {
+            List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
+                    false);
+            String respJSON;
+            for (String reqNode : respNodes) {
+                respJSON = new String(zkNodeTransaction.read(
+                        ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+                Gson gson = new Gson();
+                SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
+                if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
+                    unlockWrite();
+                    return resp.getResponse().equals(TRANSFERE_SUCCESS);
+                }
+            }
+        }
         unlockWrite();
         return false;
     }
