@@ -27,9 +27,10 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
 
+import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
-import static ecs.ZkStructureNodes.SERVER_SERVER_RESPONSE;
+import static ecs.ZkStructureNodes.*;
 
 public class KVServer implements IKVServer, Runnable {
 
@@ -244,12 +245,14 @@ public class KVServer implements IKVServer, Runnable {
                     if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
                         logger.error("Write Not Successful!");
                         SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
-                        zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue(), gson.toJson(response).getBytes());
+                        zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                                gson.toJson(response).getBytes());
                     }
                 }
                 logger.error("Write Successful!");
                 SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
-                zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue(), gson.toJson(response).getBytes());
+                zkNodeTransaction.write(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                        gson.toJson(response).getBytes());
             }
         //todo
     }
@@ -434,11 +437,10 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws Exception {
         lockWrite();
-        // get all keys
-        //check if within range
-        //KVStore target = new KVStore(null, metadata.getResponsibleServer(hashRange[1]).getNodeHost(),
-        //                metadata.getResponsibleServer(hashRange[1]).getNodePort());
-        //        target.put("", "");
+        HashMap<String, String> myKeyValues = Persist.readRange(hashRange);
+        SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
+        zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
+                new Gson().toJson(request).getBytes());
         unlockWrite();
         return false;
     }

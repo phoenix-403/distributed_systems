@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public class Persist {
@@ -94,6 +95,26 @@ public class Persist {
 
         logger.info("key \"" + key + "\" not found in database!");
         return null;
+    }
+
+    /**
+     * reads value from database given a key; cache get updated from cach
+     *
+     * @return value if key-value pair is found else null
+     * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
+     */
+    public static synchronized HashMap<String, String> readRange(String[] range) throws IOException {
+
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
+        HashMap<String, String> valuePairs = new HashMap<>();
+
+        for (String keyValue : fileLines) {
+            if (keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[1]) <= 0
+                    && keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[0]) >= 0)
+            valuePairs.put(keyValue.split(DELIMITER_PATTERN)[0], keyValue.split(DELIMITER_PATTERN)[1]);
+        }
+
+        return valuePairs;
     }
 
     /**
