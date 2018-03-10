@@ -126,9 +126,10 @@ public class ECSClient implements IECSClient {
         // setting up structural nodes
         zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.METADATA.getValue(), null, CreateMode.PERSISTENT);
-        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
-        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_COMMANDS.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
 
         // writing an empty metadata
         metadata = new Metadata(new ArrayList<>());
@@ -267,7 +268,7 @@ public class ECSClient implements IECSClient {
             InterruptedException {
         // Sending request via zookeeper
         int reqId = request.getId();
-        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + ZkStructureNodes.REQUEST
+        zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUEST.getValue() + ZkStructureNodes.REQUEST
                 .getValue(), new Gson().toJson(request, ZkToServerRequest.class).getBytes(), CreateMode
                 .EPHEMERAL_SEQUENTIAL);
 

@@ -139,11 +139,11 @@ public class KVServer implements IKVServer, Runnable {
 
     private void addEcsCommandsWatch() throws KeeperException, InterruptedException {
 
-        zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), event -> {
+        zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUEST.getValue(), event -> {
             if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
                 try {
                     List<String> requestIds =
-                            zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), false);
+                            zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUEST.getValue(), false);
                     processRequest(requestIds);
                     addEcsCommandsWatch();
                 } catch (Exception e) {
@@ -160,7 +160,7 @@ public class KVServer implements IKVServer, Runnable {
 
         String reqData;
         String requestId = requestIds.get(requestIds.size() - 1); // process latest request
-        reqData = new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue() + "/" + requestId));
+        reqData = new String(zkNodeTransaction.read(ZkStructureNodes.ZK_SERVER_REQUEST.getValue() + "/" + requestId));
         ZkToServerRequest request = new Gson().fromJson(reqData, ZkToServerRequest.class);
 
         ZkServerCommunication.Response responseState;
