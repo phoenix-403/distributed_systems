@@ -1,7 +1,7 @@
 package ecs;
 
 import com.google.gson.Gson;
-import common.messages.ClientServerRequestResponse;
+import common.messages.client_server.ClientServerRequestResponse;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

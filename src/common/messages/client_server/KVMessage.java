@@ -1,4 +1,4 @@
-package common.messages;
+package common.messages.client_server;
 
 import ecs.IECSNode;
 

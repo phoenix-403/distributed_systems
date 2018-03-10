@@ -2,7 +2,7 @@ package test;
 
 import app_kvServer.Persist;
 import client.KVStore;
-import common.messages.KVMessage;
+import common.messages.client_server.KVMessage;
 import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Assert;

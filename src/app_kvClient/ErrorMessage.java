@@ -1,6 +1,6 @@
 package app_kvClient;
 
-import common.messages.KVMessage;
+import common.messages.client_server.KVMessage;
 
 public class ErrorMessage {
     private static final String PROMPT = "KV_Client> ";

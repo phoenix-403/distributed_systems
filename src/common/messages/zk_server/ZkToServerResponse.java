@@ -1,4 +1,4 @@
-package common.messages;
+package common.messages.zk_server;
 
 public class ZkToServerResponse {
 

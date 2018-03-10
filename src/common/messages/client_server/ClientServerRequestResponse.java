@@ -1,5 +1,6 @@
-package common.messages;
+package common.messages.client_server;
 
+import common.messages.Metadata;
 import ecs.IECSNode;
 import org.apache.commons.lang3.StringUtils;
 
