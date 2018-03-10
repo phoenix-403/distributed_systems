@@ -222,6 +222,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                             }
                         }
                     }
+                    break;
                 case "disconnect":
                     disconnect();
                     break;
