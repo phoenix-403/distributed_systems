@@ -192,9 +192,7 @@ public class KVServer implements IKVServer, Runnable {
             case REMOVE_NODES:
                 List<String> targetNode = request.getNodes();
                 if (targetNode.contains(name)) {
-                    // note this is the update when nodes deleted
-                    // recalculate metadata - metadata not changed yet to keep serving read requests
-                    //todo - server lock -> call handoff keys
+
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
                     boolean isSuccessful = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
 
@@ -287,9 +285,6 @@ public class KVServer implements IKVServer, Runnable {
 
         if (!firstRun) {
             if (metadata.getRange(name) == null) {
-                // todo check if i was removed from the list... if so
-                // put yourself in wrinting lock mode
-                // note this is the update when nodes are added
                 ECSNode target = metadata.getResponsibleServer(metadata.getRange(name)[1]);
                 moveData(target.getNodeHashRange(), target.getNodeName());
             } else if (prevMetadata.getRange(name)[0].compareTo(prevMetadata.getRange(name)[1])

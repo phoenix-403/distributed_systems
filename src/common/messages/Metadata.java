@@ -2,9 +2,9 @@ package common.messages;
 
 import common.helper.ConsistentHash;
 import ecs.ECSNode;
+import jdk.nashorn.api.tree.Tree;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Metadata {
 
@@ -23,7 +23,18 @@ public class Metadata {
         }
     }
 
-    public void sortNodes(){
+    public List<ECSNode> sortNodes(List<ECSNode> ecsNodez){
+        TreeMap<String, ECSNode> sortThis = new TreeMap<>();
+        for (ECSNode ecsNode : ecsNodez) {
+            sortThis.put(ecsNode.getNodeHashRange()[0], ecsNode);
+        }
+        List<ECSNode> sortedList = new ArrayList<>();
+        Iterator it = sortThis.entrySet().iterator();
+        while (it.hasNext()) {
+            sortedList.add((ECSNode)((Map.Entry)it.next()).getValue());
+        }
+
+        return sortedList;
     }
 
 
@@ -73,7 +84,8 @@ public class Metadata {
         boolean currentPassed = false;
         ECSNode before = null;
         ECSNode after = null;
-        for (ECSNode ecsNode : ecsNodes) {
+        List<ECSNode> sortedNodes = sortNodes(ecsNodes);
+        for (ECSNode ecsNode : sortedNodes) {
             if (ecsNode.getNodeName().equals(id)) {
                 if (before != null)
                     return before;
@@ -94,7 +106,6 @@ public class Metadata {
             if (ecsNode.getNodeHashRange()[0].compareTo(ecsNode.getNodeHashRange()[1]) > 0) {
                 if ((hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
                         && hashKey.compareTo(MAX_MD5) <= 0) ||
-
                         (hashKey.compareTo(ecsNode.getNodeHashRange()[1]) <= 0
                                 && hashKey.compareTo(MIN_MD5) >= 0)) {
                     return ecsNode;
