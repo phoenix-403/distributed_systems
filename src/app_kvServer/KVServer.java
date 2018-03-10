@@ -458,7 +458,7 @@ public class KVServer implements IKVServer, Runnable {
                         ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
-                if (resp.getTargetServer().equals(name)) {
+                if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
                     unlockWrite();
                     return resp.getResponse().equals(TRANSFERE_SUCCESS);
                 }
