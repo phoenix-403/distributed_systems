@@ -52,6 +52,8 @@ public class KVServer implements IKVServer, Runnable {
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
 
+    private int TIMEOUT = 20000;
+
     private Metadata metadata;
 
     private List<ClientConnection> clientConnections;
@@ -259,7 +261,6 @@ public class KVServer implements IKVServer, Runnable {
                         gson.toJson(response).getBytes());
             }
         }
-        //todo
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {
@@ -291,7 +292,8 @@ public class KVServer implements IKVServer, Runnable {
             } else if (prevMetadata.getRange(name)[0].compareTo(prevMetadata.getRange(name)[1])
                         > metadata.getRange(name)[0].compareTo(metadata.getRange(name)[1])) {
                 // todo - increased - do nothing but decreased put urself in write lock mode and hand key to next server
-                    ECSNode target = metadata.getResponsibleServer(name);
+                //todo for multi servers
+                    ECSNode target = metadata.getResponsibleServer(null);
                     moveData(target.getNodeHashRange(), target.getNodeName());
             }
         }
@@ -446,7 +448,22 @@ public class KVServer implements IKVServer, Runnable {
         SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
         zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
                 new Gson().toJson(request).getBytes());
-
+        long startTime = System.currentTimeMillis();
+        while ((System.currentTimeMillis() - startTime) < TIMEOUT) {
+            List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
+                    false);
+            String respJSON;
+            for (String reqNode : respNodes) {
+                respJSON = new String(zkNodeTransaction.read(
+                        ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+                Gson gson = new Gson();
+                SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
+                if (resp.getTargetServer().equals(name)) {
+                    unlockWrite();
+                    return resp.getResponse().equals(TRANSFERE_SUCCESS);
+                }
+            }
+        }
         unlockWrite();
         return false;
     }
