@@ -497,6 +497,22 @@ public class ECSClient implements IECSClient {
                     nodeNames.remove(response.getServerName());
                 }
             }
+            // for the ones that did not respond
+            boolean nodeResponded;
+            Iterator<String> iterator = nodeNames.iterator();
+            while (iterator.hasNext()) {
+                String nodeToDelete = iterator.next();
+                nodeResponded = false;
+                for (ZkToServerResponse response : responses) {
+                    if (nodeToDelete.equals(response.getServerName())) {
+                        nodeResponded = true;
+                    }
+                }
+                if (!nodeResponded) {
+                    logger.error(nodeToDelete + " did not respond for delete request! Not deleting!");
+                    iterator.remove();
+                }
+            }
             success = false;
         }
 
