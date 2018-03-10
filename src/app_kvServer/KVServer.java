@@ -243,6 +243,7 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void handleServerRequest(List<String> reqNodes) throws Exception {
+        // todo in all server-server... remove duplicates! //todo in get - check data that is being moved!
         String reqJson;
         for (String reqNode : reqNodes) {
             reqJson = new String(zkNodeTransaction.read(
