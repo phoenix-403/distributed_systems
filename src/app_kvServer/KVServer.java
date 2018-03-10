@@ -196,9 +196,12 @@ public class KVServer implements IKVServer, Runnable {
                     // recalculate metadata - metadata not changed yet to keep serving read requests
                     //todo - server lock -> call handoff keys
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
-                    moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
+                    boolean isSuccessful = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
 
-                    responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
+                    if (isSuccessful)
+                        responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
+                    else
+                        responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
                     respond(request.getId(),responseState);
                     close();
                 }
