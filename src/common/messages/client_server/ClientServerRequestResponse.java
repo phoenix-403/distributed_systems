@@ -14,6 +14,7 @@ public class ClientServerRequestResponse implements KVMessage {
     private Metadata metadata;
 
     public ClientServerRequestResponse(long id, String key, String value, StatusType statusType, Metadata metadata) {
+        this.id = id;
         this.key = key;
         this.value = value;
         this.statusType = statusType;
@@ -41,8 +42,7 @@ public class ClientServerRequestResponse implements KVMessage {
 
     @Override
     public IECSNode getResponsibleServer() {
-        //TODO @abdel get it from metadata object
-        return null;
+        return metadata.getResponsibleServer(key);
     }
 
     public Metadata getMetadata() {
