@@ -7,23 +7,24 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 public class Persist {
 
-    // logger
-    private static Logger logger = LogManager.getLogger(Persist.class);
-
     // Save data into multiple DB_FILES - 1 for each letter and 1 extra for all other
-    private static String ROOT_PATH = "ds_data";
-    private static volatile File[] DB_FILES = new File[27];
+    private static final String ROOT_PATH = "ds_data";
     private static final String DB_FILE_PATH = "/db";
-
+    private static final String DB_FILE_NAME = "data.db";
     private static final String DELIMITER = "~*~*";
     private static final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
+    // logger
+    private static Logger logger = LogManager.getLogger(Persist.class);
+    private static volatile File dbFile;
 
 
     private Persist() {
@@ -37,7 +38,6 @@ public class Persist {
      * @return true if it server is ready to persist data, false otherwise
      */
     public static boolean init(String serverName) {
-        int name = 97;
 
         // creating directory if needed
         File directory = new File(ROOT_PATH + serverName + DB_FILE_PATH);
@@ -50,14 +50,10 @@ public class Persist {
 
         // creating files if needed
         try {
-            int index = 0;
-            for (File file : DB_FILES) {
-                file = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + (name++) + ".db");
-                file.createNewFile();
-                DB_FILES[index++] = file;
-            }
+            dbFile = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + DB_FILE_NAME);
+            dbFile.createNewFile();
         } catch (IOException e) {
-            logger.error("Unable to create DB_FILES: " + e.getMessage());
+            logger.error("Unable to create DB_FILES " + e.getMessage());
             return false;
         }
         logger.info("Server ready to persist data");
@@ -83,7 +79,7 @@ public class Persist {
      */
     public static synchronized String read(String key) throws IOException {
 
-        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(getFileKeyStoredIn(key).toPath());
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
         ArrayList<String> keys = new ArrayList<>();
 
         for (String keyValue : fileLines) {
@@ -108,9 +104,7 @@ public class Persist {
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
     public static synchronized boolean write(String key, String value) throws IOException {
-        File savedToFile = getFileKeyStoredIn(key);
-
-        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(savedToFile.toPath());
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
         ArrayList<String> keys = new ArrayList<>();
 
 
@@ -128,7 +122,7 @@ public class Persist {
             }
             //1.2 write non existent key at end of file
             fileLines.add(key + DELIMITER + value);
-            Files.write(savedToFile.toPath(), fileLines);
+            Files.write(dbFile.toPath(), fileLines);
             logger.info("added new key: " + key + " with value: " + value);
             Cache.updateCache(key, value);
             return true;
@@ -138,56 +132,34 @@ public class Persist {
         // 2.1 delete value
         if (StringUtils.isEmpty(value)) {
             fileLines.remove(index);
-            Files.write(savedToFile.toPath(), fileLines);
+            Files.write(dbFile.toPath(), fileLines);
             logger.info("deleted key: " + key);
             Cache.remove(key);
             return true;
         }
         // 2.2 modify value
         fileLines.set(index, key + DELIMITER + value);
-        Files.write(savedToFile.toPath(), fileLines);
+        Files.write(dbFile.toPath(), fileLines);
         logger.info("Modified key: " + key + " with value of: " + value);
         Cache.updateCache(key, value);
         return false;
     }
 
 
-    /**
-     * Initiates get file name depending on key
-     *
-     * @return File where key would/should be stored
-     */
-    private static File getFileKeyStoredIn(String key) {
-        int charAscii = Character.toLowerCase(key.charAt(0));
-        if (charAscii > 96 && charAscii < 123) {
-            return DB_FILES[charAscii - 97];
-        }
-        return DB_FILES[26];
-    }
 
     public static void clearStorage() {
-        // deleting bin directory
-        deleteDirectory(new File(DB_FILE_PATH));
-        logger.info("Cleared Persisted files. Reinitializing it...");
+        PrintWriter writer;
+        try {
+            writer = new PrintWriter(dbFile);
+            writer.print("");
+            writer.close();
+        } catch (FileNotFoundException e) {
+            logger.error("Unable to clear storage");
+        }
 
-        // reinitializing storage
-        init("");
 
         // clearing cache
         Cache.clearCache();
-    }
-
-    private static void deleteDirectory(File directory) {
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    file.delete();
-                }
-            }
-            directory.delete();
-        }
-
     }
 
 

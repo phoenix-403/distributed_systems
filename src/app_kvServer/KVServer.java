@@ -1,20 +1,22 @@
 package app_kvServer;
 
-import client.KVStore;
 import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
-import common.messages.ZkServerCommunication;
-import common.messages.ZkToServerRequest;
-import common.messages.ZkToServerResponse;
+import common.messages.zk_server.ZkServerCommunication;
+import common.messages.zk_server.ZkToServerRequest;
+import common.messages.zk_server.ZkToServerResponse;
 import ecs.ECSNode;
 import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.*;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -144,8 +146,6 @@ public class KVServer implements IKVServer, Runnable {
                             zooKeeper.getChildren(ZkStructureNodes.ZK_SERVER_REQUESTS.getValue(), false);
                     processRequest(requestIds);
                     addEcsCommandsWatch();
-                } catch (KeeperException | InterruptedException e) {
-                    logger.error(e.getMessage());
                 } catch (Exception e) {
                     logger.error(e.getMessage());
                 }
@@ -216,11 +216,9 @@ public class KVServer implements IKVServer, Runnable {
                 try {
                     updateMetadata(false);
                     addMetadataWatch();
-                } catch (KeeperException | InterruptedException e) {
+                } catch (Exception e) {
                     logger.fatal("Metadata write failed!");
                     System.exit(-1);
-                } catch (Exception e) {
-                    logger.error(e.getMessage());
                 }
             }
         });
