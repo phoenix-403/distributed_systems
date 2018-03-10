@@ -208,7 +208,7 @@ public class KVServer implements IKVServer, Runnable {
                             responseState = ZkServerCommunication.Response.REMOVE_NODES_FAIL;
                             respond(request.getId(), responseState);
                         }
-                    }else{
+                    } else {
                         // if you come here it means u r removing yourself and no other nodes exist
                         // or you are removing all nodes!
                         logger.info("No servers to move data to");
@@ -260,7 +260,6 @@ public class KVServer implements IKVServer, Runnable {
             reqJson = new String(zkNodeTransaction.read(
                     ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
             Gson gson = new Gson();
-            //todo gson to object
             SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)) {
                 HashMap<String, String> newDataPairs = req.getKvToImport();
@@ -468,10 +467,10 @@ public class KVServer implements IKVServer, Runnable {
 
         //handling wraparound case
         HashMap<String, String> myKeyValues = new HashMap<>();
-        if(hashRange[0].compareTo(hashRange[1]) > 0){
-            myKeyValues.putAll(Persist.readRange(new String[]{hashRange[0],Metadata.MAX_MD5}));
-            myKeyValues.putAll(Persist.readRange(new String[]{Metadata.MIN_MD5,hashRange[1]}));
-        }else{
+        if (hashRange[0].compareTo(hashRange[1]) > 0) {
+            myKeyValues.putAll(Persist.readRange(new String[]{hashRange[0], Metadata.MAX_MD5}));
+            myKeyValues.putAll(Persist.readRange(new String[]{Metadata.MIN_MD5, hashRange[1]}));
+        } else {
             myKeyValues.putAll(Persist.readRange(hashRange));
         }
 
@@ -490,7 +489,12 @@ public class KVServer implements IKVServer, Runnable {
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
-                    Persist.deleteRange(hashRange);
+                    if (hashRange[0].compareTo(hashRange[1]) > 0) {
+                        Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
+                        Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
+                    } else {
+                        Persist.deleteRange(hashRange);
+                    }
                     unlockWrite();
                     return resp.getResponse().equals(TRANSFERE_SUCCESS);
                 }
