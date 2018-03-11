@@ -69,11 +69,11 @@ public class KVServer implements IKVServer, Runnable {
      */
     public KVServer(String name, String zkHostname, int zkPort) throws IOException, InterruptedException {
         this.name = name;
-
         // connect to zoo keeper
         zkConnector = new ZkConnector();
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
+        logger.info(name + " me :) started!");
     }
 
     /**
@@ -197,7 +197,7 @@ public class KVServer implements IKVServer, Runnable {
 
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
                     if (nextNode != null) {
-                        success = moveData(nextNode.getNodeHashRange(), nextNode.getNodeName());
+                        success = moveData(metadata.getRange(name), nextNode.getNodeName());
 
                         if (success) {
                             responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
@@ -254,7 +254,6 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void handleServerRequest(List<String> reqNodes) throws Exception {
-        // todo in all server-server... remove duplicates! //todo in get - check data that is being moved!
         String reqJson;
         for (String reqNode : reqNodes) {
             reqJson = new String(zkNodeTransaction.read(
@@ -317,6 +316,7 @@ public class KVServer implements IKVServer, Runnable {
                 List<ECSNode> withinRangeNodes = metadata.getWithinRange(prevRange);
                 for (ECSNode withinRangeNode : withinRangeNodes)
                     moveData(withinRangeNode.getNodeHashRange(), withinRangeNode.getNodeName());
+                Cache.clearCache();
             }
         }
     }
@@ -427,6 +427,7 @@ public class KVServer implements IKVServer, Runnable {
 
     @Override
     public void close() {
+        LogManager.shutdown();
         serverRunning = false;
         for (ClientConnection connection : clientConnections) {
             connection.close();
@@ -485,7 +486,6 @@ public class KVServer implements IKVServer, Runnable {
             for (String respNode : respNodes) {
                 respJSON = new String(zkNodeTransaction.read(
                         ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode));
-                System.out.println(respJSON);
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
