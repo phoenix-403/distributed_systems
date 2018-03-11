@@ -1,10 +1,7 @@
 package app_kvECS;
 
 import com.google.gson.Gson;
-import common.helper.ConsistentHash;
-import common.helper.Script;
-import common.helper.ZkConnector;
-import common.helper.ZkNodeTransaction;
+import common.helper.*;
 import common.messages.Metadata;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
@@ -32,8 +29,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static app_kvECS.ECSClient.ArgType.INTEGER;
-import static app_kvECS.ECSClient.ArgType.STRING;
 import static common.helper.Script.createBashScript;
 import static common.helper.Script.runScript;
 
@@ -58,11 +53,6 @@ public class ECSClient implements IECSClient {
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
     private Metadata metadata;
-
-    enum ArgType {
-        INTEGER,
-        STRING,
-    }
 
 
     public ECSClient(String zkHostname, int zkPort) throws IOException, EcsException {
@@ -636,7 +626,7 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "addNode": {
-                    Object[] a = getArguments(tokens, new ArgType[]{STRING, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{ArgType.STRING, ArgType.INTEGER});
                     if (a == null)
                         return;
                     IECSNode node = addNode((String) a[0], (int) a[1]);
@@ -648,7 +638,7 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "addNodes": {
-                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
+                    Object[] a = getArguments(tokens, new ArgType[]{ArgType.INTEGER, ArgType.STRING, ArgType.INTEGER});
                     if (a == null)
                         return;
                     Collection<IECSNode> nodes = addNodes((int) a[0], (String) a[1], (int) a[2]);
@@ -696,7 +686,7 @@ public class ECSClient implements IECSClient {
                     break;
                 }
                 case "getNodeByKey": {
-                    Object[] a = getArguments(tokens, new ArgType[]{STRING});
+                    Object[] a = getArguments(tokens, new ArgType[]{ArgType.STRING});
                     if (a == null)
                         return;
                     IECSNode node = getNodeByKey((String) a[0]);

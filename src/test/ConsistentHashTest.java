@@ -83,7 +83,6 @@ public class ConsistentHashTest {
         assert (metadata.isHashWithinRange("cc9d4f0c674d5487dad5c79cb0d4ee23", serv2.getNodeName()));
         assert (metadata.isHashWithinRange("ec9d4f0c674d5487dad5c79cb0d4ee23", serv2.getNodeName()));
 
-        // todo continue creating this test case or ^^ this is enough
         assert (metadata.isHashWithinRange("2b786438d2c6425dc30de0077ea6494e", serv3.getNodeName()));
         assert (metadata.isHashWithinRange("2f786438d2c6425dc30de0077ea6494e", serv3.getNodeName()));
         assert (metadata.isHashWithinRange("33b0bff3dfa3064ca9d93c282fc67deb", serv3.getNodeName()));
@@ -113,8 +112,6 @@ public class ConsistentHashTest {
         assert (metadata.isHashWithinRange("974a769d5ea802b77c2713f5fea21f4f", serv9.getNodeName()));
 
     }
-
-
 
 
 }

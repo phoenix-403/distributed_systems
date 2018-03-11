@@ -1,6 +1,5 @@
 package test;
 
-import common.helper.ConsistentHash;
 import common.messages.Metadata;
 import ecs.ECSNode;
 import org.junit.Before;
