@@ -181,6 +181,7 @@ public class ECSClient implements IECSClient {
 
             }
 
+
             logger.error(failedServers + "did not start or timed out!");
             return false;
         }
@@ -294,7 +295,7 @@ public class ECSClient implements IECSClient {
                     ZkToServerResponse.class);
             if (response != null && response.getId() == reqId) {
                 responses.add(response);
-                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath);
+//                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath);
             }
         }
     }
