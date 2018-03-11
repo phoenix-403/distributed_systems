@@ -1,5 +1,6 @@
 package app_kvClient;
 
+import app_kvServer.KVServer;
 import client.KVCommInterface;
 import client.KVStore;
 import common.messages.client_server.KVMessage;
@@ -9,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import test.PerformanceTest;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,9 +19,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-public class KVClient implements IKVClient, IClientSocketListener, Runnable {
+public class KVClient implements IKVClient, IClientSocketListener {
 
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "KV_Client> ";
@@ -313,19 +316,33 @@ public class KVClient implements IKVClient, IClientSocketListener, Runnable {
         System.out.println(sb.toString());
     }
 
-    public long performanceTest(HashMap<String, String> map) throws Exception {
-        Iterator it = map.entrySet().iterator();
-        testTime = 0;
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry) it.next();
-            testTime += put((String) pair.getKey(), (String) pair.getValue());
-        }
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry) it.next();
-            testTime += get((String) pair.getKey());
-        }
-        System.out.println("Total test time: " + testTime);
-        return testTime;
+    public void performanceTest(HashMap<String, String> map, PerformanceTest testInstance) {
+        LogManager.getLogger(KVServer.class).setLevel(Level.OFF);
+        LogManager.getLogger(KVStore.class).setLevel(Level.OFF);
+        LogManager.getLogger(KVClient.class).setLevel(Level.OFF);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Iterator it = map.entrySet().iterator();
+            logger.setLevel(Level.OFF);
+            testTime = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                try {
+                    testTime += put((String) pair.getKey(), (String) pair.getValue());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                try {
+                    testTime += get((String) pair.getKey());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            System.out.println("Total test time: " + testTime);
+            testInstance.updateAverage(testTime);
+        });
     }
 
     public long put(String testKey, String testValue) throws Exception {
