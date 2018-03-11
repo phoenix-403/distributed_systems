@@ -148,35 +148,4 @@ public class Metadata {
         // we should never reach here !!!!
         return null;
     }
-
-    public static void main(String[] args) {
-        // todo add this as a unit test case
-        List<ECSNode> ecsNodes = new ArrayList<>();
-        ECSNode ecsNode1 = new ECSNode("server0", "localhost", 50000, new String[]{"05eaa8ab2a10954744c21574cd83e7f8",
-                "2b786438d2c6425dc30de0077ea6494d"}, true);
-        ECSNode ecsNode2 = new ECSNode("server1", "localhost", 50001, new String[]{"3f870be1e85c8da20a2ffdf82afc3314",
-                "0221f85727f09bb279fa843d25c48052"}, true);
-        ECSNode ecsNode3 = new ECSNode("server2", "localhost", 50002, new
-                String[]{"0221f85727f09bb279fa843d25c48053", "05eaa8ab2a10954744c21574cd83e7f7"}, true);
-        ECSNode ecsNode4 = new ECSNode("server3", "localhost", 50003, new
-                String[]{"2b786438d2c6425dc30de0077ea6494e", "3f870be1e85c8da20a2ffdf82afc3313"}, true);
-
-
-        ecsNodes.add(ecsNode1);
-        ecsNodes.add(ecsNode2);
-        ecsNodes.add(ecsNode3);
-        ecsNodes.add(ecsNode4);
-
-        Metadata metadata = new Metadata(ecsNodes);
-        List<ECSNode> sortedEcsNodes = metadata.sortNodes(ecsNodes); // correct sorting .. s2, s0, s3 --> s1
-        // (wraparoundNode)
-        System.out.println(sortedEcsNodes);
-
-
-        List<ECSNode> sortedCopy = new ArrayList<>(sortedEcsNodes);
-        System.out.println(metadata.getNextServer("server0", new ArrayList<>(Arrays.asList("server0","server1","server3"))));
-
-    }
-
-
 }

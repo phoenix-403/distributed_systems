@@ -107,13 +107,4 @@ public class ConsistentHash {
             }
         }
     }
-
-    public static void main(String[] args) {
-        ECSNode serv1 = new ECSNode("server1", "chewzi", 9999,null , true);
-        ArrayList<ECSNode> ecsNodes = new ArrayList<ECSNode>();
-        ecsNodes.add(serv1);
-        ConsistentHash testHash =  new ConsistentHash(ecsNodes);
-        testHash.hash();
-
-    }
 }
