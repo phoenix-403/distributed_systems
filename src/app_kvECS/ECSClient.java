@@ -310,7 +310,7 @@ public class ECSClient implements IECSClient {
                     ZkToServerResponse.class);
             if (response != null && response.getId() == reqId) {
                 responses.add(response);
-//                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath);
+                zkNodeTransaction.delete(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + "/" + nodePath);
             }
         }
     }

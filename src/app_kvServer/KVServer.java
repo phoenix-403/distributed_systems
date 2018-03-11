@@ -150,7 +150,8 @@ public class KVServer implements IKVServer, Runnable {
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket: " + e.getMessage());
         } catch (InterruptedException | KeeperException e) {
-            logger.error("Server " + name + " was not added to HB in zookeeper !!!");
+            logger.fatal("Server " + name + " was not added to HB in zookeeper !!!");
+            System.exit(-1);
         }
     }
 
