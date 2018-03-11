@@ -286,7 +286,7 @@ public class ECSClient implements IECSClient {
         int reqId = request.getId();
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUEST.getValue() + ZkStructureNodes.REQUEST
                 .getValue(), new Gson().toJson(request, ZkToServerRequest.class).getBytes(), CreateMode
-                .EPHEMERAL_SEQUENTIAL);
+                .PERSISTENT_SEQUENTIAL);
 
         List<ZkToServerResponse> responses = new ArrayList<>();
 
