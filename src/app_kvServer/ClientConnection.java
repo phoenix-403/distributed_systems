@@ -194,9 +194,6 @@ public class ClientConnection implements Runnable {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
                                 return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null);
                             }
-                        case TEST_METADATA:
-                            return new ClientServerRequestResponse(request.getId(), null,
-                                    (new Gson().toJson(kvServer.getMetadata())), StatusType.TEST_METADATA, null);
                     }
                 }
             }

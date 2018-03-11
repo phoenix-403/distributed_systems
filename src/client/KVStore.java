@@ -192,14 +192,6 @@ public class KVStore implements KVCommInterface {
         return response;
     }
 
-    public void testMetadata() {
-        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, "yolo", null, KVMessage
-                .StatusType.TEST_METADATA, null);
-        boolean status = sendRequest(req);
-        ClientServerRequestResponse response = getResponse();
-        System.out.println(new Gson().toJson(response));
-    }
-
     public void set(IClientSocketListener listener) {
         clientSocketListener = listener;
     }
