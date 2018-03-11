@@ -54,6 +54,13 @@ public class MetadataTest {
 );
     }
 
+    @Test
+    public void test_getResponsibleServer(){
+        Metadata metadata = new Metadata(ecsNodes);
+        metadata.sortNodes(ecsNodes);
+        assert(metadata.getResponsibleServer("ff870be1e85c8da20a2ffdf82afc3314") == ecsNode2);
+    }
+
 
 
 
