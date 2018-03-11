@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import common.helper.ConsistentHash;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
@@ -109,8 +110,8 @@ public class Persist {
         HashMap<String, String> valuePairs = new HashMap<>();
 
         for (String keyValue : fileLines) {
-            if (keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[1]) <= 0
-                    && keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[0]) >= 0)
+            if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
+                    && ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[0]) >= 0)
                 valuePairs.put(keyValue.split(DELIMITER_PATTERN)[0], keyValue.split(DELIMITER_PATTERN)[1]);
         }
 
