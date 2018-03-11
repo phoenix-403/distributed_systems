@@ -43,9 +43,9 @@ public class PerformanceTest  {
         averageTimeSum +=time;
         averageTime= averageTimeSum / sampleCount;
         sampleCount++;
-        logger.debug("Overall Average time is " + averageTime);
         if (sampleCount >= totalSampleCount) {
             try {
+                logger.debug("Overall Average time is " + averageTime);
                 ecsClient.shutdown();
             } catch (KeeperException e) {
                 e.printStackTrace();
@@ -103,7 +103,6 @@ public class PerformanceTest  {
         ArrayList<KVClient> kvClients = new ArrayList<>();
 
         KVStore defaultKV = connectAny();
-        long time = 0;
         int i = 0;
         int pairLimit = 40;
 
@@ -125,7 +124,7 @@ public class PerformanceTest  {
             temp.performanceTest(keyValues, this);
             kvClients.add(temp);
             System.out.println("Started client " + i);
-            if (i++ >= limit)
+            if (++i >= limit)
                 break;
         }
     }
