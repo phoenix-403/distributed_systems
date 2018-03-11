@@ -70,8 +70,26 @@ public class Metadata {
 
     // used for testing
     public boolean isHashWithinRange(String hashKey, String nodeName) {
-        String[] range = getRange(nodeName);
-        return (hashKey.compareTo(range[1])) <= 0 && (hashKey.compareTo(range[0])) >= 0;
+        for (ECSNode ecsNode : ecsNodes) {
+            if (nodeName.equals(ecsNode.getNodeName())) {
+                if (ecsNode.getNodeHashRange()[0].compareTo(ecsNode.getNodeHashRange()[1]) > 0) {
+                    // wrap around node !!!!
+                    if ((hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
+                            && hashKey.compareTo(Metadata.MAX_MD5) <= 0) ||
+
+                            (hashKey.compareTo(ecsNode.getNodeHashRange()[0]) <= 0
+                                    && hashKey.compareTo(Metadata.MIN_MD5) >= 0)) {
+                        return true;
+                    }
+                } else {
+                    if (hashKey.compareTo(ecsNode.getNodeHashRange()[0]) >= 0
+                            && hashKey.compareTo(ecsNode.getNodeHashRange()[1]) <= 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public String[] getRange(String name) {
