@@ -83,15 +83,6 @@ public class Metadata {
         return null;
     }
 
-    public List<ECSNode> getWithinRange(String[] range) {
-        List<ECSNode> withinRange = new ArrayList<>();
-        for (ECSNode ecsNode : ecsNodes) {
-            if (isWithinRange(ecsNode.getNodeHashRange()[0], range)) {
-                withinRange.add(ecsNode);
-            }
-        }
-        return withinRange;
-    }
 
     public ECSNode getNextServer(String id, List<String> removed) {
         if (ecsNodes.size() == removed.size()) {

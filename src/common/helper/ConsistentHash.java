@@ -1,5 +1,6 @@
 package common.helper;
 
+import common.messages.Metadata;
 import ecs.ECSNode;
 
 import java.io.UnsupportedEncodingException;
@@ -68,8 +69,8 @@ public class ConsistentHash {
     private void storeHashRange() {
         if(idHashPairs.size() == 1){
             String[] hashRanges = new String[2];
-            hashRanges[0] = "00000000000000000000000000000000";
-            hashRanges[1] = idHashPairs.get(0).getHashVal();
+            hashRanges[0] = Metadata.MIN_MD5;
+            hashRanges[1] = Metadata.MAX_MD5;
             idHashRangePairs.put(idHashPairs.get(0).getId(), hashRanges);
         }
         else {

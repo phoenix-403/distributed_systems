@@ -1,9 +1,5 @@
 package ecs;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.util.Arrays;
 
 public class ECSNode implements IECSNode{
@@ -13,12 +9,6 @@ public class ECSNode implements IECSNode{
     private int nodePort;
     private String [] nodeHashRange;
     private boolean reserved;
-
-    private int requestId = 0;
-    private OutputStreamWriter outputStreamWriter;
-    private InputStream inputStream;
-    private InputStreamReader inputStreamReader;
-    private BufferedReader bufferedInputStream;
 
     public ECSNode(String nodeName, String nodeHost, int nodePort, String[] nodeHashRange, boolean reserved) {
         this.nodeName = nodeName;

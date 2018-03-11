@@ -27,8 +27,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
 
-import static common.messages.Metadata.MAX_MD5;
-import static common.messages.Metadata.MIN_MD5;
 import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
@@ -57,6 +55,7 @@ public class KVServer implements IKVServer, Runnable {
     private int TIMEOUT = 20000;
 
     private Metadata metadata;
+    private String serverRange[] = null;
 
     private List<ClientConnection> clientConnections;
 
@@ -272,7 +271,7 @@ public class KVServer implements IKVServer, Runnable {
                                 gson.toJson(response).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
                     }
                 }
-                logger.error("Write Successful!");
+                logger.info("Write Successful!");
                 SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                 zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                         gson.toJson(response).getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
@@ -294,29 +293,78 @@ public class KVServer implements IKVServer, Runnable {
         });
     }
 
-
-    private void updateMetadata(boolean firstRun) throws Exception {
-        String[] prevRange = null;
-
-        if (!firstRun && metadata.getEcsNodes().size() > 0) {
-            prevRange = new String[2];
-            System.arraycopy(metadata.getRange(name), 0, prevRange, 0, 2);
-        }
-
+    // will movedata from server if the server is affected!!!!!
+    private void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException, IOException {
+        // if first run is true .. it loads AN EMPTY metadata
         String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
         metadata = new Gson().fromJson(data, Metadata.class);
 
-        if (!firstRun && prevRange != null) {
-            int prevRangeInt = prevRange[1].compareTo(prevRange[0]) < 0 ? prevRange[1].compareTo(prevRange[0]) :
-                    prevRange[1].compareTo(prevRange[0]) + MAX_MD5.compareTo(MIN_MD5);
-            int currRangeInt = metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) < 0 ?
-                    metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) :
-                    metadata.getRange(name)[1].compareTo(metadata.getRange(name)[0]) + MAX_MD5.compareTo(MIN_MD5);
-            if (prevRangeInt > currRangeInt) {
-                List<ECSNode> withinRangeNodes = metadata.getWithinRange(prevRange);
-                for (ECSNode withinRangeNode : withinRangeNodes)
-                    moveData(withinRangeNode.getNodeHashRange(), withinRangeNode.getNodeName());
-                Cache.clearCache();
+        if (!firstRun) {
+            String[] newRange = metadata.getRange(name);
+
+            if (serverRange != null) {
+                //third run
+                List<ECSNode> updatedNodes = new ArrayList<>(metadata.getEcsNodes());
+                // removing myself and splitting wrap around server to 2 peices
+                ECSNode updatdNode;
+                List<ECSNode> wrapAroundSplitNode = new ArrayList<>();
+                Iterator<ECSNode> updatedNodesIterator = updatedNodes.iterator();
+                while (updatedNodesIterator.hasNext()) {
+                    updatdNode = updatedNodesIterator.next();
+                    if (updatdNode.getNodeName().equals(name)) {
+                        updatedNodesIterator.remove();
+                    } else if (updatdNode.getNodeHashRange()[0].compareTo(updatdNode.getNodeHashRange()[1]) > 0) {
+                        wrapAroundSplitNode.add(new ECSNode(updatdNode.getNodeName(), updatdNode.getNodeHost(),
+                                updatdNode.getNodePort(), new String[]{updatdNode.getNodeHashRange()[0], Metadata
+                                .MAX_MD5}, updatdNode.isReserved()));
+                        wrapAroundSplitNode.add(new ECSNode(updatdNode.getNodeName(), updatdNode.getNodeHost(),
+                                updatdNode.getNodePort(), new String[]{Metadata.MIN_MD5, updatdNode.getNodeHashRange
+                                ()[1]}, updatdNode.isReserved()));
+                        updatedNodesIterator.remove();
+                    }
+                }
+                updatedNodes.addAll(wrapAroundSplitNode);
+
+                // calculating the three scenarios
+
+                if (serverRange[0].compareTo(serverRange[1]) > 0) {
+                    calculate(new String[]{serverRange[0], Metadata.MAX_MD5}, updatedNodes);
+                    calculate(new String[]{Metadata.MIN_MD5, serverRange[1]}, updatedNodes);
+                } else {
+                    calculate(serverRange, updatedNodes);
+                }
+
+
+                //updating range to actual current value
+                this.serverRange = new String[]{newRange[0], newRange[1]};
+            } else {
+                // second run which is when it receives its official metadata for the first time
+                // therefore no moving data from this server
+                serverRange = new String[]{newRange[0], newRange[1]};
+            }
+        }
+    }
+
+    private void calculate(String[] oldRange, List<ECSNode> nodesUpdatedHashRange) throws InterruptedException,
+            IOException, KeeperException {
+
+        for (ECSNode updatedNode : nodesUpdatedHashRange) {
+            //scenario 1 -- all of new node lies in this server range
+            if (oldRange[0].compareTo(updatedNode.getNodeHashRange()[0]) <= 0
+                    && oldRange[1].compareTo(updatedNode.getNodeHashRange()[0]) >= 0) {
+                moveData(updatedNode.getNodeHashRange(), updatedNode.getNodeName());
+                clearCache();
+            }//scenario 2 -- only some of the first ranges in this server
+            else if (oldRange[0].compareTo(updatedNode.getNodeHashRange()[1]) < 0
+                    && oldRange[1].compareTo(updatedNode.getNodeHashRange()[1]) >= 0) {
+                moveData(new String[]{oldRange[0], updatedNode.getNodeHashRange()[1]}, updatedNode.getNodeName());
+                clearCache();
+            }//scenario 3 -- only some of the last ranges in this server
+            else if (oldRange[0].compareTo(updatedNode.getNodeHashRange()[0]) <= 0
+                    && oldRange[1].compareTo(updatedNode.getNodeHashRange()[0]) > 0) {
+
+                moveData(new String[]{updatedNode.getNodeHashRange()[0], oldRange[1]}, updatedNode.getNodeName());
+                clearCache();
             }
         }
     }
@@ -463,7 +511,8 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     @Override
-    public boolean moveData(String[] hashRange, String targetName) throws Exception {
+    public boolean moveData(String[] hashRange, String targetName) throws IOException, KeeperException,
+            InterruptedException {
         lockWrite();
 
         //handling wraparound case
