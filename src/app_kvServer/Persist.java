@@ -170,25 +170,23 @@ public class Persist {
     /**
      * deletes values over a range
      *
-     * @return true if it is a new value, false if it updated an existing one;
-     * true if deleted false if not
      * @throws IOException if unable to to check if key exists in db due to db DB_FILES not opening
      */
-    public static synchronized boolean deleteRange(String[] range) throws IOException {
-
+    public static synchronized void deleteRange(String[] range) throws IOException {
+        logger.info("Deleting keys within range: " + range[0] +"-" + range[1] + "...");
         ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
-        int i = 0;
         for (String keyValue : fileLines) {
-            if (keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[1]) <= 0
-                    && keyValue.split(DELIMITER_PATTERN)[0].compareTo(range[0]) >= 0) {
+            if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
+                    && ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[0]) >= 0) {
                 String key = keyValue.split(DELIMITER_PATTERN)[0];
-                fileLines.remove(i++);
+                Persist.write(key, null);
                 Cache.remove(key);
+                logger.info("Deleted key: " + key + " as it was moved to another server");
             }
         }
-        Files.write(dbFile.toPath(), fileLines);
-        logger.info("deleted keys within range: " + range[0] +"-" + range[1]);
-        return true;
+        logger.info("Done deleting.. keys within range: " + range[0] +"-" + range[1]);
+
+
     }
 
 
