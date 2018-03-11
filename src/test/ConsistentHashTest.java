@@ -84,33 +84,33 @@ public class ConsistentHashTest {
         assert (metadata.isHashWithinRange("ec9d4f0c674d5487dad5c79cb0d4ee23", serv2.getNodeName()));
 
         // todo continue creating this test case or ^^ this is enough
-//        assert (metadata.isHashWithinRange("", serv3.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv3.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv3.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv4.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv4.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv4.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv5.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv5.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv5.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv6.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv6.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv6.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv7.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv7.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv7.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv8.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv8.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv8.getNodeName()));
-//
-//        assert (metadata.isHashWithinRange("", serv9.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv9.getNodeName()));
-//        assert (metadata.isHashWithinRange("", serv9.getNodeName()));
+        assert (metadata.isHashWithinRange("2b786438d2c6425dc30de0077ea6494e", serv3.getNodeName()));
+        assert (metadata.isHashWithinRange("2f786438d2c6425dc30de0077ea6494e", serv3.getNodeName()));
+        assert (metadata.isHashWithinRange("33b0bff3dfa3064ca9d93c282fc67deb", serv3.getNodeName()));
+
+        assert (metadata.isHashWithinRange("974a769d5ea802b77c2713f5fea21f50", serv4.getNodeName()));
+        assert (metadata.isHashWithinRange("b07c6da95b39edc845134fb118f001aa", serv4.getNodeName()));
+        assert (metadata.isHashWithinRange("b87c6da95b39edc845134fb118f001aa", serv4.getNodeName()));
+
+        assert (metadata.isHashWithinRange("5d51e183fa04afd7e84ae74967b98b1d", serv5.getNodeName()));
+        assert (metadata.isHashWithinRange("5f51e183fa04afd7e84ae74967b98b1d", serv5.getNodeName()));
+        assert (metadata.isHashWithinRange("6a4997ef87eaa5951bf2fd21ffab145a", serv5.getNodeName()));
+
+        assert (metadata.isHashWithinRange("05eaa8ab2a10954744c21574cd83e7f8", serv6.getNodeName()));
+        assert (metadata.isHashWithinRange("1094ea955766f22d41d4aeda0c722f74", serv6.getNodeName()));
+        assert (metadata.isHashWithinRange("1f94ea955766f22d41d4aeda0c722f74", serv6.getNodeName()));
+
+        assert (metadata.isHashWithinRange("1f94ea955766f22d41d4aeda0c722f75", serv7.getNodeName()));
+        assert (metadata.isHashWithinRange("200bebd6d6e35c8ee716a3416dcaf577", serv7.getNodeName()));
+        assert (metadata.isHashWithinRange("228bebd6d6e35c8ee716a3416dcaf577", serv7.getNodeName()));
+
+        assert (metadata.isHashWithinRange("33b0bff3dfa3064ca9d93c282fc67dec", serv8.getNodeName()));
+        assert (metadata.isHashWithinRange("3fb0bff3dfa3064ca9d93c282fc67dec", serv8.getNodeName()));
+        assert (metadata.isHashWithinRange("5d51e183fa04afd7e84ae74967b98b1c", serv8.getNodeName()));
+
+        assert (metadata.isHashWithinRange("6a4997ef87eaa5951bf2fd21ffab145b", serv9.getNodeName()));
+        assert (metadata.isHashWithinRange("904a769d5ea802b77c2713f5fea21f4f", serv9.getNodeName()));
+        assert (metadata.isHashWithinRange("974a769d5ea802b77c2713f5fea21f4f", serv9.getNodeName()));
 
     }
 

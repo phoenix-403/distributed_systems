@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.Map;
 
 public class ECSClientTest {
-    private String host = "chenhen7@ug157.eecg.utoronto.ca";
+    private String host = "localhost";
     private int cacheSize = 10;
     private String strategy = "LRU";
     private String nodeID = "";

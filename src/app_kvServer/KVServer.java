@@ -57,6 +57,9 @@ public class KVServer implements IKVServer, Runnable {
     private Metadata metadata;
     private String serverRange[] = null;
 
+    private String EMPTY_SRV_SRV_REQ;
+    private String EMPTY_SRV_SRV_RES;
+
     private List<ClientConnection> clientConnections;
 
     /**
@@ -73,6 +76,10 @@ public class KVServer implements IKVServer, Runnable {
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
         logger.info(name + " me :) started!");
+
+        // init req
+        EMPTY_SRV_SRV_REQ = new Gson().toJson(new SrvSrvRequest("", "", null, null), SrvSrvRequest.class);
+        EMPTY_SRV_SRV_RES = new Gson().toJson(new SrvSrvResponse("", null, null), SrvSrvResponse.class);
     }
 
     /**
@@ -119,6 +126,7 @@ public class KVServer implements IKVServer, Runnable {
         //setup the metaData
         updateMetadata(true);
         addMetadataWatch();
+        // server-server req watch
         addServerRequestWatch();
 
         serverRunning = false;
@@ -142,7 +150,8 @@ public class KVServer implements IKVServer, Runnable {
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket: " + e.getMessage());
         } catch (InterruptedException | KeeperException e) {
-            logger.error("Server " + name + " was not added to HB in zookeeper !!!");
+            logger.fatal("Server " + name + " was not added to HB in zookeeper !!!");
+            System.exit(-1);
         }
     }
 
@@ -173,16 +182,19 @@ public class KVServer implements IKVServer, Runnable {
         ZkServerCommunication.Response responseState;
         switch (request.getZkSvrRequest()) {
             case START:
+                logger.info("Got start request");
                 start();
                 responseState = ZkServerCommunication.Response.START_SUCCESS;
                 respond(request.getId(), responseState);
                 break;
             case STOP:
+                logger.info("Got stop request");
                 stop();
                 responseState = ZkServerCommunication.Response.STOP_SUCCESS;
                 respond(request.getId(), responseState);
                 break;
             case SHUTDOWN:
+                logger.info("Got shutdown request");
                 // for shutdown, i have to respond before closing the server
                 responseState = ZkServerCommunication.Response.SHUTDOWN_SUCCESS;
                 respond(request.getId(), responseState);
@@ -190,15 +202,19 @@ public class KVServer implements IKVServer, Runnable {
                 close();
                 break;
             case REMOVE_NODES:
+                logger.info("Received removeNode request");
                 boolean success;
                 List<String> targetNode = request.getNodes();
                 if (targetNode.contains(name)) {
+                    logger.info("remove req is for me!");
 
                     ECSNode nextNode = metadata.getNextServer(name, targetNode);
                     if (nextNode != null) {
+                        logger.info("Attempting to move data to " + nextNode.getNodeName() + "!");
                         success = moveData(metadata.getRange(name), nextNode.getNodeName());
 
                         if (success) {
+                            logger.info("Moved data successfully");
                             responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                             respond(request.getId(), responseState);
                             Thread.sleep(2000);
@@ -214,6 +230,7 @@ public class KVServer implements IKVServer, Runnable {
                         responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                         respond(request.getId(), responseState);
                         Thread.sleep(2000);
+                        logger.info("Moved data successfully");
                         close();
                     }
 
@@ -257,9 +274,15 @@ public class KVServer implements IKVServer, Runnable {
         for (String reqNode : reqNodes) {
             reqJson = new String(zkNodeTransaction.read(
                     ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+
+
             Gson gson = new Gson();
             SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)) {
+                // ----------------------- nullifying req so it is not processed again ------------------------------
+                zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
+                        EMPTY_SRV_SRV_REQ.getBytes());
+                // --------------------------------------------------------------------------------------------------
                 HashMap<String, String> newDataPairs = req.getKvToImport();
                 Iterator it = newDataPairs.entrySet().iterator();
                 while (it.hasNext()) {
@@ -283,6 +306,7 @@ public class KVServer implements IKVServer, Runnable {
         zooKeeper.exists(ZkStructureNodes.METADATA.getValue(), event -> {
             if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
                 try {
+                    logger.info("Updating metadata!");
                     updateMetadata(false);
                     addMetadataWatch();
                 } catch (Exception e) {
@@ -293,16 +317,18 @@ public class KVServer implements IKVServer, Runnable {
         });
     }
 
-    // will movedata from server if the server is affected!!!!!
-    private void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException, IOException {
+    // will move_data from server if the server is affected!!!!!
+    private synchronized void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException, IOException {
         // if first run is true .. it loads AN EMPTY metadata
         String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
         metadata = new Gson().fromJson(data, Metadata.class);
+        logger.info("updating metadata to: " + data);
 
         if (!firstRun) {
             String[] newRange = metadata.getRange(name);
 
             if (serverRange != null) {
+                logger.info("setting up to prepare to move data if needed");
                 //third run
                 List<ECSNode> updatedNodes = new ArrayList<>(metadata.getEcsNodes());
                 // removing myself and splitting wrap around server to 2 peices
@@ -513,6 +539,7 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws IOException, KeeperException,
             InterruptedException {
+        logger.info("locking server!");
         lockWrite();
 
         //handling wraparound case
@@ -524,6 +551,7 @@ public class KVServer implements IKVServer, Runnable {
             myKeyValues.putAll(Persist.readRange(hashRange));
         }
 
+        logger.info("creating a server-server req and requesting");
         SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
         zkNodeTransaction.createZNode(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
                 new Gson().toJson(request).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
@@ -538,29 +566,36 @@ public class KVServer implements IKVServer, Runnable {
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
+                    // ----------------------- nullifying res so it is not processed again ------------------------------
+                    zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
+                            EMPTY_SRV_SRV_RES.getBytes());
+                    // --------------------------------------------------------------------------------------------------
+                    logger.info("got a srv-srv response");
                     if (hashRange[0].compareTo(hashRange[1]) > 0) {
                         Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
                         Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
                     } else {
                         Persist.deleteRange(hashRange);
                     }
+                    logger.info("unlock write and return success");
                     unlockWrite();
                     return resp.getResponse().equals(TRANSFERE_SUCCESS);
                 }
             }
         }
+        logger.info("unlock write and return fail");
         unlockWrite();
         return false;
     }
 
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 6) {
-            throw new Exception("Incorrect server arguments!");
-        }
+//        if (args.length != 6) {
+//            throw new Exception("Incorrect server arguments!");
+//        }
 
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
-        server.initKVServer(Integer.parseInt(args[3]), Integer.parseInt(args[4]), args[5]);
+        server.initKVServer(Integer.parseInt(args[3]), 5, CacheStrategy.LFU.getValue());
         Thread thread = new Thread(server);
         thread.start();
 

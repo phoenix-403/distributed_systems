@@ -47,7 +47,6 @@ public class ConsistentHash {
         }
     }
 
-
     public static String getMD5(String preImage) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -88,8 +87,8 @@ public class ConsistentHash {
                     hashRanges[0] = start.toString();
                     hashRanges[1] = idHashPairs.get(i).getHashVal();
                 } else {
-                    if (idHashPairs.get(idHashPairs.size() - 1).getHashVal().equals("ffffffffffffffffffffffffffffffff")) {
-                        hashRanges[0] = "00000000000000000000000000000000";
+                    if (idHashPairs.get(idHashPairs.size() - 1).getHashVal().equals(Metadata.MAX_MD5)) {
+                        hashRanges[0] = Metadata.MIN_MD5;
                         hashRanges[1] = idHashPairs.get(i).getHashVal();
                     } else {
                         BigInteger value = new BigInteger(idHashPairs.get(idHashPairs.size() - 1).getHashVal(), 16);
@@ -107,14 +106,5 @@ public class ConsistentHash {
                 idHashRangePairs.put(idHashPairs.get(i).getId(), hashRanges);
             }
         }
-    }
-
-    public static void main(String[] args) {
-        ECSNode serv1 = new ECSNode("server1", "chewzi", 9999,null , true);
-        ArrayList<ECSNode> ecsNodes = new ArrayList<ECSNode>();
-        ecsNodes.add(serv1);
-        ConsistentHash testHash =  new ConsistentHash(ecsNodes);
-        testHash.hash();
-
     }
 }
