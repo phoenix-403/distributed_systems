@@ -1,6 +1,7 @@
 package app_kvClient;
 
 import app_kvServer.KVServer;
+import app_kvServer.Persist;
 import client.KVCommInterface;
 import client.KVStore;
 import common.KVMessage;
@@ -320,6 +321,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
         LogManager.getLogger(KVServer.class).setLevel(Level.OFF);
         LogManager.getLogger(KVStore.class).setLevel(Level.OFF);
         LogManager.getLogger(KVClient.class).setLevel(Level.OFF);
+        LogManager.getLogger(Persist.class).setLevel(Level.OFF);
         Executors.newSingleThreadExecutor().execute(() -> {
             Iterator it = map.entrySet().iterator();
             logger.setLevel(Level.OFF);
@@ -340,8 +342,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Total test time: " + testTime);
-            testInstance.updateAverage(testTime);
+            System.out.println("Average test time: " + testTime/(map.size() * 2));
+            testInstance.updateAverage(testTime/(map.size() * 2));
         });
     }
 
