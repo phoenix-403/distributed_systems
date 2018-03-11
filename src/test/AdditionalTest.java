@@ -5,7 +5,7 @@ import app_kvECS.EcsException;
 import app_kvServer.KVServer;
 import app_kvServer.Persist;
 import client.KVStore;
-import common.messages.client_server.KVMessage;
+import common.KVMessage;
 import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Assert;

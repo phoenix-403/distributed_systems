@@ -2,7 +2,7 @@ package app_kvServer;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import common.messages.client_server.ClientServerRequestResponse;
+import common.ClientServerRequestResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 import java.io.*;
 import java.net.Socket;
 
-import static common.messages.client_server.KVMessage.StatusType;
+import static common.KVMessage.StatusType;
 
 
 /**

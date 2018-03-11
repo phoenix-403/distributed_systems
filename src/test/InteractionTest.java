@@ -1,8 +1,8 @@
 package test;
 
 import client.KVStore;
-import common.messages.client_server.KVMessage;
-import common.messages.client_server.KVMessage.StatusType;
+import common.KVMessage;
+import common.KVMessage.StatusType;
 import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Assert;

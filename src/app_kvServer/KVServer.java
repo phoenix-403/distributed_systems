@@ -589,12 +589,12 @@ public class KVServer implements IKVServer, Runnable {
 
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 6) {
-            throw new Exception("Incorrect server arguments!");
-        }
+//        if (args.length != 6) {
+//            throw new Exception("Incorrect server arguments!");
+//        }
 
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
-        server.initKVServer(Integer.parseInt(args[3]), Integer.parseInt(args[4]), args[5]);
+        server.initKVServer(Integer.parseInt(args[3]), 5, CacheStrategy.LFU.getValue());
         Thread thread = new Thread(server);
         thread.start();
 

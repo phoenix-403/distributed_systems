@@ -64,6 +64,21 @@ public class ECSClient implements IECSClient {
         STRING,
     }
 
+
+    public ECSClient(String zkHostname, int zkPort) throws IOException, EcsException {
+        try {
+            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.zkAddress = zkHostname;
+        this.zkPort = zkPort;
+
+        File file = new File("ecs.config");
+        configureAvailableNodes(file);
+
+    }
+
     public ECSClient(String configFile) throws IOException, EcsException {
 
         // setting up log
@@ -81,19 +96,19 @@ public class ECSClient implements IECSClient {
         loggerCnxn.setLevel(Level.OFF);
 
         // reading config file
-        configureAvailableNodes(configFile);
+        File file = new File("src/app_kvECS/" + configFile);
+        configureAvailableNodes(file);
     }
 
-    private void configureAvailableNodes(String configFile) throws EcsException, IOException {
-        File file = new File("src/app_kvECS/" + configFile);
-        if (!file.exists()) {
+    private void configureAvailableNodes(File configFile) throws EcsException, IOException {
+        if (!configFile.exists()) {
             throw new EcsException("Config file does not exist!");
         }
 
         final String DELIMITER = " ";
         final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
 
-        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(file.toPath());
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(configFile.toPath());
         for (String line : fileLines) {
             String[] tokenizedLine = line.split(DELIMITER_PATTERN);
             ecsNodes.add(new ECSNode(tokenizedLine[0], tokenizedLine[1], Integer.parseInt(tokenizedLine[2]), null,

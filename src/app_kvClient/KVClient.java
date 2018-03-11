@@ -2,7 +2,7 @@ package app_kvClient;
 
 import client.KVCommInterface;
 import client.KVStore;
-import common.messages.client_server.KVMessage;
+import common.KVMessage;
 import common.messages.Metadata;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
