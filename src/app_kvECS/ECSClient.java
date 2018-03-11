@@ -118,7 +118,7 @@ public class ECSClient implements IECSClient {
 
     }
 
-    private void startZK() throws InterruptedException, IOException, KeeperException {
+    public void startZK() throws InterruptedException, IOException, KeeperException {
         // starting zookeeper on local machine on the default port and waiting for script to finish
         String zkStartScript = System.getProperty("user.dir") + "/src/app_kvECS/startZK.sh";
         Process startZkProcess = runScript(zkStartScript, logger);
@@ -152,7 +152,7 @@ public class ECSClient implements IECSClient {
                 new Gson().toJson(metadata, Metadata.class).getBytes());
     }
 
-    private void stopZK() throws InterruptedException {
+    public void stopZK() throws InterruptedException {
         zkConnector.close();
         String zkStopScript = System.getProperty("user.dir") + "/src/app_kvECS/stopZK.sh";
         runScript(zkStopScript, logger);
@@ -600,7 +600,7 @@ public class ECSClient implements IECSClient {
         app.stopZK();
     }
 
-    private void run() throws EcsException, KeeperException, InterruptedException {
+    public void run() throws EcsException, KeeperException, InterruptedException {
         while (!stopClient) {
             BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
