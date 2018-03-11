@@ -57,6 +57,9 @@ public class KVServer implements IKVServer, Runnable {
     private Metadata metadata;
     private String serverRange[] = null;
 
+    private String EMPTY_SRV_SRV_REQ;
+    private String EMPTY_SRV_SRV_RES;
+
     private List<ClientConnection> clientConnections;
 
     /**
@@ -73,6 +76,10 @@ public class KVServer implements IKVServer, Runnable {
         zooKeeper = zkConnector.connect(zkHostname + ":" + zkPort);
         zkNodeTransaction = new ZkNodeTransaction(zooKeeper);
         logger.info(name + " me :) started!");
+
+        // init req
+        EMPTY_SRV_SRV_REQ = new Gson().toJson(new SrvSrvRequest("", "", null, null), SrvSrvRequest.class);
+        EMPTY_SRV_SRV_RES = new Gson().toJson(new SrvSrvResponse("", null, null), SrvSrvResponse.class);
     }
 
     /**
@@ -119,6 +126,7 @@ public class KVServer implements IKVServer, Runnable {
         //setup the metaData
         updateMetadata(true);
         addMetadataWatch();
+        // server-server req watch
         addServerRequestWatch();
 
         serverRunning = false;
@@ -257,9 +265,15 @@ public class KVServer implements IKVServer, Runnable {
         for (String reqNode : reqNodes) {
             reqJson = new String(zkNodeTransaction.read(
                     ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode));
+
+
             Gson gson = new Gson();
             SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)) {
+                // ----------------------- nullifying req so it is not processed again ------------------------------
+                zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
+                        EMPTY_SRV_SRV_REQ.getBytes());
+                // --------------------------------------------------------------------------------------------------
                 HashMap<String, String> newDataPairs = req.getKvToImport();
                 Iterator it = newDataPairs.entrySet().iterator();
                 while (it.hasNext()) {
@@ -293,7 +307,7 @@ public class KVServer implements IKVServer, Runnable {
         });
     }
 
-    // will movedata from server if the server is affected!!!!!
+    // will move_data from server if the server is affected!!!!!
     private void updateMetadata(boolean firstRun) throws KeeperException, InterruptedException, IOException {
         // if first run is true .. it loads AN EMPTY metadata
         String data = new String(zkNodeTransaction.read(ZkStructureNodes.METADATA.getValue()));
@@ -538,6 +552,10 @@ public class KVServer implements IKVServer, Runnable {
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
+                    // ----------------------- nullifying res so it is not processed again ------------------------------
+                    zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
+                            EMPTY_SRV_SRV_RES.getBytes());
+                    // --------------------------------------------------------------------------------------------------
                     if (hashRange[0].compareTo(hashRange[1]) > 0) {
                         Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
                         Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
