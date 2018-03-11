@@ -342,8 +342,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Total test time: " + testTime);
-            testInstance.updateAverage(testTime);
+            System.out.println("Average test time: " + testTime/(map.size() * 2));
+            testInstance.updateAverage(testTime/(map.size() * 2));
         });
     }
 

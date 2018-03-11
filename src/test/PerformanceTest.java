@@ -27,7 +27,7 @@ public class PerformanceTest  {
     String configFile;
 
     long averageTime=0;
-    long totalSampleTime=0;
+    long averageTimeSum =0;
 
     long sampleCount =1;
     long totalSampleCount;
@@ -40,10 +40,10 @@ public class PerformanceTest  {
     }
 
     public void updateAverage(long time){
-        totalSampleTime+=time;
-        averageTime=totalSampleTime/ sampleCount;
+        averageTimeSum +=time;
+        averageTime= averageTimeSum / sampleCount;
         sampleCount++;
-        logger.debug("Average time is " + averageTime);
+        logger.debug("Overall Average time is " + averageTime);
         if (sampleCount >= totalSampleCount) {
             try {
                 ecsClient.shutdown();
