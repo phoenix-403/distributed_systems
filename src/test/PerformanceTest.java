@@ -39,7 +39,8 @@ public class PerformanceTest  {
     public static void main(String[] args) throws Exception {
         ECSClient ecsClient = new ECSClient(args[0]);
         ecsClient.startZK();
-        ecsClient.addNode("LRU", 10);
+        int serverCount = (int) Files.lines(Paths.get(new File("src/app_kvECS/" + args[0]).getPath())).count();
+        ecsClient.addNodes(serverCount,"LRU", 10);
         ecsClient.start();
         PerformanceTest test = new PerformanceTest(args[0]);
         test.testRead(Integer.parseInt(args[1]));
