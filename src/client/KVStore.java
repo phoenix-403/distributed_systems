@@ -24,6 +24,14 @@ public class KVStore implements KVCommInterface {
 
     private static final int TIMEOUT = 4 * 1000;
 
+    public String getAddress() {
+        return address;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
     private KVClient kvClient;
 
     private Socket clientSocket;

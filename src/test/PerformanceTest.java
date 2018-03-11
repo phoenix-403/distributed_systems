@@ -1,16 +1,94 @@
-//package test;
-//
-//import app_kvServer.KVServer;
-//import client.KVStore;
-//import junit.framework.TestCase;
-//import org.junit.After;
-//import org.junit.Assert;
-//import org.junit.Before;
-//import org.junit.Test;
-//
-//import java.util.Random;
-//
-//public class PerformanceTest extends TestCase {
+package test;
+
+import app_kvClient.KVClient;
+import app_kvECS.EcsException;
+import client.KVStore;
+import ecs.ECSNode;
+import junit.framework.TestCase;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static java.nio.file.Files.walk;
+import static org.junit.Assert.assertTrue;
+
+public class PerformanceTest  {
+
+    @Test
+    public void kk() throws Exception {
+        testRead("ecsTest1.config", 10);
+        assertTrue(true);
+    }
+
+    private KVStore connectAny(String configFile) {
+        File file = new File("src/app_kvECS/" + configFile);
+
+        final String DELIMITER = " ";
+        final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
+
+        ArrayList<String> fileLines = null;
+        try {
+            fileLines = (ArrayList<String>) Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (String line : fileLines) {
+            String[] tokenizedLine = line.split(DELIMITER_PATTERN);
+            try {
+                KVStore store = new KVStore(null, tokenizedLine[1], Integer.parseInt(tokenizedLine[2]));
+                store.connect();
+                store.disconnect();
+                return (store);
+            } catch (Exception e) {
+            }
+        }
+        return null;
+    }
+
+    public void testRead(String configFile, int limit) throws Exception {
+
+        final DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get("/home/k/maildir"));
+        ArrayList<KVClient> kvClients = new ArrayList<>();
+
+        KVStore defaultKV = connectAny(configFile);
+        long time = 0;
+        int i = 0;
+
+        for (Path dir : dirStream) {
+            HashMap<String, String> keyValues = new HashMap<>();
+            Stream<Path> files = Files.walk(dir);
+            Iterator it = files.iterator();
+            KVClient temp = new KVClient();
+            new Thread(temp).start();
+            temp.newConnection(defaultKV.getAddress(), defaultKV.getPort());
+
+            while (it.hasNext()) {
+                String p = it.next().toString();
+                if (!new File(p).isDirectory())
+                    keyValues.put(p, new String(Files.readAllBytes(Paths.get(p))) );
+            }
+            temp.performanceTest(keyValues);
+            kvClients.add(temp);
+            if (i++ >= limit)
+                break;
+        }
+    }
+
+
+
+}
 //
 //    private KVStore kvClientFIFO, kvClientLRU, kvClientLFU;
 //    private static int TOTAL_REQUESTS = 400;

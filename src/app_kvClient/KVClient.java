@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-public class KVClient implements IKVClient, IClientSocketListener {
+public class KVClient implements IKVClient, IClientSocketListener, Runnable {
 
     private static Logger logger = LogManager.getLogger(KVClient.class);
     private static final String PROMPT = "KV_Client> ";
@@ -25,6 +27,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
     private KVStore defaultKvStoreInstance = null;
     private boolean stop = false;
     private ErrorMessage errM = new ErrorMessage();
+
+    private long testTime;
 
     private String serverAddress;
     private int serverPort;
@@ -39,6 +43,10 @@ public class KVClient implements IKVClient, IClientSocketListener {
         defaultKvStoreInstance = new KVStore(this, serverAddress, serverPort);
         defaultKvStoreInstance.set(this);
         defaultKvStoreInstance.connect();
+    }
+
+    public long getTestTime() {
+        return testTime;
     }
 
     @Override
@@ -77,7 +85,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
         }
     }
 
-    private void handleCommand(String cmdLine) {
+    public void handleCommand(String cmdLine) {
         String[] tokens = cmdLine.split("\\s+");
         Arrays.stream(tokens).filter(s -> s != null && s.length() > 0).collect(Collectors.toList()).toArray(tokens);
 
@@ -304,6 +312,103 @@ public class KVClient implements IKVClient, IClientSocketListener {
         sb.append("\t\t\t\t\t exits the program");
         System.out.println(sb.toString());
     }
+
+    public long performanceTest(HashMap<String, String> map) throws Exception {
+        Iterator it = map.entrySet().iterator();
+        testTime = 0;
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            testTime += put((String) pair.getKey(), (String) pair.getValue());
+        }
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            testTime += get((String) pair.getKey());
+        }
+        System.out.println("Total test time: " + testTime);
+        return testTime;
+    }
+
+    public long put(String testKey, String testValue) throws Exception {
+        long start = System.currentTimeMillis();
+        if (metadata == null) {
+            defaultKvStoreInstance.put(testKey, testValue);
+        } else {
+            String respServer = metadata.getResponsibleServer(testKey)
+                    .getNodeName();
+            KVStore kvStore = allKVStores.get(respServer);
+            if (!kvStore.isConnected()) {
+                kvStore.connect();
+            }
+            if (kvStore.put(testKey, testValue).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                allKVStores.remove(respServer);
+                boolean foundServer = false;
+                for (String key : allKVStores.keySet()) {
+                    if (foundServer) {
+                        break;
+                    }
+                    if (!key.equals(respServer)) {
+                        printTerminal("Trying another server.. " + key);
+                        kvStore = allKVStores.get(key);
+                        if (!kvStore.isConnected()) {
+                            kvStore.connect();
+                        }
+                        if (!kvStore.put(key, testValue).getStatus().equals(KVMessage.StatusType
+                                .TIME_OUT)) {
+                            foundServer = true;
+                        }
+                        allKVStores.remove(respServer);
+                    }
+                }
+                if (!foundServer) {
+                    printTerminal("No active server was found! Disconnecting....");
+                    disconnect();
+                }
+            }
+        }
+        return System.currentTimeMillis() - start;
+    }
+
+
+    public long get(String testKey) throws Exception {
+        long start = System.currentTimeMillis();
+        if (metadata == null) {
+            defaultKvStoreInstance.get(testKey);
+        } else {
+            String respServer = metadata.getResponsibleServer(testKey)
+                    .getNodeName();
+            KVStore kvStore = allKVStores.get(respServer);
+            if (!kvStore.isConnected()) {
+                kvStore.connect();
+            }
+            if (kvStore.get(testKey).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                allKVStores.remove(respServer);
+                boolean foundServer = false;
+                for (String key : allKVStores.keySet()) {
+                    if (foundServer) {
+                        break;
+                    }
+                    if (!key.equals(respServer)) {
+                        printTerminal("Trying another server.. " + key);
+                        kvStore = allKVStores.get(key);
+                        if (!kvStore.isConnected()) {
+                            kvStore.connect();
+                        }
+                        if (!kvStore.get(key).getStatus().equals(KVMessage.StatusType
+                                .TIME_OUT)) {
+                            foundServer = true;
+                        }
+                        allKVStores.remove(respServer);
+                    }
+                }
+                if (!foundServer) {
+                    printTerminal("No active server was found! Disconnecting....");
+                    disconnect();
+                }
+            }
+        }
+        return System.currentTimeMillis() - start;
+    }
+
 
     private void printPossibleLogLevels() {
         System.out.println(PROMPT
