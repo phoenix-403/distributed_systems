@@ -3,14 +3,14 @@ package test;
 import common.helper.ConsistentHash;
 import common.messages.Metadata;
 import ecs.ECSNode;
-import org.junit.Before;
+import junit.framework.TestCase;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ConsistentHashTest {
+public class ConsistentHashTest extends TestCase{
 
     private List<ECSNode> ecsNodeList;
     private ConsistentHash consistentHash;
@@ -25,27 +25,6 @@ public class ConsistentHashTest {
     private ECSNode serv7;
     private ECSNode serv8;
     private ECSNode serv9;
-
-
-    @Before
-    public void setup() {
-        serv0 = new ECSNode("server0", "localhost", 50000, null, true);
-        serv1 = new ECSNode("server1", "localhost", 50002, null, true);
-        serv2 = new ECSNode("server2", "localhost", 50004, null, true);
-        serv3 = new ECSNode("server3", "localhost", 50006, null, true);
-        serv4 = new ECSNode("server4", "localhost", 50008, null, true);
-        serv5 = new ECSNode("server5", "localhost", 50010, null, true);
-        serv6 = new ECSNode("server6", "localhost", 50012, null, true);
-        serv7 = new ECSNode("server7", "localhost", 50014, null, true);
-        serv8 = new ECSNode("server8", "localhost", 50016, null, true);
-        serv9 = new ECSNode("server9", "localhost", 50018, null, true);
-
-        ecsNodeList = new ArrayList<>(Arrays.asList(serv0, serv1, serv2, serv3, serv4, serv5, serv6, serv7, serv8,
-                serv9));
-
-        consistentHash = new ConsistentHash(ecsNodeList);
-
-    }
 
 
 // ECSNode{nodeName='server0', nodeHashRange=[228bebd6d6e35c8ee716a3416dcaf578, 2b786438d2c6425dc30de0077ea6494d]}
@@ -66,6 +45,23 @@ public class ConsistentHashTest {
 
     @Test
     public void testEveryServerWithAKey() {
+        serv0 = new ECSNode("server0", "localhost", 50000, null, true);
+        serv1 = new ECSNode("server1", "localhost", 50002, null, true);
+        serv2 = new ECSNode("server2", "localhost", 50004, null, true);
+        serv3 = new ECSNode("server3", "localhost", 50006, null, true);
+        serv4 = new ECSNode("server4", "localhost", 50008, null, true);
+        serv5 = new ECSNode("server5", "localhost", 50010, null, true);
+        serv6 = new ECSNode("server6", "localhost", 50012, null, true);
+        serv7 = new ECSNode("server7", "localhost", 50014, null, true);
+        serv8 = new ECSNode("server8", "localhost", 50016, null, true);
+        serv9 = new ECSNode("server9", "localhost", 50018, null, true);
+
+        ecsNodeList = new ArrayList<>(Arrays.asList(serv0, serv1, serv2, serv3, serv4, serv5, serv6, serv7, serv8,
+                serv9));
+
+        consistentHash = new ConsistentHash(ecsNodeList);
+
+
         consistentHash.hash();
         Metadata metadata = new Metadata(ecsNodeList);
         assert (metadata.isHashWithinRange("228bebd6d6e35c8ee716a3416dcaf578", serv0.getNodeName()));

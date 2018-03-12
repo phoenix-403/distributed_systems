@@ -1,6 +1,6 @@
 package test;
 
-import app_kvECS.ECSClient;
+import app_kvClient.KVClient;
 import app_kvECS.EcsException;
 import client.KVStore;
 import junit.framework.TestCase;
@@ -8,26 +8,28 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.BeforeClass;
 
-import java.io.IOException;
 import java.net.UnknownHostException;
 
 
 public class ConnectionTest extends TestCase {
 
-	private ECSClient ecsClient;
+    private KVStore kvClient;
 
-	@BeforeClass
-	public void setUp() {
-		try {
-			ecsClient = new ECSClient("ecs.config");
-			ecsClient.startZK();
-			ecsClient.addNodes(10, "LRU", 10);
-			ecsClient.start();
-			Thread.sleep(1000);
-		} catch (IOException | EcsException | InterruptedException | KeeperException e) {
-			e.printStackTrace();
-		}
-	}
+    @BeforeClass
+    public void setUp() {
+        KVClient client = new KVClient();
+        kvClient = new KVStore(client, "localhost", 50009);
+        try {
+            kvClient.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @After
+    public void tearDown() throws InterruptedException, KeeperException, EcsException {
+        kvClient.disconnect();
+    }
 
 	
 	public void testConnectionSuccess() {
@@ -71,13 +73,6 @@ public class ConnectionTest extends TestCase {
 		
 		assertTrue(ex instanceof IllegalArgumentException);
 	}
-
-
-    @After
-    public void tearDown() throws InterruptedException, KeeperException, EcsException {
-        ecsClient.shutdown();
-        ecsClient.stopZK();
-    }
 	
 }
 
