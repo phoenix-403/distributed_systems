@@ -14,12 +14,13 @@ public class MetadataTest extends TestCase{
 
     List<ECSNode> ecsNodes = new ArrayList<>();
 
-    ECSNode ecsNode1;
-    ECSNode ecsNode2;
-    ECSNode ecsNode3;
-    ECSNode ecsNode4;
+    private ECSNode ecsNode1;
+    private ECSNode ecsNode2;
+    private ECSNode ecsNode3;
+    private ECSNode ecsNode4;
+
     @Before
-    public void setup() {
+    public void setUp() {
         ecsNode1 = new ECSNode("server0", "localhost", 50000, new String[]{"05eaa8ab2a10954744c21574cd83e7f8",
                 "2b786438d2c6425dc30de0077ea6494d"}, true);
         ecsNode2 = new ECSNode("server1", "localhost", 50001, new String[]{"3f870be1e85c8da20a2ffdf82afc3314",
@@ -33,8 +34,8 @@ public class MetadataTest extends TestCase{
         ecsNodes.add(ecsNode2);
         ecsNodes.add(ecsNode3);
         ecsNodes.add(ecsNode4);
-
     }
+
 
     @Test
     public void testSort(){
