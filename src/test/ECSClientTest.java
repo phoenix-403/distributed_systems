@@ -17,7 +17,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static test.AllTests.ecsClient;
+import static test.DSTestSuite.ecsClient;
+
 
 public class ECSClientTest extends TestCase{
 
