@@ -4,6 +4,7 @@ import common.helper.ConsistentHash;
 import common.messages.Metadata;
 import ecs.ECSNode;
 import junit.framework.TestCase;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -26,6 +27,24 @@ public class ConsistentHashTest extends TestCase {
     private ECSNode serv8;
     private ECSNode serv9;
 
+    @Before
+    protected void setUp() {
+        serv0 = new ECSNode("server0", "localhost", 50000, null, true);
+        serv1 = new ECSNode("server1", "localhost", 50002, null, true);
+        serv2 = new ECSNode("server2", "localhost", 50004, null, true);
+        serv3 = new ECSNode("server3", "localhost", 50006, null, true);
+        serv4 = new ECSNode("server4", "localhost", 50008, null, true);
+        serv5 = new ECSNode("server5", "localhost", 50010, null, true);
+        serv6 = new ECSNode("server6", "localhost", 50012, null, true);
+        serv7 = new ECSNode("server7", "localhost", 50014, null, true);
+        serv8 = new ECSNode("server8", "localhost", 50016, null, true);
+        serv9 = new ECSNode("server9", "localhost", 50018, null, true);
+
+        ecsNodeList = new ArrayList<>(Arrays.asList(serv0, serv1, serv2, serv3, serv4, serv5, serv6, serv7, serv8,
+                serv9));
+
+    }
+
 
 // ECSNode{nodeName='server0', nodeHashRange=[228bebd6d6e35c8ee716a3416dcaf578, 2b786438d2c6425dc30de0077ea6494d]}
 // WA ECSNode{nodeName='server1', nodeHashRange=[ec9d4f0c674d5487dad5c79cb0d4ee24, 05eaa8ab2a10954744c21574cd83e7f7]}
@@ -46,35 +65,13 @@ public class ConsistentHashTest extends TestCase {
 
     @Test
     public void testEveryServerWithAKey() {
-        serv0 = new ECSNode("server0", "localhost", 50000, null, true);
-        serv1 = new ECSNode("server1", "localhost", 50002, null, true);
-        serv2 = new ECSNode("server2", "localhost", 50004, null, true);
-        serv3 = new ECSNode("server3", "localhost", 50006, null, true);
-        serv4 = new ECSNode("server4", "localhost", 50008, null, true);
-        serv5 = new ECSNode("server5", "localhost", 50010, null, true);
-        serv6 = new ECSNode("server6", "localhost", 50012, null, true);
-        serv7 = new ECSNode("server7", "localhost", 50014, null, true);
-        serv8 = new ECSNode("server8", "localhost", 50016, null, true);
-        serv9 = new ECSNode("server9", "localhost", 50018, null, true);
-
-        ecsNodeList = new ArrayList<>(Arrays.asList(serv0, serv1, serv2, serv3, serv4, serv5, serv6, serv7, serv8,
-                serv9));
-
         consistentHash = new ConsistentHash(ecsNodeList);
-
-
         consistentHash.hash();
         Metadata metadata = new Metadata(ecsNodeList);
+
         assert (metadata.isHashWithinRange("228bebd6d6e35c8ee716a3416dcaf578", serv0.getNodeName()));
         assert (metadata.isHashWithinRange("258bebd6d6e35c8ee716a3416dcaf578", serv0.getNodeName()));
         assert (metadata.isHashWithinRange("2b786438d2c6425dc30de0077ea6494d", serv0.getNodeName()));
-
-        assert (metadata.isHashWithinRange("ec9d4f0c674d5487dad5c79cb0d4ee24", serv1.getNodeName()));
-        assert (metadata.isHashWithinRange("fc9d4f0c674d5487dad5c79cb0d4ee24", serv1.getNodeName()));
-        assert (metadata.isHashWithinRange("ffffffffffffffffffffffffffffffff", serv1.getNodeName()));
-        assert (metadata.isHashWithinRange("00000000000000000000000000000000", serv1.getNodeName()));
-        assert (metadata.isHashWithinRange("04000000000000000000000000000000", serv1.getNodeName()));
-        assert (metadata.isHashWithinRange("05eaa8ab2a10954744c21574cd83e7f7", serv1.getNodeName()));
 
         assert (metadata.isHashWithinRange("b87c6da95b39edc845134fb118f001ab", serv2.getNodeName()));
         assert (metadata.isHashWithinRange("cc9d4f0c674d5487dad5c79cb0d4ee23", serv2.getNodeName()));
@@ -108,6 +105,21 @@ public class ConsistentHashTest extends TestCase {
         assert (metadata.isHashWithinRange("904a769d5ea802b77c2713f5fea21f4f", serv9.getNodeName()));
         assert (metadata.isHashWithinRange("974a769d5ea802b77c2713f5fea21f4f", serv9.getNodeName()));
 
+    }
+
+    @Test
+    public void testWrapAround() {
+        consistentHash = new ConsistentHash(ecsNodeList);
+        consistentHash.hash();
+        Metadata metadata = new Metadata(ecsNodeList);
+
+
+        assert (metadata.isHashWithinRange("ec9d4f0c674d5487dad5c79cb0d4ee24", serv1.getNodeName()));
+        assert (metadata.isHashWithinRange("fc9d4f0c674d5487dad5c79cb0d4ee24", serv1.getNodeName()));
+        assert (metadata.isHashWithinRange("ffffffffffffffffffffffffffffffff", serv1.getNodeName()));
+        assert (metadata.isHashWithinRange("00000000000000000000000000000000", serv1.getNodeName()));
+        assert (metadata.isHashWithinRange("04000000000000000000000000000000", serv1.getNodeName()));
+        assert (metadata.isHashWithinRange("05eaa8ab2a10954744c21574cd83e7f7", serv1.getNodeName()));
     }
 
 

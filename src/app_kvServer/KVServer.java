@@ -573,7 +573,8 @@ public class KVServer implements IKVServer, Runnable {
                 Gson gson = new Gson();
                 SrvSrvResponse resp = gson.fromJson(respJSON, SrvSrvResponse.class);
                 if (resp.getTargetServer().equals(name) && resp.getServerName().equals(request.getTargetServer())) {
-                    // ----------------------- nullifying res so it is not processed again ------------------------------
+                    // ----------------------- nullifying res so it is not processed again
+                    // ------------------------------
                     zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
                             EMPTY_SRV_SRV_RES.getBytes());
                     // --------------------------------------------------------------------------------------------------
@@ -602,7 +603,7 @@ public class KVServer implements IKVServer, Runnable {
 //        }
 
         KVServer server = new KVServer(args[0], args[1], Integer.parseInt(args[2]));
-        server.initKVServer(Integer.parseInt(args[3]), 5, CacheStrategy.LFU.getValue());
+        server.initKVServer(Integer.parseInt(args[3]), Integer.parseInt(args[4]), args[5]);
         Thread thread = new Thread(server);
         thread.start();
 

@@ -2,6 +2,7 @@ package test;
 
 import app_kvClient.KVClient;
 import app_kvECS.EcsException;
+import app_kvServer.IKVServer;
 import client.KVStore;
 import common.KVMessage;
 import ecs.IECSNode;
@@ -20,7 +21,7 @@ import java.util.Map;
 import static test.DSTestSuite.ecsClient;
 
 
-public class ECSClientTest extends TestCase{
+public class ECSClientTest extends TestCase {
 
     private KVStore kvClient;
 
@@ -92,6 +93,13 @@ public class ECSClientTest extends TestCase{
         nodes = ecsClient.getNodes();
         Assert.assertTrue(nodes.size() == 9);
     }
+
+    @Test
+    public void testSetupNodes() {
+        assert (ecsClient.setupNodes(10, IKVServer.CacheStrategy.LFU.getValue(), 55) == null);
+    }
+
+
 
 
 }
