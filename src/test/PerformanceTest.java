@@ -54,8 +54,10 @@ public class PerformanceTest  {
         sampleCount++;
         if (sampleCount >= totalClients) {
             try {
-                logger.debug("Overall Average time for " + totalClients + " clients " +
+                logger.debug("Overall Average RTT time for " + totalClients + " clients " +
                         "and " + totalServers + " servers is " + averageTime);
+                logger.debug("Overall Average Throughput time for " + totalClients + " clients " +
+                        "and " + totalServers + " servers is " + 100/averageTime);
                 ecsClient.shutdown();
                 ecsClient.stopZK();
                 new PerformanceTest(configFile, clientCountIndex + 1);
