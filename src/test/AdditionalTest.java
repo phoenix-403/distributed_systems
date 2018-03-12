@@ -1,33 +1,26 @@
 package test;
 
 import app_kvClient.KVClient;
-import app_kvECS.ECSClient;
 import app_kvECS.EcsException;
 import client.KVStore;
 import common.KVMessage;
 import junit.framework.TestCase;
 import org.apache.zookeeper.KeeperException;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 
 public class AdditionalTest extends TestCase {
 
-    private ECSClient ecsClient;
+
     private KVStore kvClient;
-    private static int CLIENT_CONNECTIONS = 50;
+    private int CLIENT_CONNECTIONS = 10;
 
     @BeforeClass
     public void setUp() {
-        try {
-            ecsClient = new ECSClient("ecs.config");
-            ecsClient.startZK();
-            ecsClient.addNodes(10, "LRU", 10);
-            ecsClient.start();
-            Thread.sleep(1000);
-        } catch (IOException | EcsException | InterruptedException | KeeperException e) {
-            e.printStackTrace();
-        }
         KVClient client = new KVClient();
         kvClient = new KVStore(client, "localhost", 50009);
         try {
@@ -39,8 +32,6 @@ public class AdditionalTest extends TestCase {
 
     @After
     public void tearDown() throws InterruptedException, KeeperException, EcsException {
-        ecsClient.shutdown();
-        ecsClient.stopZK();
         kvClient.disconnect();
     }
 

@@ -1,118 +1,96 @@
-//package test;
-//
-//import app_kvClient.KVClient;
-//import app_kvECS.ECSClient;
-//import app_kvECS.EcsException;
-//import client.KVStore;
-//import ecs.IECSNode;
-//import org.apache.zookeeper.KeeperException;
-//import org.junit.After;
-//import org.junit.Assert;
-//import org.junit.BeforeClass;
-//import org.junit.Test;
-//
-//import java.io.IOException;
-//import java.util.Collection;
-//import java.util.Map;
-//
-//public class ECSClientTest {
-//    private ECSClient ecsClient;
-//    private KVStore kvClient;
-//    private static int CLIENT_CONNECTIONS = 50;
-//
-//    @BeforeClass
-//    public void setUp() {
-//        try {
-//            ecsClient = new ECSClient("ecs.config");
-//            ecsClient.startZK();
-//            ecsClient.addNodes(10, "LRU", 10);
-//            Thread.sleep(1000);
-//        } catch (IOException | EcsException | InterruptedException | KeeperException e) {
-//            e.printStackTrace();
-//        }
-//        KVClient client = new KVClient();
-//        kvClient = new KVStore(client, "localhost", 50009);
-//        try {
-//            kvClient.connect();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    @After
-//    public void tearDown() throws InterruptedException, KeeperException, EcsException {
-//        ecsClient.shutdown();
-//        ecsClient.stopZK();
-//        kvClient.disconnect();
-//    }
-//
-//
-//
-//    @Test
-//    public void testAddNodes() {
-//        Collection<IECSNode> nodes = null;
-//        Exception ex = null;
-//
-//        try {
-//            setUp();
-//            nodes = ecsClient.addNodes(numberOfNodes, strategy, cacheSize);
-//            for (IECSNode node: nodes) {
-//                // try connecting to the nodes
-//            }
-//            tearDown();
-//        } catch (Exception e) {
-//            ex = e;
-//        }
-//
-//        Assert.assertTrue(ex == null); //needs to be changed
-//    }
-//
-//    @Test
-//    public void testAwaitNodes() {
-//        boolean success = false;
-//        Exception ex = null;
-//
-//        try {
-//            setUp();
-//            ecsClient.addNodes(numberOfNodes, strategy, cacheSize);
-//            success = ecsClient.awaitNodes(numberOfNodes, timeout);
-//            tearDown();
-//        } catch (Exception e) {
-//            ex = e;
-//        }
-//
-//        Assert.assertTrue(ex == null && success);
-//    }
-//
-//    @Test
-//    public void testGetNodes() {
-//        Map<String, IECSNode> nodes = null;
-//        Exception ex = null;
-//
-//        try {
-//            setUp();
-//            nodes = ecsClient.getNodes();
-//            tearDown();
-//        } catch (Exception e) {
-//            ex = e;
-//        }
-//
-//        Assert.assertTrue(ex == null && nodes != null); //needs to be changed
-//    }
-//
-//    @Test
-//    public void testGetNodeByKey() {
-//        IECSNode node = null;
-//        Exception ex = null;
-//
-//        try {
-//            setUp();
-//            node = ecsClient.getNodeByKey(nodeID);
-//            tearDown();
-//        } catch (Exception e) {
-//            ex = e;
-//        }
-//        Assert.assertTrue(ex == null && node != null); //needs to be changed
-//    }
-//
-//}
+package test;
+
+import app_kvClient.KVClient;
+import app_kvECS.EcsException;
+import client.KVStore;
+import common.KVMessage;
+import ecs.IECSNode;
+import junit.framework.TestCase;
+import org.apache.zookeeper.KeeperException;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static test.AllTests.ecsClient;
+
+public class ECSClientTest extends TestCase{
+
+    private KVStore kvClient;
+
+    @Before
+    protected void setUp() {
+        KVClient client = new KVClient();
+        kvClient = new KVStore(client, "localhost", 50009);
+        try {
+            kvClient.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @After
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        kvClient.disconnect();
+    }
+
+
+    @Test
+    public void testServerStopped() throws InterruptedException, EcsException, KeeperException {
+        ecsClient.stop();
+        String key = "ab";
+        String value = "persistPls";
+        KVMessage response = null;
+        Exception ex = null;
+        try {
+            response = kvClient.put(key, value);
+            kvClient.disconnect();
+            kvClient.connect();
+            response = kvClient.get(key);
+        } catch (Exception e1) {
+            ex = e1;
+        }
+
+        Assert.assertTrue(ex == null && response.getStatus().equals(KVMessage.StatusType.SERVER_STOPPED));
+    }
+
+    @Test
+    public void testServerNotResponsible() throws InterruptedException, EcsException, KeeperException {
+        ecsClient.start();
+        String key = "abd";
+        String value = "persistPls";
+        KVMessage response = null;
+        Exception ex = null;
+        try {
+            response = kvClient.put(key, value);
+            kvClient.disconnect();
+            kvClient.connect();
+            response = kvClient.get(key);
+        } catch (Exception e1) {
+            ex = e1;
+        }
+
+        Assert.assertTrue(ex == null && response.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE));
+    }
+
+    @Test
+    public void testDeleteNodes() {
+
+        Map<String, IECSNode> nodes = ecsClient.getNodes();
+        Assert.assertTrue(nodes.size() == 10);
+
+        List<String> serversToRemove = new ArrayList<>(Arrays.asList("server0"));
+        ecsClient.removeNodes(serversToRemove);
+
+        nodes = ecsClient.getNodes();
+        Assert.assertTrue(nodes.size() == 9);
+    }
+
+
+}

@@ -2,6 +2,7 @@ package test;
 
 import common.messages.Metadata;
 import ecs.ECSNode;
+import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MetadataTest {
+public class MetadataTest extends TestCase{
 
     List<ECSNode> ecsNodes = new ArrayList<>();
 
