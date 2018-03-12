@@ -26,44 +26,54 @@ public class PerformanceTest  {
     ECSClient ecsClient;
     String configFile;
 
+    int[] clientNumbers = new int[]{1, 5, 10, 50, 100};
+    int clientCountIndex=0;
+
+
     long averageTime=0;
     long averageTimeSum =0;
 
     long sampleCount =1;
-    long totalSampleCount;
+    long totalClients;
+    long totalServers;
 
     private static Logger logger = LogManager.getLogger(PerformanceTest.class);
 
     public static void main(String[] args) throws Exception {
-        PerformanceTest test = new PerformanceTest(args[0]);
-        test.testEmailData(Integer.parseInt(args[1]));
+//        PerformanceTest test = new PerformanceTest(args[0]);
+//        test.testEmailData(Integer.parseInt(args[1]));
+
+
+        PerformanceTest test = new PerformanceTest(args[0], 0);
+
     }
 
-    public void updateAverage(long time){
+    public synchronized void updateAverage(long time){
         averageTimeSum +=time;
         averageTime= averageTimeSum / sampleCount;
         sampleCount++;
-        if (sampleCount >= totalSampleCount) {
+        if (sampleCount >= totalClients) {
             try {
-                logger.debug("Overall Average time is " + averageTime);
+                logger.debug("Overall Average time for " + totalClients + " clients " +
+                        "and " + totalServers + " servers is " + averageTime);
                 ecsClient.shutdown();
-            } catch (KeeperException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (EcsException e) {
-                e.printStackTrace();
+                ecsClient.stopZK();
+                new PerformanceTest(configFile, clientCountIndex + 1);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
             }
         }
     }
 
-    PerformanceTest(String configFile) throws InterruptedException, IOException, KeeperException, EcsException {
+    PerformanceTest(String configFile, int index) throws Exception {
+        this.clientCountIndex = index;
         this.configFile = configFile;
         ecsClient = new ECSClient(configFile);
         ecsClient.startZK();
-        long totalServerCount = Files.lines(Paths.get(new File("src/app_kvECS/" + configFile).getPath())).count();
-        ecsClient.addNodes((int) totalServerCount,"LRU", 10);
+        totalServers = Files.lines(Paths.get(new File("src/app_kvECS/" + configFile).getPath())).count();
+        ecsClient.addNodes((int) totalServers,"LRU", 10);
         ecsClient.start();
+        this.testEmailData(clientNumbers[index]);
         try {
             new LogSetup("logs/test/Performance.log", Level.DEBUG);
         } catch (IOException e) {
@@ -96,15 +106,15 @@ public class PerformanceTest  {
         return null;
     }
 
-    public void testEmailData(int limit) throws Exception {
-        totalSampleCount = limit;
+    public synchronized void testEmailData(int limit) throws Exception {
+        totalClients = limit;
 
         final DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get("/home/k/maildir"));
         ArrayList<KVClient> kvClients = new ArrayList<>();
 
         KVStore defaultKV = connectAny();
         int i = 0;
-        int pairLimit = 40;
+        int pairLimit = 50;
 
         for (Path dir : dirStream) {
             HashMap<String, String> keyValues = new HashMap<>();
