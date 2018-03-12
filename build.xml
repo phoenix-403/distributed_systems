@@ -139,7 +139,7 @@
         <junit>
             <classpath refid="project.classpath"/>
             <formatter type="brief" usefile="false"/>
-            <test name="test.TestSuite"/>
+            <test name="test.DSTestSuite"/>
         </junit>
     </target>
 
