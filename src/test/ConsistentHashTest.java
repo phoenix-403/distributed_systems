@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ConsistentHashTest extends TestCase{
+public class ConsistentHashTest extends TestCase {
 
     private List<ECSNode> ecsNodeList;
     private ConsistentHash consistentHash;
@@ -42,6 +42,7 @@ public class ConsistentHashTest extends TestCase{
     public void testHash() {
         assert (ConsistentHash.getMD5("yoyo").equals("48dc8d29308eb256edc76f25def07251"));
     }
+
 
     @Test
     public void testEveryServerWithAKey() {
