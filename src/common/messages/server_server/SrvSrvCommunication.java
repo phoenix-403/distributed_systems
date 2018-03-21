@@ -6,6 +6,7 @@ public class SrvSrvCommunication {
     public enum Request {
 
         TRANSFERE_DATA("TFD"),
+        REPLICATE_DATA("RPD"),
         REDIRECT_DATA("RDD");
 
         String value;
