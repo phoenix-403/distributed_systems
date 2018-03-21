@@ -127,6 +127,32 @@ public class Metadata {
             return before;
     }
 
+    //this is used for replication
+    public ECSNode getNextServer(String id) {
+        if (ecsNodes.size() == 1) {
+            return null;
+        }
+
+        boolean currentPassed = false;
+        ECSNode before = null;
+        ECSNode after = null;
+        List<ECSNode> sortedNodes = sortNodes(ecsNodes);
+        for (ECSNode ecsNode : sortedNodes) {
+            if (ecsNode.getNodeName().equals(id)) {
+                currentPassed = true;
+                continue;
+            }
+            if (before == null && !currentPassed)
+                before = ecsNode;
+            if (after == null && currentPassed)
+                after = ecsNode;
+        }
+        if (after != null) {
+            return after;
+        } else
+            return before;
+    }
+
     public ECSNode getResponsibleServer(String key) {
         String hashKey = ConsistentHash.getMD5(key);
         for (ECSNode ecsNode : ecsNodes) {

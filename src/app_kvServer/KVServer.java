@@ -276,28 +276,39 @@ public class KVServer implements IKVServer, Runnable {
             Gson gson = new Gson();
             SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)) {
-                // ----------------------- nullifying req so it is not processed again ------------------------------
-                zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
-                        EMPTY_SRV_SRV_REQ.getBytes());
-                // --------------------------------------------------------------------------------------------------
+
                 lockWrite();
-                HashMap<String, String> newDataPairs = req.getKvToImport();
-                Iterator it = newDataPairs.entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry next = (Map.Entry) it.next();
-                    if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
-                        logger.error("Write Not Successful!");
-                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                switch(req.getRequest()) {
+                    case TRANSFERE_DATA: {
+                            // ----------------------- nullifying req so it is not processed again ------------------------------
+                            zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
+                                    EMPTY_SRV_SRV_REQ.getBytes());
+                        // --------------------------------------------------------------------------------------------------
+                        HashMap<String, String> newDataPairs = req.getKvToImport();
+                        Iterator it = newDataPairs.entrySet().iterator();
+                        while (it.hasNext()) {
+                            Map.Entry next = (Map.Entry) it.next();
+                            if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
+                                logger.error("Write Not Successful!");
+                                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                                zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                                        gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                unlockWrite();
+                            }
+                        }
+                        logger.info("Write Successful!");
+                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                         zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                 gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                        unlockWrite();
+                        break;
+                    }
+                    case REDIRECT_DATA: {
+
+                        break;
                     }
                 }
-                logger.info("Write Successful!");
-                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
-                zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
-                        gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
                 unlockWrite();
+
             }
         }
     }
@@ -541,6 +552,27 @@ public class KVServer implements IKVServer, Runnable {
         acceptingWriteRequests = true;
     }
 
+    public synchronized boolean replicateData(String key, String value) {
+        ECSNode nextNode = metadata.getResponsibleServer(key);
+        int i = 0;
+        boolean success = false;
+        ZkServerCommunication.Response responseState;
+
+        HashMap<String, String> keyValuePairs = new HashMap<>();
+        keyValuePairs.put(key, value);
+
+        while ((nextNode = metadata.getNextServer(nextNode.getNodeName()))!=null && i<2) {
+            try {
+                success = sendServerReq(nextNode.getNodeName(), keyValuePairs);
+                i++;
+            } catch (Exception e) {
+                success = false;
+                break;
+            }
+        }
+        return success;
+    }
+
     @Override
     public boolean moveData(String[] hashRange, String targetName) throws IOException, KeeperException,
             InterruptedException {
@@ -555,7 +587,23 @@ public class KVServer implements IKVServer, Runnable {
         } else {
             myKeyValues.putAll(Persist.readRange(hashRange));
         }
+        if (sendServerReq(targetName, myKeyValues)) {
+            logger.info("got a srv-srv response");
+            if (hashRange[0].compareTo(hashRange[1]) > 0) {
+                Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
+                Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
+            } else {
+                Persist.deleteRange(hashRange);
+            }
+            logger.info("unlock write and return success");
+            return true;
+        } else
+            logger.info("unlock write and return fail");
+        unlockWrite();
+        return false;
+    }
 
+    private boolean sendServerReq(String targetName, HashMap<String, String> myKeyValues) throws KeeperException, InterruptedException {
         logger.info("creating a server-server req and requesting");
         SrvSrvRequest request = new SrvSrvRequest(name, targetName, TRANSFERE_DATA, myKeyValues);
         zkNodeTransaction.createZNode(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
@@ -578,24 +626,13 @@ public class KVServer implements IKVServer, Runnable {
                     zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
                             EMPTY_SRV_SRV_RES.getBytes());
                     // --------------------------------------------------------------------------------------------------
-                    logger.info("got a srv-srv response");
-                    if (hashRange[0].compareTo(hashRange[1]) > 0) {
-                        Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
-                        Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
-                    } else {
-                        Persist.deleteRange(hashRange);
-                    }
-                    logger.info("unlock write and return success");
                     unlockWrite();
                     return resp.getResponse().equals(TRANSFERE_SUCCESS);
                 }
             }
         }
-        logger.info("unlock write and return fail");
-        unlockWrite();
         return false;
     }
-
 
     public static void main(String[] args) throws Exception {
 //        if (args.length != 6) {
