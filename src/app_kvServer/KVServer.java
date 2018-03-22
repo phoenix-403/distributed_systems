@@ -197,7 +197,7 @@
 
                     replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                                 try {
-                                    replicateData();
+                                    replicateData(null);
                                 } catch (IOException e) {
                                     logger.error("Replicate Data Failed with Error: " + e.getMessage());
                                 } catch (InterruptedException e) {
@@ -319,7 +319,6 @@
                                     SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
                                     zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                             gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                                    replicateData();
                                     unlockWrite();
                                 }
                             }
@@ -621,8 +620,9 @@
             // --------------------------------------------------------------------------------------------------
         }
 
-        public synchronized void replicateData() throws IOException, KeeperException, InterruptedException {
-            String[] hashRange = metadata.getRange(name);
+        public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException, InterruptedException {
+            if (hashRange==null)
+                hashRange = metadata.getRange(name);
             int i = 0;
 
             //handling wraparound case
@@ -638,11 +638,12 @@
             cleanseOldResponses();
             while (!nextNode.equals(name) && nextNode != null && i<2) {
                 final String nextName = nextNode.getNodeName();
+                final String[] finalRange = hashRange;
                 logger.info("Replicating to " + nextName + " on iteration " + i);
 
                 Executors.newSingleThreadExecutor().execute(() -> {
                     try {
-                        sendServerReq(nextName, myKeyValues, hashRange,
+                        sendServerReq(nextName, myKeyValues, finalRange,
                                 REPLICATE_DATA);
                     } catch (Exception e) {
                         logger.error("Replicate Data Failed with Error: " + e.getMessage());
@@ -672,6 +673,7 @@
 
             if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
                 logger.info("got a srv-srv response");
+
                 if (hashRange[0].compareTo(hashRange[1]) > 0) {
                     Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});
                     Persist.deleteRange(new String[]{Metadata.MIN_MD5, hashRange[1]});
