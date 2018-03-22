@@ -231,6 +231,7 @@
                         logger.info("remove req is for me!");
 
                         ECSNode nextNode = metadata.getNextServer(name, targetNode);
+
                         if (nextNode != null) {
                             logger.info("Attempting to move data to " + nextNode.getNodeName() + "!");
                             success = moveData(metadata.getRange(name), nextNode.getNodeName());
@@ -318,6 +319,7 @@
                                     SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
                                     zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                             gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                    replicateData();
                                     unlockWrite();
                                 }
                             }

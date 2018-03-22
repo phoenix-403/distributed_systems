@@ -114,7 +114,7 @@ public class ClientConnection implements Runnable {
      *
      * @return Response to send back to server
      */
-    private ClientServerRequestResponse handleRequest(String reqLine) {
+    public ClientServerRequestResponse handleRequest(String reqLine) {
 
         ClientServerRequestResponse request;
         ClientServerRequestResponse response;
