@@ -238,6 +238,7 @@
 
                             if (success) {
                                 logger.info("Moved data successfully");
+                                deleteReplicatedData();
                                 responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                                 respond(request.getId(), responseState);
                                 Thread.sleep(2000);
@@ -618,6 +619,32 @@
                 }
             }
             // --------------------------------------------------------------------------------------------------
+        }
+
+        public void deleteReplicatedData() throws KeeperException, InterruptedException {
+            HashMap<String, String> emptyKeyValues = new HashMap<String, String>();
+            cleanseOldResponses();
+            ECSNode nextNode = metadata.getNextServer(name);
+            cleanseOldResponses();
+            int i = 0;
+            while (!nextNode.equals(name) && nextNode != null && i<2) {
+                final String nextName = nextNode.getNodeName();
+                final String[] finalRange = serverRange;
+                logger.info("Replicating to " + nextName + " on iteration " + i);
+
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    try {
+                        sendServerReq(nextName, emptyKeyValues, finalRange,
+                                REPLICATE_DATA);
+                    } catch (Exception e) {
+                        logger.error("Replicate Data Failed with Error: " + e.getMessage());
+                    }
+                });
+                i++;
+                nextNode = metadata.getNextServer(nextNode.getNodeName());
+            }
+
+
         }
 
         public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException, InterruptedException {
