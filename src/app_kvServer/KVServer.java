@@ -452,11 +452,11 @@
                 }//scenario 3 -- only some of the last ranges in this server
                 else if (oldRange[0].compareTo(updatedNode.getNodeHashRange()[0]) <= 0
                         && oldRange[1].compareTo(updatedNode.getNodeHashRange()[0]) > 0) {
-
                     moveData(new String[]{updatedNode.getNodeHashRange()[0], oldRange[1]}, updatedNode.getNodeName());
                     clearCache();
                 }
             }
+            replicateData(oldRange);
         }
 
         public boolean isAcceptingRequests() {
@@ -649,7 +649,7 @@
 
         public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException, InterruptedException {
             if (hashRange==null)
-                hashRange = metadata.getRange(name);
+                hashRange = serverRange;
             int i = 0;
 
             //handling wraparound case
