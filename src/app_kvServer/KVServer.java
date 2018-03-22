@@ -55,7 +55,7 @@
         private ZooKeeper zooKeeper;
         private ZkNodeTransaction zkNodeTransaction;
 
-        private int TIMEOUT = 20000;
+        private int TIMEOUT = 25000;
 
         private Metadata metadata;
         private String serverRange[] = null;
@@ -199,7 +199,11 @@
                                 try {
                                     replicateData();
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                    logger.error("Replicate Data Failed with Error: " + e.getMessage());
+                                } catch (InterruptedException e) {
+                                    logger.error("Replicate Data Failed with Error: " + e.getMessage());
+                                } catch (KeeperException e) {
+                                    logger.error("Replicate Data Failed with Error: " + e.getMessage());
                                 }
                             }, initialDelay, periodicDelay,
                             TimeUnit.SECONDS);
@@ -599,11 +603,25 @@
             acceptingWriteRequests = true;
         }
 
-        public synchronized boolean replicateData() throws IOException {
+        public synchronized void cleanseOldResponses() throws KeeperException, InterruptedException {
+            // ----------------------- Cleanse the old responses
+            // ------------------------------
+            List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
+                    false);
+            for (String respNode : respNodes) {
+                SrvSrvResponse resp = new Gson().fromJson(new String(zkNodeTransaction.read(
+                        ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode)), SrvSrvResponse.class);
+                if (resp.getTargetServer().equals(name)) {
+                    zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
+                            EMPTY_SRV_SRV_RES.getBytes());
+                }
+            }
+            // --------------------------------------------------------------------------------------------------
+        }
+
+        public synchronized void replicateData() throws IOException, KeeperException, InterruptedException {
             String[] hashRange = metadata.getRange(name);
-            ECSNode nextNode = metadata.getResponsibleServer(hashRange[0]);
             int i = 0;
-            boolean isSuccessful = false;
 
             //handling wraparound case
             HashMap<String, String> myKeyValues = new HashMap<>();
@@ -614,22 +632,23 @@
                 myKeyValues.putAll(Persist.readRange(hashRange));
             }
 
-            while ((nextNode = metadata.getNextServer(nextNode.getNodeName()))!=null && i<2) {
-                try {
-                    isSuccessful = sendServerReq(nextNode.getNodeName(), myKeyValues, hashRange,
-                            REPLICATE_DATA);
-                    if (isSuccessful) {
-                        logger.info("got a srv-srv response for replicate data");
-                    } else
-                        logger.info("unlock write and return fail for replicate data");
-                    i++;
-                } catch (Exception e) {
-                    isSuccessful = false;
-                    break;
-                }
+            ECSNode nextNode = metadata.getNextServer(name);
+            cleanseOldResponses();
+            while (!nextNode.equals(name) && nextNode != null && i<2) {
+                final String nextName = nextNode.getNodeName();
+                logger.info("Replicating to " + nextName + " on iteration " + i);
+
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    try {
+                        sendServerReq(nextName, myKeyValues, hashRange,
+                                REPLICATE_DATA);
+                    } catch (Exception e) {
+                        logger.error("Replicate Data Failed with Error: " + e.getMessage());
+                    }
+                });
+                i++;
+                nextNode = metadata.getNextServer(nextNode.getNodeName());
             }
-            unlockWrite();
-            return isSuccessful;
         }
 
         @Override
@@ -646,6 +665,9 @@
             } else {
                 myKeyValues.putAll(Persist.readRange(hashRange));
             }
+
+            cleanseOldResponses();
+
             if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
                 logger.info("got a srv-srv response");
                 if (hashRange[0].compareTo(hashRange[1]) > 0) {
@@ -665,6 +687,7 @@
 
         private boolean sendServerReq(String targetName, HashMap<String, String> myKeyValues, String[] hashRange,
                                       SrvSrvCommunication.Request requestType) throws KeeperException, InterruptedException {
+
             logger.info("creating a server-server req and requesting");
             SrvSrvRequest request = new SrvSrvRequest(name, targetName, hashRange, requestType, myKeyValues);
             zkNodeTransaction.createZNode(SERVER_SERVER_REQUEST.getValue() + REQUEST.getValue(),
@@ -674,9 +697,8 @@
                 List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
                         false);
                 logger.info("Got responses from: " + respNodes);
-                String respJSON;
                 for (String respNode : respNodes) {
-                    respJSON = new String(zkNodeTransaction.read(
+                    String respJSON = new String(zkNodeTransaction.read(
                             ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode));
                     logger.info("response: " + respJSON);
                     Gson gson = new Gson();
@@ -687,7 +709,7 @@
                         zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue() + "/" + respNode,
                                 EMPTY_SRV_SRV_RES.getBytes());
                         // --------------------------------------------------------------------------------------------------
-                        unlockWrite();
+                        logger.info("response recieved for " + request.getRequest().getValue() + " to " + request.getTargetServer());
                         return resp.getResponse().equals(TRANSFERE_SUCCESS);
                     }
                 }
