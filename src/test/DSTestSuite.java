@@ -20,7 +20,7 @@ public class DSTestSuite {
 
     @BeforeClass
     public static void doYourOneTimeSetup() throws IOException, EcsException, KeeperException, InterruptedException {
-        ecsClient = new ECSClient("ecs.config");
+        ecsClient = new ECSClient("localhost", 2181);
         ecsClient.startZK();
         ecsClient.addNodes(10, "LRU", 10);
         ecsClient.start();

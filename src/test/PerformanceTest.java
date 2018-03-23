@@ -71,7 +71,7 @@ public class PerformanceTest  {
 
     PerformanceTest(String configFile, String strategy) throws Exception {
         this.configFile = configFile;
-        ecsClient = new ECSClient(configFile);
+        ecsClient = new ECSClient("localhost", 2181);
         ecsClient.startZK();
         totalServers = Files.lines(Paths.get(new File("src/app_kvECS/" + configFile).getPath())).count();
         ecsClient.addNodes((int) totalServers, strategy, 20);
@@ -87,7 +87,7 @@ public class PerformanceTest  {
     PerformanceTest(String configFile, int index) throws Exception {
         this.clientCountIndex = index;
         this.configFile = configFile;
-        ecsClient = new ECSClient(configFile);
+        ecsClient = new ECSClient("localhost", 2181);
         ecsClient.startZK();
         totalServers = Files.lines(Paths.get(new File("src/app_kvECS/" + configFile).getPath())).count();
         ecsClient.addNodes((int) totalServers,"LRU", 10);
