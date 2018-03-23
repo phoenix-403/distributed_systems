@@ -15,10 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.ClientCnxn;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -54,6 +52,9 @@ public class ECSClient implements IECSClient {
     private List<ECSNode> ecsNodes = new ArrayList<>();
     private Metadata metadata;
 
+    // lock to prevent permanent node watch conflict with add, delete and start/stop
+    ReentrantLock lock = new ReentrantLock();
+
 
     public ECSClient(String zkHostname, int zkPort) throws IOException, EcsException {
         try {
@@ -64,30 +65,9 @@ public class ECSClient implements IECSClient {
         this.zkAddress = zkHostname;
         this.zkPort = zkPort;
 
-        File file = new File("ecs.config");
+        File file = new File("src/app_kvECS/" + "ecs.config");
         configureAvailableNodes(file);
 
-    }
-
-    public ECSClient(String configFile) throws IOException, EcsException {
-
-        // setting up log
-        try {
-            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // setting zookeeper variables
-        zkAddress = "localhost";
-        zkPort = 2181;
-
-        //disable ClientCnxn messages
-        loggerCnxn.setLevel(Level.OFF);
-
-        // reading config file
-        File file = new File("src/app_kvECS/" + configFile);
-        configureAvailableNodes(file);
     }
 
     private void configureAvailableNodes(File configFile) throws EcsException, IOException {
@@ -129,6 +109,7 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.delete(ZkStructureNodes.ROOT.getValue());
 
         // setting up structural nodes
+        zkNodeTransaction.createZNode(ZkStructureNodes.NONE_HEART_BEAT.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.METADATA.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
@@ -140,6 +121,9 @@ public class ECSClient implements IECSClient {
         metadata = new Metadata(new ArrayList<>());
         zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(),
                 new Gson().toJson(metadata, Metadata.class).getBytes());
+
+        // setting a perm watch on node heart beat
+        addPermanentHBNodeWatch(zooKeeper);
     }
 
     public void stopZK() throws InterruptedException {
@@ -339,7 +323,7 @@ public class ECSClient implements IECSClient {
         } else {
             List<String> failedServers = new ArrayList<>();
             try {
-                List<String> activeServers = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+                List<String> activeServers = zooKeeper.getChildren(ZkStructureNodes.NONE_HEART_BEAT.getValue(), false);
 
                 Iterator<IECSNode> newEcsNodeIterator = newEcsNodes.iterator();
                 while (newEcsNodeIterator.hasNext()) {
@@ -444,7 +428,8 @@ public class ECSClient implements IECSClient {
 
         while (System.currentTimeMillis() - startTime <= timeout) {
             try {
-                int numberHrChildrenNodes = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false).size();
+                int numberHrChildrenNodes = zooKeeper.getChildren(ZkStructureNodes.NONE_HEART_BEAT.getValue(), false)
+                        .size();
                 if (numberHrChildrenNodes - preexistingHrNodes == count) {
                     return true;
                 }
@@ -576,31 +561,22 @@ public class ECSClient implements IECSClient {
     }
 
 
-    /**
-     * @param args config file
-     */
-    public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
-        if (args.length != 1) {
-            throw new EcsException("Incorrect # of arguments for ECS Client!");
-        }
-
-        ECSClient app = new ECSClient(args[0]);
-        app.startZK();
-        app.run();
-        app.stopZK();
-    }
-
-    public void run() throws EcsException, KeeperException, InterruptedException {
+    public void run() {
         while (!stopClient) {
             BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
 
             try {
+                lock.lock();
                 String cmdLine = stdin.readLine();
                 this.handleCommand(cmdLine);
             } catch (IOException e) {
                 stopClient = true;
                 printError("CLI does not respond - Application terminated ");
+            } catch (InterruptedException | KeeperException | EcsException e) {
+                logger.error(e.getMessage());
+            } finally {
+                lock.unlock();
             }
         }
     }
@@ -653,24 +629,6 @@ public class ECSClient implements IECSClient {
                     }
                     break;
                 }
-//                case "setupNodes": {
-//                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, STRING, INTEGER});
-//                    if (a == null)
-//                        return;
-//                    Collection<IECSNode> nodes = setupNodes((int) a[0], (String) a[1], (int) a[2]);
-//                    break;
-//                }
-//                case "awaitNodes": {
-//                    Object[] a = getArguments(tokens, new ArgType[]{INTEGER, INTEGER});
-//                    if (a == null)
-//                        return;
-//                    try {
-//                        awaitNodes((int) a[0], (int) a[1]);
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                    }
-//                    break;
-//                }
                 case "removeNodes": {
                     if (tokens.length < 2) {
                         printHelp();
@@ -679,17 +637,6 @@ public class ECSClient implements IECSClient {
                     ArrayList<String> temp = new ArrayList<String>(
                             Arrays.asList(Arrays.copyOfRange(tokens, 1, tokens.length)));
                     System.out.println(PROMPT + removeNodes(temp));
-                    break;
-                }
-                case "getNodes": {
-                    Map<String, IECSNode> nodes = getNodes();
-                    break;
-                }
-                case "getNodeByKey": {
-                    Object[] a = getArguments(tokens, new ArgType[]{ArgType.STRING});
-                    if (a == null)
-                        return;
-                    IECSNode node = getNodeByKey((String) a[0]);
                     break;
                 }
                 case "logLevel": {
@@ -825,4 +772,50 @@ public class ECSClient implements IECSClient {
         return array;
     }
 
+
+    private synchronized void addPermanentHBNodeWatch(final ZooKeeper zooKeeper) throws KeeperException,
+            InterruptedException {
+        zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
+                try {
+                    addPermanentHBNodeWatch(zooKeeper);
+                    lock.lock();
+                    checkHBStatus(zooKeeper);
+                } catch (KeeperException | InterruptedException e) {
+                    logger.error(e.getMessage());
+                } finally {
+                    lock.unlock();
+                }
+            }
+        });
+    }
+
+
+    private synchronized void checkHBStatus(ZooKeeper zooKeeper) throws KeeperException,
+            InterruptedException {
+        List<String> nodesHB = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+        List<String> nodesNHB = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+
+
+        if (nodesNHB.size() - nodesHB.size() > 1) {
+            //node deleted
+            List<String> nodesCrashed = ((List<String>) CollectionUtils.subtract(nodesNHB, nodesHB));
+            nodesNHB.remove(nodesCrashed);
+            logger.warn(nodesCrashed.toString() + " crashed!!");
+        }
+    }
+
+
+    /**
+     * @param args config file
+     */
+    public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
+        if (args.length != 2) {
+            throw new EcsException("Incorrect # of arguments for ECS Client!");
+        }
+        ECSClient app = new ECSClient(args[0], Integer.parseInt(args[1]));
+        app.startZK();
+        app.run();
+        app.stopZK();
+    }
 }

@@ -143,9 +143,11 @@ public class KVServer implements IKVServer, Runnable {
             }
             logger.info("Initialized! listening on port: " + serverSocket.getLocalPort());
 
-            // adding hb node
-            zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name, null, CreateMode
+            // adding nhb and hb node
+            zkNodeTransaction.createZNode(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name, null, CreateMode
                     .PERSISTENT);
+            zkNodeTransaction.createZNode(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name, null, CreateMode
+                    .EPHEMERAL);
 
         } catch (IOException e) {
             logger.error("Error! Cannot open server socket: " + e.getMessage());
@@ -502,6 +504,7 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void close() {
         try {
+            zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name);
             zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
         } catch (KeeperException | InterruptedException e) {
             logger.fatal("Unable to delete HR Node");
