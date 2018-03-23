@@ -27,7 +27,7 @@ public class PerformanceTest  {
     String configFile;
 
     int[] clientNumbers = new int[]{1, 5, 10, 50, 100};
-    int clientCountIndex=0;
+    int clientCountIndex=-1;
 
 
     long averageTime=0;
@@ -44,7 +44,8 @@ public class PerformanceTest  {
 //        test.testEmailData(Integer.parseInt(args[1]));
 
 
-        PerformanceTest test = new PerformanceTest(args[0], 0);
+//        PerformanceTest test = new PerformanceTest(args[0], 0);
+        PerformanceTest test = new PerformanceTest(args[0], "FIFO");
 
     }
 
@@ -60,10 +61,26 @@ public class PerformanceTest  {
                         "and " + totalServers + " servers is " + 100/averageTime);
                 ecsClient.shutdown();
                 ecsClient.stopZK();
-                new PerformanceTest(configFile, clientCountIndex + 1);
+                if (clientCountIndex != -1)
+                    new PerformanceTest(configFile, clientCountIndex + 1);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
+        }
+    }
+
+    PerformanceTest(String configFile, String strategy) throws Exception {
+        this.configFile = configFile;
+        ecsClient = new ECSClient(configFile);
+        ecsClient.startZK();
+        totalServers = Files.lines(Paths.get(new File("src/app_kvECS/" + configFile).getPath())).count();
+        ecsClient.addNodes((int) totalServers, strategy, 20);
+        ecsClient.start();
+        this.testEmailData(1);
+        try {
+            new LogSetup("logs/test/Performance.log", Level.DEBUG);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

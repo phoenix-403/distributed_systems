@@ -378,7 +378,7 @@ public class ECSClient implements IECSClient {
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
             scriptContent.append("ssh -n ").append(ecsNode.getNodeHost()).append(" ").append("nohup java -jar ")
-                    .append("~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append
+                    .append("~/Documents/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append
                     (" ")
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +

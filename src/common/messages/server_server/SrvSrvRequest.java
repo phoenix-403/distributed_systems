@@ -5,15 +5,17 @@ import java.util.HashMap;
 public class SrvSrvRequest {
     private String serverName;
     private String targetServer;
+    private String[] hashRange;
     private SrvSrvCommunication.Request request;
 
     private HashMap<String, String> kvToImport;
 
-    public SrvSrvRequest(String serverName, String targetServer, SrvSrvCommunication.Request request, HashMap<String,
-            String> kvToImport) {
+    public SrvSrvRequest(String serverName, String targetServer, String[] hashRange,
+                         SrvSrvCommunication.Request request, HashMap<String, String> kvToImport) {
         this.serverName = serverName;
         this.targetServer = targetServer;
         this.request = request;
+        this.hashRange = hashRange;
         this.kvToImport = kvToImport;
     }
 
@@ -23,6 +25,10 @@ public class SrvSrvRequest {
 
     public String getServerName() {
         return serverName;
+    }
+
+    public String[] getHashRange() {
+        return hashRange;
     }
 
     public String getTargetServer() {

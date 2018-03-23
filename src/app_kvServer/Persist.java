@@ -22,11 +22,13 @@ public class Persist {
     private static final String ROOT_PATH = "ds_data";
     private static final String DB_FILE_PATH = "/db";
     private static final String DB_FILE_NAME = "data.db";
+    private static final String DB_REPLICA_FILE_NAME = "dataREP.db";
     private static final String DELIMITER = "~*~*";
     private static final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
     // logger
     private static Logger logger = LogManager.getLogger(Persist.class);
     private static volatile File dbFile;
+    private static volatile File dbFileReplica;
 
 
     private Persist() {
@@ -58,6 +60,16 @@ public class Persist {
             logger.error("Unable to create DB_FILES " + e.getMessage());
             return false;
         }
+
+        // creating replica files if needed
+        try {
+            dbFileReplica = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + DB_REPLICA_FILE_NAME);
+            dbFileReplica.createNewFile();
+        } catch (IOException e) {
+            logger.error("Unable to create DB_REPLICA_FILES " + e.getMessage());
+            return false;
+        }
+        
         logger.info("Server ready to persist data");
         return true;
     }
@@ -166,7 +178,6 @@ public class Persist {
         return false;
     }
 
-
     /**
      * deletes values over a range
      *
@@ -189,7 +200,78 @@ public class Persist {
 
     }
 
+    public static synchronized HashMap<String, String> readRangeReplica(String[] range) throws IOException {
 
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
+        HashMap<String, String> valuePairs = new HashMap<>();
+
+        for (String keyValue : fileLines) {
+            if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
+                    && ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[0]) >= 0)
+                valuePairs.put(keyValue.split(DELIMITER_PATTERN)[0], keyValue.split(DELIMITER_PATTERN)[1]);
+        }
+
+        return valuePairs;
+    }
+
+    public static synchronized boolean writeReplica(String key, String value) throws IOException {
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
+        ArrayList<String> keys = new ArrayList<>();
+
+
+        for (String keyValue : fileLines) {
+            keys.add(keyValue.split(DELIMITER_PATTERN)[0]);
+        }
+
+        int index = keys.indexOf(key);
+        // scenario1: key does not exist
+        if (index == -1) {
+            //1.1 should not delete a none existent value
+            if (StringUtils.isEmpty(value)) {
+                logger.warn("Trying to delete a non existing key");
+                return false;
+            }
+            //1.2 write non existent key at end of file
+            fileLines.add(key + DELIMITER + value);
+            Files.write(dbFileReplica.toPath(), fileLines);
+            logger.info("added new key: " + key + " with value: " + value);
+            Cache.updateCache(key, value);
+            return true;
+        }
+
+        // scenario2: key exists
+        // 2.1 delete value
+        if (StringUtils.isEmpty(value)) {
+            fileLines.remove(index);
+            Files.write(dbFileReplica.toPath(), fileLines);
+            logger.info("deleted key: " + key);
+            Cache.remove(key);
+            return true;
+        }
+        // 2.2 modify value
+        fileLines.set(index, key + DELIMITER + value);
+        Files.write(dbFileReplica.toPath(), fileLines);
+        logger.info("Modified key: " + key + " with value of: " + value);
+        Cache.updateCache(key, value);
+        return false;
+    }
+
+    public static synchronized void deleteRangeReplica(String[] range) throws IOException {
+        logger.info("Deleting keys within range: " + range[0] +"-" + range[1] + "...");
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
+        for (String keyValue : fileLines) {
+            if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
+                    && ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[0]) >= 0) {
+                String key = keyValue.split(DELIMITER_PATTERN)[0];
+                Persist.write(key, null);
+                Cache.remove(key);
+                logger.info("Deleted key: " + key + " as it was moved to another server");
+            }
+        }
+        logger.info("Done deleting.. keys within range: " + range[0] +"-" + range[1]);
+
+
+    }
 
     public static void clearStorage() {
         PrintWriter writer;
@@ -205,7 +287,6 @@ public class Persist {
         // clearing cache
         Cache.clearCache();
     }
-
 
     public static void main(String[] args) throws IOException {
         new LogSetup("logs/server/server.log", Level.ALL);
