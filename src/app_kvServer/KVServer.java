@@ -399,21 +399,21 @@ public class KVServer implements IKVServer, Runnable {
                 logger.info("setting up to prepare to move data if needed");
                 //third run
                 List<ECSNode> updatedNodes = new ArrayList<>(metadata.getEcsNodes());
-                // removing myself and splitting wrap around server to 2 peices
-                ECSNode updatdNode;
+                // removing myself and splitting wrap around server to 2 pieces
+                ECSNode updatedNode;
                 List<ECSNode> wrapAroundSplitNode = new ArrayList<>();
                 Iterator<ECSNode> updatedNodesIterator = updatedNodes.iterator();
                 while (updatedNodesIterator.hasNext()) {
-                    updatdNode = updatedNodesIterator.next();
-                    if (updatdNode.getNodeName().equals(name)) {
+                    updatedNode = updatedNodesIterator.next();
+                    if (updatedNode.getNodeName().equals(name)) {
                         updatedNodesIterator.remove();
-                    } else if (updatdNode.getNodeHashRange()[0].compareTo(updatdNode.getNodeHashRange()[1]) > 0) {
-                        wrapAroundSplitNode.add(new ECSNode(updatdNode.getNodeName(), updatdNode.getNodeHost(),
-                                updatdNode.getNodePort(), new String[]{updatdNode.getNodeHashRange()[0], Metadata
-                                .MAX_MD5}, updatdNode.isReserved()));
-                        wrapAroundSplitNode.add(new ECSNode(updatdNode.getNodeName(), updatdNode.getNodeHost(),
-                                updatdNode.getNodePort(), new String[]{Metadata.MIN_MD5, updatdNode.getNodeHashRange
-                                ()[1]}, updatdNode.isReserved()));
+                    } else if (updatedNode.getNodeHashRange()[0].compareTo(updatedNode.getNodeHashRange()[1]) > 0) {
+                        wrapAroundSplitNode.add(new ECSNode(updatedNode.getNodeName(), updatedNode.getNodeHost(),
+                                updatedNode.getNodePort(), new String[]{updatedNode.getNodeHashRange()[0], Metadata
+                                .MAX_MD5}, updatedNode.isReserved()));
+                        wrapAroundSplitNode.add(new ECSNode(updatedNode.getNodeName(), updatedNode.getNodeHost(),
+                                updatedNode.getNodePort(), new String[]{Metadata.MIN_MD5, updatedNode.getNodeHashRange
+                                ()[1]}, updatedNode.isReserved()));
                         updatedNodesIterator.remove();
                     }
                 }
@@ -632,7 +632,7 @@ public class KVServer implements IKVServer, Runnable {
         ECSNode nextNode = metadata.getNextServer(name);
         cleanseOldResponses();
         int i = 0;
-        while (!nextNode.equals(name) && nextNode != null && i < 2) {
+        while (nextNode != null && !nextNode.getNodeName().equals(name) && i < 2) {
             final String nextName = nextNode.getNodeName();
             final String[] finalRange = serverRange;
             logger.info("Replicating to " + nextName + " on iteration " + i);
@@ -669,7 +669,7 @@ public class KVServer implements IKVServer, Runnable {
 
         ECSNode nextNode = metadata.getNextServer(name);
         cleanseOldResponses();
-        while (!nextNode.equals(name) && nextNode != null && i < 2) {
+        while (nextNode != null && !nextNode.getNodeName().equals(name) && i < 2) {
             final String nextName = nextNode.getNodeName();
             final String[] finalRange = hashRange;
             logger.info("Replicating to " + nextName + " on iteration " + i);
