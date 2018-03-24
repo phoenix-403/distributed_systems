@@ -8,7 +8,8 @@ public class ZkServerCommunication {
         START("STR"),
         STOP("STP"),
         SHUTDOWN("SHD"),
-        REMOVE_NODES("RMS");
+        REMOVE_NODES("RMS"),
+        TRANSFER_BACKUP_DATA("TBD");
 
         String value;
 
