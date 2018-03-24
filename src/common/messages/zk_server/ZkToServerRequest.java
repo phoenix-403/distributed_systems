@@ -8,10 +8,14 @@ public class ZkToServerRequest {
     private ZkServerCommunication.Request zkSvrRequest;
     private List<String> nodes;
 
-    public ZkToServerRequest(int id, ZkServerCommunication.Request zkSvrRequest, List<String> nodes) {
+    // used for crash recovery!
+    private String[] crashedServerHashRange;
+
+    public ZkToServerRequest(int id, ZkServerCommunication.Request zkSvrRequest, List<String> nodes, String[] crashedServerHashRange) {
         this.id = id;
         this.zkSvrRequest = zkSvrRequest;
         this.nodes = nodes;
+        this.crashedServerHashRange = crashedServerHashRange;
     }
 
     public int getId() {

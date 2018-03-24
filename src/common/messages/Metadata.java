@@ -103,7 +103,7 @@ public class Metadata {
 
 
     public ECSNode getNextServer(String id, List<String> removed) {
-        if (ecsNodes.size() == removed.size()) {
+        if (ecsNodes.size() <= removed.size()) {
             return null;
         }
 

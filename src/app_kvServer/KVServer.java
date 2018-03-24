@@ -589,8 +589,8 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void close() {
         try {
-            zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
             zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name);
+            zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
         } catch (KeeperException | InterruptedException e) {
             logger.fatal("Unable to delete HR Node");
         }
@@ -629,7 +629,7 @@ public class KVServer implements IKVServer, Runnable {
         acceptingWriteRequests = true;
     }
 
-    public synchronized void cleanseOldResponses() throws KeeperException, InterruptedException {
+    private synchronized void cleanseOldResponses() throws KeeperException, InterruptedException {
         // ----------------------- Cleanse the old responses
         // ------------------------------
         List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
