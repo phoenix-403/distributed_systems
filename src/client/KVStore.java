@@ -1,14 +1,18 @@
 package client;
 
 import app_kvClient.IClientSocketListener;
+import app_kvClient.KVClient;
 import com.google.gson.Gson;
-import common.messages.KVMessage;
-import common.messages.RequestResponse;
+import common.ClientServerRequestResponse;
+import common.KVMessage;
+import common.messages.Metadata;
+import ecs.ECSNode;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 
 public class KVStore implements KVCommInterface {
 
@@ -20,6 +24,16 @@ public class KVStore implements KVCommInterface {
 
     private static final int TIMEOUT = 4 * 1000;
 
+    public String getAddress() {
+        return address;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    private KVClient kvClient;
+
     private Socket clientSocket;
     private IClientSocketListener clientSocketListener;
     private OutputStreamWriter outputStreamWriter;
@@ -29,7 +43,8 @@ public class KVStore implements KVCommInterface {
 
     private int requestId = 0;
 
-    public KVStore(String address, int port) {
+    public KVStore(KVClient kvClient, String address, int port) {
+        this.kvClient = kvClient;
         this.address = address;
         this.port = port;
     }
@@ -41,7 +56,6 @@ public class KVStore implements KVCommInterface {
         inputStreamReader = new InputStreamReader(inputStream);
         bufferedInputStream = new BufferedReader(inputStreamReader);
         outputStreamWriter = new OutputStreamWriter(clientSocket.getOutputStream());
-
     }
 
     @Override
@@ -50,14 +64,13 @@ public class KVStore implements KVCommInterface {
         try {
             tearDownConnection();
         } catch (IOException ioe) {
-            logger.error("Unable to close connection properly! - " + ioe.getMessage() );
+            logger.error("Unable to close connection properly! - " + ioe.getMessage());
         }
     }
 
     @Override
     public boolean isConnected() {
-        // TODO Auto-generated method stub
-        return false;
+        return clientSocket.isConnected();
     }
 
     private void tearDownConnection() throws IOException {
@@ -75,10 +88,11 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage put(String key, String value) throws IOException {
-        RequestResponse req = new RequestResponse(requestId++, key, value, KVMessage.StatusType.PUT);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, value, KVMessage
+                .StatusType.PUT, null);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
             if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
                 throw new IOException("Connection Dropped");
             return response;
@@ -90,10 +104,11 @@ public class KVStore implements KVCommInterface {
 
     @Override
     public KVMessage get(String key) throws IOException {
-        RequestResponse req = new RequestResponse(requestId++, key, null, KVMessage.StatusType.GET);
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage
+                .StatusType.GET, null);
         boolean status = sendRequest(req);
         if (status) {
-            RequestResponse response = getResponse();
+            ClientServerRequestResponse response = getResponse();
             if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
                 throw new IOException("Connection Dropped");
             return response;
@@ -102,9 +117,9 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    private boolean sendRequest(RequestResponse req) {
+    private boolean sendRequest(ClientServerRequestResponse req) {
         try {
-            outputStreamWriter.write(new Gson().toJson(req, RequestResponse.class) + "\r\n");
+            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
             outputStreamWriter.flush();
             return true;
         } catch (IOException e) {
@@ -113,9 +128,9 @@ public class KVStore implements KVCommInterface {
     }
 
 
-    private RequestResponse getResponse() {
+    private ClientServerRequestResponse getResponse() {
         try {
-            RequestResponse response;
+            ClientServerRequestResponse response;
 
             long startTime = System.currentTimeMillis();
 
@@ -124,7 +139,12 @@ public class KVStore implements KVCommInterface {
                     && (respLine = bufferedInputStream.readLine()) != null) {
 
                 Gson gson = new Gson();
-                response = gson.fromJson(respLine, RequestResponse.class);
+                response = gson.fromJson(respLine, ClientServerRequestResponse.class);
+                // updating metadata if needed
+                if (response.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
+                    updateMetadata(response.getMetadata());
+                }
+                // sending response to terminal
                 if (clientSocketListener != null) {
                     clientSocketListener.printTerminal(response.toString());
                     logResponse(response);
@@ -133,7 +153,7 @@ public class KVStore implements KVCommInterface {
 
             }
 
-            response = new RequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT);
+            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT, null);
             if (clientSocketListener != null) {
                 clientSocketListener.printTerminal(response.toString());
                 logResponse(response);
@@ -145,8 +165,25 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    private void logResponse(RequestResponse response){
-        if(response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
+    private void updateMetadata(Metadata metadata) {
+        kvClient.setMetadata(metadata);
+        HashMap<String, KVStore> kvStoreHashMap = new HashMap<>();
+        KVStore kvStore;
+        for (ECSNode ecsNode : metadata.getEcsNodes()) {
+            kvStore = new KVStore(kvClient, ecsNode.getNodeHost(), ecsNode.getNodePort());
+            try {
+                kvStore.connect();
+                kvStore.set(kvClient);
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+            kvStoreHashMap.put(ecsNode.getNodeName(), kvStore);
+        }
+        kvClient.setAllKVStores(kvStoreHashMap);
+    }
+
+    private void logResponse(ClientServerRequestResponse response) {
+        if (response.getStatus().equals(KVMessage.StatusType.GET_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.PUT_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.DELETE_ERROR)
                 || response.getStatus().equals(KVMessage.StatusType.SERVER_ERROR))
@@ -155,15 +192,15 @@ public class KVStore implements KVCommInterface {
             logger.info(response.toString());
     }
 
-    private RequestResponse connectionDropped() {
-        RequestResponse response = new RequestResponse(-1, null, null,
-                KVMessage.StatusType.CONNECTION_DROPPED);
+    private ClientServerRequestResponse connectionDropped() {
+        ClientServerRequestResponse response = new ClientServerRequestResponse(-1, null, null,
+                KVMessage.StatusType.CONNECTION_DROPPED, null);
         if (clientSocketListener != null)
             clientSocketListener.printTerminal(response.toString());
         return response;
     }
 
     public void set(IClientSocketListener listener) {
-            clientSocketListener = listener;
+        clientSocketListener = listener;
     }
 }

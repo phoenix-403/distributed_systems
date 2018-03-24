@@ -1,157 +1,163 @@
 package test;
 
+import app_kvClient.KVClient;
+import app_kvECS.EcsException;
 import client.KVStore;
-import common.messages.KVMessage;
-import common.messages.KVMessage.StatusType;
+import common.KVMessage;
+import common.KVMessage.StatusType;
 import junit.framework.TestCase;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 
-public class InteractionTest extends TestCase{
 
-	private KVStore kvClient;
-	
-	@Before
-	public void setUp() {
-		kvClient = new KVStore("localhost", 50000);
-		try {
-			kvClient.connect();
-		} catch (Exception e) {
-		}
-	}
+public class InteractionTest extends TestCase {
 
-	@After
-	public void tearDown() {
-		kvClient.disconnect();
-	}
-	
-	
-	@Test
-	public void testPut() {
-		String key = "foo2";
-		String value = "bar2";
-		KVMessage response = null;
-		Exception ex = null;
+    private KVStore kvClient;
 
-		try {
-			response = kvClient.put(key, value);
-		} catch (Exception e) {
-			ex = e;
-		}
+    @BeforeClass
+    public void setUp() {
+        KVClient client = new KVClient();
+        kvClient = new KVStore(client, "localhost", 50009);
+        try {
+            kvClient.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-		Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
-	}
-	
-	@Test
-	public void testPutDisconnected() {
-		kvClient.disconnect();
-		String key = "foo";
-		String value = "bar";
-		Exception ex = null;
+    @After
+    public void tearDown() throws InterruptedException, KeeperException, EcsException {
+        kvClient.disconnect();
+    }
 
-		try {
-			kvClient.put(key, value);
-		} catch (Exception e) {
-			ex = e;
-		}
+    @Test
+    public void testPut() {
+        String key = "ab";
+        String value = "bar2";
+        KVMessage response = null;
+        Exception ex = null;
 
-		Assert.assertNotNull(ex);
-	}
+        try {
+            response = kvClient.put(key, value);
+        } catch (Exception e) {
+            ex = e;
+        }
 
-	@Test
-	public void testUpdate() {
-		String key = "updateTestValue";
-		String initialValue = "initial";
-		String updatedValue = "updated";
-		
-		KVMessage response = null;
-		Exception ex = null;
+        Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
+    }
 
-		try {
-			kvClient.put(key, initialValue);
-			response = kvClient.put(key, updatedValue);
-			
-		} catch (Exception e) {
-			ex = e;
-		}
+    @Test
+    public void testPutDisconnected() {
+        kvClient.disconnect();
+        String key = "ab";
+        String value = "bar";
+        Exception ex = null;
 
-		Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_UPDATE
-				&& response.getValue().equals(updatedValue));
-	}
-	
-	@Test
-	public void testDelete() {
-		String key = "deleteTestValue";
-		String value = "toDelete";
-		
-		KVMessage response = null;
-		Exception ex = null;
+        try {
+            kvClient.put(key, value);
+        } catch (Exception e) {
+            ex = e;
+        }
 
-		try {
-			kvClient.put(key, value);
-			response = kvClient.put(key, null);
-			
-		} catch (Exception e) {
-			ex = e;
-		}
+        Assert.assertNotNull(ex);
+    }
 
-		Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
-	}
+    @Test
+    public void testUpdate() {
+        String key = "ab";
+        String initialValue = "initial";
+        String updatedValue = "updated";
 
-	@Test
-	public void testDelete2() {
-		String key = "deleteTestValue";
-		String value = "toDelete";
+        KVMessage response = null;
+        Exception ex = null;
 
-		KVMessage response = null;
-		Exception ex = null;
+        try {
+            kvClient.put(key, initialValue);
+            response = kvClient.put(key, updatedValue);
 
-		try {
-			kvClient.put(key, value);
-			response = kvClient.put(key, "");
+        } catch (Exception e) {
+            ex = e;
+        }
 
-		} catch (Exception e) {
-			ex = e;
-		}
+        Assert.assertTrue(ex == null && response.getStatus() == StatusType.PUT_UPDATE
+                && response.getValue().equals(updatedValue));
+    }
 
-		Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
-	}
+    @Test
+    public void testDelete() {
+        String key = "ab";
+        String value = "toDelete";
 
-	@Test
-	public void testGet() {
-		String key = "foo";
-		String value = "bar";
-		KVMessage response = null;
-		Exception ex = null;
+        KVMessage response = null;
+        Exception ex = null;
 
-			try {
-				kvClient.put(key, value);
-				response = kvClient.get(key);
-			} catch (Exception e) {
-				ex = e;
-			}
-		
-		Assert.assertTrue(ex == null && response.getValue().equals("bar"));
-	}
+        try {
+            kvClient.put(key, value);
+            response = kvClient.put(key, null);
 
-	@Test
-	public void testGetUnsetValue() {
-		String key = "an unset value";
-		KVMessage response = null;
-		Exception ex = null;
+        } catch (Exception e) {
+            ex = e;
+        }
 
-		try {
-			response = kvClient.get(key);
-		} catch (Exception e) {
-			ex = e;
-		}
+        Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
+    }
 
-		Assert.assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
-	}
-	
+    @Test
+    public void testDelete2() {
+        String key = "ab";
+        String value = "toDelete";
+
+        KVMessage response = null;
+        Exception ex = null;
+
+        try {
+            kvClient.put(key, value);
+            response = kvClient.put(key, "");
+
+        } catch (Exception e) {
+            ex = e;
+        }
+
+        Assert.assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
+    }
+
+    @Test
+    public void testGet() {
+        String key = "ab";
+        String value = "bar";
+        KVMessage response = null;
+        Exception ex = null;
+
+        try {
+            kvClient.put(key, value);
+            response = kvClient.get(key);
+        } catch (Exception e) {
+            ex = e;
+        }
+
+        Assert.assertTrue(ex == null && response.getValue().equals("bar"));
+    }
+
+    @Test
+    public void testGetUnsetValue() throws IOException {
+        String key = "ab";
+        kvClient.put(key, null);
+        KVMessage response = null;
+        Exception ex = null;
+
+        try {
+            response = kvClient.get(key);
+        } catch (Exception e) {
+            ex = e;
+        }
+
+        Assert.assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
+    }
 
 
 }

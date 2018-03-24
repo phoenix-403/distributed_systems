@@ -1,70 +1,110 @@
 package common.helper;
-import java.io.IOException;
+
+import common.messages.Metadata;
+import ecs.ECSNode;
+
 import java.io.UnsupportedEncodingException;
-import java.security.*;
-import java.math.*;
-import java.util.*;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.TreeMap;
 
 public class ConsistentHash {
-    public String getMD5(String preImage) {
+
+    private List<ECSNode> ecsNodes;
+    private List<IDHashPair> idHashPairs;
+    private TreeMap<String, String[]> idHashRangePairs;
+
+    public ConsistentHash(List<ECSNode> ecsNodes) {
+        this.ecsNodes = ecsNodes;
+        idHashPairs = new ArrayList<>();
+        idHashRangePairs = new TreeMap<>();
+    }
+
+    public void hash() {
+        String nodeName;
+        String nodeAddress;
+
+        for (ECSNode ecsNode : ecsNodes) {
+            // only hash active servers
+            if (ecsNode.isReserved()) {
+                nodeName = ecsNode.getNodeName();
+                nodeAddress = ecsNode.getNodeHost() + ":" + ecsNode.getNodePort();
+                idHashPairs.add(new IDHashPair(nodeName, getMD5(nodeAddress)));
+            }
+        }
+
+        storeHashRange();
+
+        // updating ecsNodes hash range
+        for (ECSNode ecsNode : ecsNodes) {
+            if (ecsNode.isReserved()) {
+                ecsNode.setNodeHashRange(idHashRangePairs.get(ecsNode.getNodeName()));
+            }
+        }
+    }
+
+    public static String getMD5(String preImage) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(preImage.getBytes("UTF-8"));
             BigInteger number = new BigInteger(1, messageDigest);
-            String hashtext = number.toString(16);
+//            System.out.println("number: " + number);
+            StringBuilder hashText = new StringBuilder(number.toString(16));
             // Now we need to zero pad it if you actually want the full 32 chars.
-            while (hashtext.length() < 32) {
-                hashtext = "0" + hashtext;
+            while (hashText.length() < 32) {
+                hashText.insert(0, "0");
             }
-            return hashtext;
-        }
-        catch (NoSuchAlgorithmException | UnsupportedEncodingException e){
+//            System.out.println("string: " + hashText.toString());
+            return hashText.toString();
+        } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
     }
 
-
-    private static class idHash_pair implements Comparable<idHash_pair> {
-        private String id;
-        private String hashVal;
-        public idHash_pair(String id, String hashVal) {
-            this.id = id;
-            this.hashVal = hashVal;
+    private void storeHashRange() {
+        if(idHashPairs.size() == 1){
+            String[] hashRanges = new String[2];
+            hashRanges[0] = Metadata.MIN_MD5;
+            hashRanges[1] = Metadata.MAX_MD5;
+            idHashRangePairs.put(idHashPairs.get(0).getId(), hashRanges);
         }
-
-        public String getId() {
-            return id;
-        }
-
-        public String getHashVal() {
-            return hashVal;
-        }
-
-        @Override
-        public int compareTo(idHash_pair o) {
-            if (this.getHashVal().compareTo(o.getHashVal()) == -1) {
-                return -1;
-            } else if (this.getHashVal().compareTo(o.getHashVal()) == 1) {
-                return 1;
+        else {
+            Collections.sort(idHashPairs);
+            for (int i = 0; i < idHashPairs.size(); i++) {
+                String[] hashRanges = new String[2];
+                if (i > 0) {
+                    BigInteger value = new BigInteger(idHashPairs.get(i - 1).getHashVal(), 16);
+                    value = value.add(BigInteger.ONE);
+                    StringBuilder start = new StringBuilder(value.toString(16));
+                    // Now we need to zero pad it if you actually want the full 32 chars.
+                    while (start.length() < 32) {
+                        start.insert(0, "0");
+                    }
+                    hashRanges[0] = start.toString();
+                    hashRanges[1] = idHashPairs.get(i).getHashVal();
+                } else {
+                    if (idHashPairs.get(idHashPairs.size() - 1).getHashVal().equals(Metadata.MAX_MD5)) {
+                        hashRanges[0] = Metadata.MIN_MD5;
+                        hashRanges[1] = idHashPairs.get(i).getHashVal();
+                    } else {
+                        BigInteger value = new BigInteger(idHashPairs.get(idHashPairs.size() - 1).getHashVal(), 16);
+                        value = value.add(BigInteger.ONE);
+                        StringBuilder start = new StringBuilder(value.toString(16));
+                        // Now we need to zero pad it if you actually want the full 32 chars.
+                        while (start.length() < 32) {
+                            start.insert(0, "0");
+                        }
+                        hashRanges[0] = start.toString();
+                        // wraparound
+                        hashRanges[1] = idHashPairs.get(i).getHashVal();
+                    }
+                }
+                idHashRangePairs.put(idHashPairs.get(i).getId(), hashRanges);
             }
-            return 0;
-        }
-    }
-
-    public static void main(String[] args) {
-        ConsistentHash testHash = new ConsistentHash();
-        ArrayList<idHash_pair> idHashes = new ArrayList<idHash_pair>();
-
-        System.out.println(testHash.getMD5("testing shit"));
-        idHash_pair test1 = new idHash_pair("server1", testHash.getMD5("test1"));
-        idHashes.add(test1);
-        idHash_pair test2 = new idHash_pair("server2", testHash.getMD5("test2"));
-        idHashes.add(test2);
-        idHash_pair test0 = new idHash_pair("server0", testHash.getMD5("test0"));
-        idHashes.add(test0);
-        Collections.sort(idHashes);
-        for(idHash_pair idhash : idHashes){
-            System.out.println(idhash);
         }
     }
 }

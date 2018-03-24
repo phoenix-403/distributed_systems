@@ -2,10 +2,15 @@ package ecs;
 
 public enum ZkStructureNodes {
     ROOT("/"),
+    NONE_HEART_BEAT("/NHB"),
     HEART_BEAT("/HB"),
-    GLOBAL_STATUS("/GS"),
-    SERVER_NODES("/SN"),
-    METADATA("/MD");
+    ZK_SERVER_REQUEST("/ZSREQ"),
+    ZK_SERVER_RESPONSE("/ZSRES"),
+    SERVER_SERVER_REQUEST("/SSREQ"),
+    SERVER_SERVER_RESPONSE("/SSRES"),
+    METADATA("/MD"),
+    REQUEST("/REQ"),
+    RESPONSE("/RES");
 
     String value;
 

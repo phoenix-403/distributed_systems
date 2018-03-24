@@ -1,4 +1,4 @@
-package common.messages;
+package common;
 
 import ecs.IECSNode;
 
@@ -49,7 +49,7 @@ public interface KVMessage {
     StatusType getStatus();
 
     /**
-     * @return  the responsible server node
+     * @return the responsible server node
      */
     IECSNode getResponsibleServer();
 

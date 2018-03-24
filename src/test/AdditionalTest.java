@@ -1,28 +1,28 @@
 package test;
 
-import app_kvServer.Persist;
+import app_kvClient.KVClient;
+import app_kvECS.EcsException;
 import client.KVStore;
-import common.messages.KVMessage;
+import common.KVMessage;
 import junit.framework.TestCase;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
-import static app_kvServer.Persist.init;
+import java.io.IOException;
 
 public class AdditionalTest extends TestCase {
 
-    private KVStore kvClient;
-    private static int CLIENT_CONNECTIONS = 50;
 
-    @Before
+    private KVStore kvClient;
+    private int CLIENT_CONNECTIONS = 10;
+
+    @BeforeClass
     public void setUp() {
-        kvClient = new KVStore("localhost", 50000);
+        KVClient client = new KVClient();
+        kvClient = new KVStore(client, "localhost", 50009);
         try {
             kvClient.connect();
         } catch (Exception e) {
@@ -31,7 +31,7 @@ public class AdditionalTest extends TestCase {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException, KeeperException, EcsException {
         kvClient.disconnect();
     }
 
@@ -40,8 +40,8 @@ public class AdditionalTest extends TestCase {
         Exception ex = null;
 
         try {
-            for (int i=0; i < CLIENT_CONNECTIONS; i++) {
-                KVStore kvClient = new KVStore("localhost", 50000);
+            for (int i = 0; i < CLIENT_CONNECTIONS; i++) {
+                KVStore kvClient = new KVStore(null, "localhost", 50009);
                 kvClient.disconnect();
                 kvClient.connect();
             }
@@ -58,8 +58,8 @@ public class AdditionalTest extends TestCase {
         Exception ex = null;
 
         try {
-            for (int i=0; i < CLIENT_CONNECTIONS; i++) {
-                KVStore kvClient = new KVStore("localhost", 50000);
+            for (int i = 0; i < CLIENT_CONNECTIONS; i++) {
+                KVStore kvClient = new KVStore(null, "localhost", 50009);
                 kvClient.connect();
             }
 
@@ -72,11 +72,10 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPersistGet() {
-        String key = "testPersistGet";
+        String key = "ab";
         String value = "persistPls";
         KVMessage response = null;
         Exception ex = null;
-
         try {
             response = kvClient.put(key, value);
             kvClient.disconnect();
@@ -91,7 +90,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testPersistUpdate() {
-        String key = "testPersistUpdate";
+        String key = "ab";
         String value1 = "doNotPersist";
         String value2 = "persistPls";
         KVMessage response = null;
@@ -112,7 +111,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleUpdate() {
-        String key = "testDoubleUpdate";
+        String key = "ab";
         String value1 = "one";
         String value2 = "two";
         String value3 = "three";
@@ -131,8 +130,9 @@ public class AdditionalTest extends TestCase {
     }
 
     @Test
-    public void testGetNonExistant() {
-        String key = "testGetNonExistant";
+    public void testGetNonExistent() throws IOException {
+        String key = "ab";
+        kvClient.put(key, null);
         KVMessage response = null;
         Exception ex = null;
 
@@ -147,7 +147,7 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testGetAfterDelete() {
-        String key = "testGetAfterDelete";
+        String key = "ab";
         String value = "init";
         KVMessage response = null;
         Exception ex = null;
@@ -165,8 +165,8 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleDelete() {
-        String key = "testDoubleDelete";
-        String value ="deleteThisTwice";
+        String key = "ab";
+        String value = "deleteThisTwice";
         KVMessage response = null;
         Exception ex = null;
 
@@ -183,8 +183,8 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testDoubleDelete2() {
-        String key = "testDoubleDelete2";
-        String value ="deleteThisTwice";
+        String key = "ab";
+        String value = "deleteThisTwice";
         KVMessage response = null;
         Exception ex = null;
 
@@ -200,14 +200,15 @@ public class AdditionalTest extends TestCase {
     }
 
     @Test
-    public void testDeleteNonExistant() {
-        String key = "testDeleteNonExistant";
+    public void testDeleteNonExistent() {
+        String key = "ab";
         String value = "";
         KVMessage response = null;
         Exception ex = null;
 
         try {
             response = kvClient.put(key, value);
+            response = kvClient.put(key, value);
         } catch (Exception e) {
             ex = e;
         }
@@ -215,40 +216,6 @@ public class AdditionalTest extends TestCase {
         Assert.assertTrue(ex == null && response.getStatus() == KVMessage.StatusType.DELETE_ERROR);
     }
 
-    @Test
-    public void testDisconnectedPut() {
-        String key = "testDisconnectedPut";
-        String value = "123";
-        Exception ex = null;
 
-        try {
-            kvClient.disconnect();
-            kvClient.put(key, value);
-            kvClient.connect();
-        } catch (Exception e) {
-            ex = e;
-        }
-
-        Assert.assertTrue(ex.getMessage().equals("Not Connected"));
-    }
-
-
-
-    @Test
-    public void testKeyFileLookUp() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-
-        // testing private method
-        assert (init());
-
-        Method method = Persist.class.getDeclaredMethod("getFileKeyStoredIn", String.class);
-        method.setAccessible(true);
-
-        Assert.assertEquals("97.db", ((File) method.invoke(null, "ABC")).getName());
-        Assert.assertEquals("97.db", ((File) method.invoke(null, "abc")).getName());
-        Assert.assertEquals("98.db", ((File) method.invoke(null, "b")).getName());
-        Assert.assertEquals("99.db", ((File) method.invoke(null, "c")).getName());
-        Assert.assertEquals("123.db", ((File) method.invoke(null, "~")).getName());
-
-    }
 
 }

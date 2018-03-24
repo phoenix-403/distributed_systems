@@ -60,4 +60,45 @@ public class ECSNode implements IECSNode{
                 ", reserved=" + reserved +
                 '}';
     }
+
+//    public void lockWrite(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_LOCK, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
+//
+//    public void unLockWrite(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.WRITE_UNLOCK, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
+//
+//    public void transferData(String key) {
+//        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage.StatusType.TRANSFER_DATA, null);
+//        boolean status = sendRequest(req);
+//        if (status) {
+//            ClientServerRequestResponse response = getResponse();
+//        }
+//    }
+
+//    public boolean sendRequest(ClientServerRequestResponse req) {
+//        Socket socket;
+//        try {
+//            socket = new Socket(nodeHost, nodePort);
+//            outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
+//            outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//            return false;
+//        }
+//        return true;
+//    }
+//
+//    private ClientServerRequestResponse getResponse() {
+//        return null;
+//    }
 }
