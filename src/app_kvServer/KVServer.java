@@ -67,7 +67,8 @@ public class KVServer implements IKVServer, Runnable {
 
     private List<ClientConnection> clientConnections;
 
-    Future<?> replicationCancelButton;
+    ScheduledExecutorService scheduler = null;
+    private Future<?> replicationCancelButton;
 
     private ReentrantLock replicaDBLock = new ReentrantLock();
 
@@ -195,8 +196,7 @@ public class KVServer implements IKVServer, Runnable {
                 responseState = ZkServerCommunication.Response.START_SUCCESS;
                 respond(request.getId(), responseState);
 
-                ScheduledExecutorService scheduler
-                        = Executors.newSingleThreadScheduledExecutor();
+                scheduler = Executors.newSingleThreadScheduledExecutor();
 
                 int initialDelay = 15;
                 int periodicDelay = 30;
@@ -212,7 +212,7 @@ public class KVServer implements IKVServer, Runnable {
                 break;
             case STOP:
                 logger.info("Got stop request");
-                replicationCancelButton.cancel(true);
+                stopScheduler();
                 stop();
                 responseState = ZkServerCommunication.Response.STOP_SUCCESS;
                 respond(request.getId(), responseState);
@@ -220,7 +220,7 @@ public class KVServer implements IKVServer, Runnable {
             case TRANSFER_BACKUP_DATA:
                 logger.info("Got transfer backup data request");
 
-                if (moveReplicatedData(null, null)) {
+                if (moveReplicatedData(request.getCrashedServerHashRange(), request.getNodes().get(0))) {
                     logger.info("Moved backup data successfully");
                     responseState = ZkServerCommunication.Response.TRANSFER_BACKUP_DATA_SUCCESS;
                     respond(request.getId(), responseState);
@@ -279,6 +279,11 @@ public class KVServer implements IKVServer, Runnable {
                 // will never reach here unless enum is updated
                 logger.error("Unknown ECS request!!");
         }
+    }
+
+    private void stopScheduler() {
+        replicationCancelButton.cancel(true);
+        scheduler.shutdown();
     }
 
     private void respond(int reqId, ZkServerCommunication.Response responseState) throws KeeperException,
@@ -628,6 +633,7 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Error! " +
                     "Unable to close socket on port: " + port, e);
         }
+        stopScheduler();
     }
 
 

@@ -22,6 +22,10 @@ public class ZkToServerRequest {
         return id;
     }
 
+    public String[] getCrashedServerHashRange() {
+        return crashedServerHashRange;
+    }
+
     public void setId(int id) {
         this.id = id;
     }
