@@ -139,7 +139,7 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START, null);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.START, null, null);
         List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         if (noActiveServers == responses.size()) {
@@ -183,7 +183,7 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP, null);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.STOP, null, null);
         List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         if (noActiveServers == responses.size()) {
@@ -227,7 +227,8 @@ public class ECSClient implements IECSClient {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
-        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN, null);
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.SHUTDOWN, null,
+                null);
         List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         for (ZkToServerResponse response : responses) {
@@ -463,7 +464,7 @@ public class ECSClient implements IECSClient {
         // requesting delete nodes
         int reqId = reqResId++;
         ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.REMOVE_NODES, (List
-                <String>) nodeNames);
+                <String>) nodeNames, null);
         List<ZkToServerResponse> responses;
         try {
             responses = processReqResp(nodeNames.size(), request);
@@ -590,8 +591,74 @@ public class ECSClient implements IECSClient {
             logger.warn(crashedNodes.toString() + " crashed!!");
             for (String crashedNode : crashedNodes) {
                 zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + crashedNode);
+
+                logger.info("attempting to fetch backup for node " + crashedNode + "...");
+                // getting the next and next next server of failed server so we can attempt backup recovery
+                ECSNode nextServerNode = metadata.getNextServer(crashedNode, new ArrayList<>(Collections
+                        .singletonList(crashedNode)));
+                ECSNode nextNextServerNode = metadata.getNextServer(crashedNode, new ArrayList<>(Arrays
+                        .asList(crashedNode, nextServerNode.getNodeName())));
+
+                ZkToServerRequest request = null;
+                int reqId = reqResId++;
+                logger.info("Attempting recovery from first backup server...");
+                if (nextServerNode != null && !crashedNodes.contains(nextServerNode.getNodeName())) {
+                    logger.info("Found first backup server! Connecting...");
+                    //creating request
+                    request = new ZkToServerRequest(reqId, ZkServerCommunication.Request
+                            .TRANSFER_BACKUP_DATA, new ArrayList<>(Collections.singletonList(nextServerNode
+                            .getNodeName())), metadata.getRange(crashedNode));
+
+                } else {
+                    logger.info("Attempting recovery from second backup server...");
+                    if (nextNextServerNode != null && !crashedNodes.contains(nextNextServerNode.getNodeName())) {
+                        logger.info("Found second backup server! Connecting...");
+                        // creating request
+                        request = new ZkToServerRequest(reqId, ZkServerCommunication.Request
+                                .TRANSFER_BACKUP_DATA, new ArrayList<>(Collections.singletonList(nextNextServerNode
+                                .getNodeName())), metadata.getRange(crashedNode));
+                    }
+                }
+
+                if (request == null) {
+                    logger.fatal("Data on server " + crashedNode + " was lost!");
+                } else {
+                    List<ZkToServerResponse> responses;
+                    try {
+                        responses = processReqResp(1, request);
+                        if (responses.size() == 0 || responses.get(0).getZkSvrResponse().equals(ZkServerCommunication
+                                .Response.TRANSFER_BACKUP_DATA_FAIL)) {
+                            logger.fatal("Data on server " + crashedNode + " was lost as server responded with backup" +
+                                    " fail!");
+                        }
+                        logger.info("Data successfully recovered!");
+                    } catch (KeeperException | InterruptedException e) {
+                        logger.fatal("Data on server " + crashedNode + " was lost due to next error!");
+                        logger.error(e.getMessage());
+                    }
+                }
             }
 
+            // updating metadata
+            for (ECSNode ecsNode : ecsNodes) {
+                if (crashedNodes.contains(ecsNode.getNodeName())) {
+                    ecsNode.setNodeHashRange(new String[2]);
+                    ecsNode.setReserved(false);
+                }
+            }
+
+
+            ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
+            consistentHash.hash();
+
+            metadata = new Metadata(ecsNodes);
+            try {
+                zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata
+                        .class)
+                        .getBytes());
+            } catch (KeeperException | InterruptedException e) {
+                logger.fatal("Metadata was not updated when recovering crashed nodes! " + e.getMessage());
+            }
         }
     }
 
