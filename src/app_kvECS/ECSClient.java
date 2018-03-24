@@ -53,7 +53,8 @@ public class ECSClient implements IECSClient {
     private Metadata metadata;
 
     // lock to prevent permanent node watch conflict with add, delete and start/stop
-    ReentrantLock lock = new ReentrantLock();
+    public static volatile ReentrantLock lock = new ReentrantLock();
+    private Thread heartBeatThread = null;
 
 
     public ECSClient(String zkHostname, int zkPort) throws IOException, EcsException {
@@ -378,7 +379,7 @@ public class ECSClient implements IECSClient {
         for (IECSNode iEcsNode : iEcsNodes) {
             ecsNode = (ECSNode) iEcsNode;
             scriptContent.append("ssh -n ").append(ecsNode.getNodeHost()).append(" ").append("nohup java -jar ")
-                    .append("~/Documents/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append
+                    .append("~/IdeaProjects/distributed_systems/m2-server.jar ").append(ecsNode.getNodeName()).append
                     (" ")
                     .append
                             (zkAddress).append(" ").append(zkPort).append(" ").append(ecsNode.getNodePort()).append("" +
@@ -390,7 +391,6 @@ public class ECSClient implements IECSClient {
 
         createBashScript(scriptPath, scriptContent.toString(), logger);
         Script.runScript(scriptPath, logger);
-
     }
 
     @Override
@@ -560,6 +560,41 @@ public class ECSClient implements IECSClient {
         return null;
     }
 
+    private synchronized void addPermanentHBNodeWatch(final ZooKeeper zooKeeper) throws KeeperException,
+            InterruptedException {
+        zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), event -> {
+            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
+                try {
+                    addPermanentHBNodeWatch(zooKeeper);
+                    ECSClient.lock.lock();
+                    checkHBStatus(zooKeeper);
+                } catch (KeeperException | InterruptedException e) {
+                    logger.error(e.getMessage());
+                } finally {
+                    ECSClient.lock.unlock();
+                }
+            }
+        });
+    }
+
+
+    private synchronized void checkHBStatus(ZooKeeper zooKeeper) throws KeeperException,
+            InterruptedException {
+        List<String> nodesHB = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
+        List<String> nodesNHB = zooKeeper.getChildren(ZkStructureNodes.NONE_HEART_BEAT.getValue(), false);
+
+
+        if (nodesNHB.size() - nodesHB.size() > 0) {
+            //node deleted
+            List<String> crashedNodes = ((List<String>) CollectionUtils.subtract(nodesNHB, nodesHB));
+            logger.warn(crashedNodes.toString() + " crashed!!");
+            for (String crashedNode : crashedNodes) {
+                zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + crashedNode);
+            }
+
+        }
+    }
+
 
     public void run() {
         while (!stopClient) {
@@ -567,8 +602,8 @@ public class ECSClient implements IECSClient {
             System.out.print(PROMPT);
 
             try {
-                lock.lock();
                 String cmdLine = stdin.readLine();
+                lock.lock();
                 this.handleCommand(cmdLine);
             } catch (IOException e) {
                 stopClient = true;
@@ -661,6 +696,9 @@ public class ECSClient implements IECSClient {
                 }
                 case "quit":
                     stopClient = true;
+                    if (heartBeatThread != null && heartBeatThread.isAlive()) {
+                        heartBeatThread.stop();
+                    }
                     break;
                 default: {
                     printError("Unknown command");
@@ -770,39 +808,6 @@ public class ECSClient implements IECSClient {
             return null;
         }
         return array;
-    }
-
-
-    private synchronized void addPermanentHBNodeWatch(final ZooKeeper zooKeeper) throws KeeperException,
-            InterruptedException {
-        zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), event -> {
-            if (event.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
-                try {
-                    addPermanentHBNodeWatch(zooKeeper);
-                    lock.lock();
-                    checkHBStatus(zooKeeper);
-                } catch (KeeperException | InterruptedException e) {
-                    logger.error(e.getMessage());
-                } finally {
-                    lock.unlock();
-                }
-            }
-        });
-    }
-
-
-    private synchronized void checkHBStatus(ZooKeeper zooKeeper) throws KeeperException,
-            InterruptedException {
-        List<String> nodesHB = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
-        List<String> nodesNHB = zooKeeper.getChildren(ZkStructureNodes.HEART_BEAT.getValue(), false);
-
-
-        if (nodesNHB.size() - nodesHB.size() > 1) {
-            //node deleted
-            List<String> nodesCrashed = ((List<String>) CollectionUtils.subtract(nodesNHB, nodesHB));
-            nodesNHB.remove(nodesCrashed);
-            logger.warn(nodesCrashed.toString() + " crashed!!");
-        }
     }
 
 

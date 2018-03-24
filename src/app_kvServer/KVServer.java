@@ -580,8 +580,8 @@ public class KVServer implements IKVServer, Runnable {
     @Override
     public void close() {
         try {
-            zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
             zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name);
+            zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
         } catch (KeeperException | InterruptedException e) {
             logger.fatal("Unable to delete HR Node");
         }
@@ -620,7 +620,7 @@ public class KVServer implements IKVServer, Runnable {
         acceptingWriteRequests = true;
     }
 
-    public synchronized void cleanseOldResponses() throws KeeperException, InterruptedException {
+    private synchronized void cleanseOldResponses() throws KeeperException, InterruptedException {
         // ----------------------- Cleanse the old responses
         // ------------------------------
         List<String> respNodes = zooKeeper.getChildren(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(),
@@ -636,7 +636,7 @@ public class KVServer implements IKVServer, Runnable {
         // --------------------------------------------------------------------------------------------------
     }
 
-    public void deleteReplicatedData() throws KeeperException, InterruptedException {
+    private void deleteReplicatedData() throws KeeperException, InterruptedException {
         HashMap<String, String> emptyKeyValues = new HashMap<String, String>();
         cleanseOldResponses();
         ECSNode nextNode = metadata.getNextServer(name);
@@ -661,7 +661,7 @@ public class KVServer implements IKVServer, Runnable {
 
     }
 
-    public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
+    private synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
             InterruptedException {
         if (hashRange == null)
             hashRange = serverRange;
