@@ -200,11 +200,7 @@ public class KVServer implements IKVServer, Runnable {
                 replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                             try {
                                 replicateData(null);
-                            } catch (IOException e) {
-                                logger.error("Replicate Data Failed with Error: " + e.getMessage());
-                            } catch (InterruptedException e) {
-                                logger.error("Replicate Data Failed with Error: " + e.getMessage());
-                            } catch (KeeperException e) {
+                            } catch (IOException | InterruptedException | KeeperException e) {
                                 logger.error("Replicate Data Failed with Error: " + e.getMessage());
                             }
                         }, initialDelay, periodicDelay,
@@ -216,6 +212,20 @@ public class KVServer implements IKVServer, Runnable {
                 stop();
                 responseState = ZkServerCommunication.Response.STOP_SUCCESS;
                 respond(request.getId(), responseState);
+                break;
+            case TRANSFER_BACKUP_DATA:
+                logger.info("Got transfer backup data request");
+
+                if (moveReplicatedData(null, null)) {
+                    logger.info("Moved backup data successfully");
+                    responseState = ZkServerCommunication.Response.TRANSFER_BACKUP_DATA_SUCCESS;
+                    respond(request.getId(), responseState);
+                    Thread.sleep(2000);
+                    close();
+                } else {
+                    responseState = ZkServerCommunication.Response.TRANSFER_BACKUP_DATA_FAIL;
+                    respond(request.getId(), responseState);
+                }
                 break;
             case SHUTDOWN:
                 logger.info("Got shutdown request");
@@ -649,7 +659,6 @@ public class KVServer implements IKVServer, Runnable {
             nextNode = metadata.getNextServer(nextNode.getNodeName());
         }
 
-
     }
 
     public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
@@ -659,13 +668,7 @@ public class KVServer implements IKVServer, Runnable {
         int i = 0;
 
         //handling wraparound case
-        HashMap<String, String> myKeyValues = new HashMap<>();
-        if (hashRange[0].compareTo(hashRange[1]) > 0) {
-            myKeyValues.putAll(Persist.readRange(new String[]{hashRange[0], Metadata.MAX_MD5}));
-            myKeyValues.putAll(Persist.readRange(new String[]{Metadata.MIN_MD5, hashRange[1]}));
-        } else {
-            myKeyValues.putAll(Persist.readRange(hashRange));
-        }
+        HashMap<String, String> myKeyValues = getKeyValues(serverRange);
 
         ECSNode nextNode = metadata.getNextServer(name);
         cleanseOldResponses();
@@ -687,12 +690,7 @@ public class KVServer implements IKVServer, Runnable {
         }
     }
 
-    @Override
-    public boolean moveData(String[] hashRange, String targetName) throws IOException, KeeperException,
-            InterruptedException {
-        logger.info("locking server!");
-        lockWrite();
-
+    public HashMap<String, String> getKeyValues(String[] hashRange) throws IOException {
         //handling wraparound case
         HashMap<String, String> myKeyValues = new HashMap<>();
         if (hashRange[0].compareTo(hashRange[1]) > 0) {
@@ -701,11 +699,52 @@ public class KVServer implements IKVServer, Runnable {
         } else {
             myKeyValues.putAll(Persist.readRange(hashRange));
         }
+        return myKeyValues;
+    }
+
+    public HashMap<String, String> getReplicatedKeyValues(String[] hashRange) throws IOException {
+        //handling wraparound case
+        HashMap<String, String> myKeyValues = new HashMap<>();
+        if (hashRange[0].compareTo(hashRange[1]) > 0) {
+            myKeyValues.putAll(Persist.readRangeReplica(new String[]{hashRange[0], Metadata.MAX_MD5}));
+            myKeyValues.putAll(Persist.readRangeReplica(new String[]{Metadata.MIN_MD5, hashRange[1]}));
+        } else {
+            myKeyValues.putAll(Persist.readRangeReplica(hashRange));
+        }
+        return myKeyValues;
+    }
+
+    public boolean moveReplicatedData(String[] hashRange, String targetName) throws IOException, KeeperException,
+            InterruptedException {
+        logger.info("locking server!");
+
+        cleanseOldResponses();
+
+        HashMap<String, String> myKeyValues = getReplicatedKeyValues(hashRange);
+
+        if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
+            logger.info("got a srv-srv response for replicated data");
+
+            logger.info("unlock write and return success");
+            return true;
+        } else
+            logger.info("unlock write and return fail");
+        return false;
+    }
+
+    @Override
+    public boolean moveData(String[] hashRange, String targetName) throws IOException, KeeperException,
+            InterruptedException {
+        logger.info("locking server!");
+        lockWrite();
+
+        //handling wraparound case
+        HashMap<String, String> myKeyValues = getKeyValues(hashRange);
 
         cleanseOldResponses();
 
         if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
-            logger.info("got a srv-srv response");
+            logger.info("got a srv-srv response for move data");
 
             if (hashRange[0].compareTo(hashRange[1]) > 0) {
                 Persist.deleteRange(new String[]{hashRange[0], Metadata.MAX_MD5});

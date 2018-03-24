@@ -29,7 +29,9 @@ public class ZkServerCommunication {
         STOP_SUCCESS("SPS"),
         SHUTDOWN_SUCCESS("SDS"),
         REMOVE_NODES_SUCCESS("RNS"),
-        REMOVE_NODES_FAIL("RNF");
+        REMOVE_NODES_FAIL("RNF"),
+        TRANSFER_BACKUP_DATA_SUCCESS("TDS"),
+        TRANSFER_BACKUP_DATA_FAIL("TDF");
 
         String value;
 
