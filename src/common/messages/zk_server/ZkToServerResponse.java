@@ -25,4 +25,8 @@ public class ZkToServerResponse {
         return zkSvrResponse;
     }
 
+    @Override
+    public String toString() {
+        return "{id:" + id + ",serverName:" + serverName + ",response:" + zkSvrResponse + "}";
+    }
 }

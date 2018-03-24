@@ -118,6 +118,12 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
 
+        //todo
+//        try {
+//            zkNodeTransaction.createZNode(ZkStructureNodes.BACKUP_DATA.getValue(),null, CreateMode.PERSISTENT);
+//        }catch ()
+
+
         // writing an empty metadata
         metadata = new Metadata(new ArrayList<>());
         zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(),
@@ -623,11 +629,16 @@ public class ECSClient implements IECSClient {
                 if (request == null) {
                     logger.fatal("Data on server " + crashedNode + " was lost!");
                 } else {
+                    logger.info("requesting with...");
+                    logger.info(request.toString());
                     List<ZkToServerResponse> responses;
                     try {
                         responses = processReqResp(1, request);
                         if (responses.size() == 0 || responses.get(0).getZkSvrResponse().equals(ZkServerCommunication
                                 .Response.TRANSFER_BACKUP_DATA_FAIL)) {
+                            if(responses.size() !=0) {
+                                logger.info(responses.get(0).toString());
+                            }
                             logger.fatal("Data on server " + crashedNode + " was lost as server responded with backup" +
                                     " fail or timed out!");
                         }else {

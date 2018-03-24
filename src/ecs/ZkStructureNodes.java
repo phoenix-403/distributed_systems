@@ -10,7 +10,8 @@ public enum ZkStructureNodes {
     SERVER_SERVER_RESPONSE("/SSRES"),
     METADATA("/MD"),
     REQUEST("/REQ"),
-    RESPONSE("/RES");
+    RESPONSE("/RES"),
+    BACKUP_DATA("/BCK");
 
     String value;
 

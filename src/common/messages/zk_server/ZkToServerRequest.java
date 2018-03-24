@@ -1,5 +1,6 @@
 package common.messages.zk_server;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class ZkToServerRequest {
@@ -11,7 +12,8 @@ public class ZkToServerRequest {
     // used for crash recovery!
     private String[] crashedServerHashRange;
 
-    public ZkToServerRequest(int id, ZkServerCommunication.Request zkSvrRequest, List<String> nodes, String[] crashedServerHashRange) {
+    public ZkToServerRequest(int id, ZkServerCommunication.Request zkSvrRequest, List<String> nodes, String[]
+            crashedServerHashRange) {
         this.id = id;
         this.zkSvrRequest = zkSvrRequest;
         this.nodes = nodes;
@@ -44,5 +46,15 @@ public class ZkToServerRequest {
 
     public void setNodes(List<String> nodes) {
         this.nodes = nodes;
+    }
+
+    @Override
+    public String toString() {
+        return "ZkToServerRequest{" +
+                "id=" + id +
+                ", zkSvrRequest=" + zkSvrRequest +
+                ", nodes=" + nodes +
+                ", crashedServerHashRange=" + Arrays.toString(crashedServerHashRange) +
+                '}';
     }
 }

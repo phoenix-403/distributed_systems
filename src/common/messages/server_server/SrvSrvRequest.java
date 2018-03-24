@@ -1,5 +1,6 @@
 package common.messages.server_server;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class SrvSrvRequest {
@@ -37,5 +38,16 @@ public class SrvSrvRequest {
 
     public HashMap<String, String> getKvToImport() {
         return kvToImport;
+    }
+
+    @Override
+    public String toString() {
+        return "SrvSrvRequest{" +
+                "serverName='" + serverName + '\'' +
+                ", targetServer='" + targetServer + '\'' +
+                ", hashRange=" + Arrays.toString(hashRange) +
+                ", request=" + request +
+                ", kvToImport=" + kvToImport +
+                '}';
     }
 }

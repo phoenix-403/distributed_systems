@@ -23,4 +23,13 @@ public class SrvSrvResponse {
     public SrvSrvCommunication.Response getResponse() {
         return response;
     }
+
+    @Override
+    public String toString() {
+        return "SrvSrvResponse{" +
+                "serverName='" + serverName + '\'' +
+                ", targetServer='" + targetServer + '\'' +
+                ", response=" + response +
+                '}';
+    }
 }
