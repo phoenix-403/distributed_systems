@@ -369,24 +369,19 @@
                                         for (String[] replicaRange : replicaRanges) {
                                             // wrap-around case
                                             if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
-                                                if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
-                                                        || req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
-                                                        || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
-                                                        || req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
-                                                    String[] startInterval = new String[2];
-                                                    startInterval[0] = metadata.MIN_MD5;
-                                                    startInterval[1] = replicaRange[0];
+                                                String[] startInterval = new String[2];
+                                                startInterval[0] = metadata.MIN_MD5;
+                                                startInterval[1] = replicaRange[0];
+                                                String[] endInterval = new String[2];
+                                                endInterval[0] = replicaRange[1];
+                                                endInterval[1] = metadata.MAX_MD5;
+                                                if (metadata.isWithinRange(req.getHashRange()[0],startInterval)
+                                                    || metadata.isWithinRange(req.getHashRange()[1],endInterval)) {
                                                     Persist.deleteRangeReplica(startInterval);
-                                                    String[] endInterval = new String[2];
-                                                    endInterval[0] = replicaRange[1];
-                                                    endInterval[1] = metadata.MAX_MD5;
                                                     Persist.deleteRangeReplica(endInterval);
-
                                                 }
-                                            } else if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
-                                                    && req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
-                                                    || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
-                                                    && req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
+                                            } else if (metadata.isWithinRange(req.getHashRange()[0],replicaRange)
+                                                    || metadata.isWithinRange(req.getHashRange()[1],replicaRange)) {
                                                 Persist.deleteRangeReplica(req.getHashRange());
                                             }
                                         }
