@@ -629,9 +629,10 @@ public class ECSClient implements IECSClient {
                         if (responses.size() == 0 || responses.get(0).getZkSvrResponse().equals(ZkServerCommunication
                                 .Response.TRANSFER_BACKUP_DATA_FAIL)) {
                             logger.fatal("Data on server " + crashedNode + " was lost as server responded with backup" +
-                                    " fail!");
+                                    " fail or timed out!");
+                        }else {
+                            logger.info("Data successfully recovered!");
                         }
-                        logger.info("Data successfully recovered!");
                     } catch (KeeperException | InterruptedException e) {
                         logger.fatal("Data on server " + crashedNode + " was lost due to next error!");
                         logger.error(e.getMessage());
