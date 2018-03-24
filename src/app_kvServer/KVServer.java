@@ -362,27 +362,37 @@
                                 Iterator it = newDataPairs.entrySet().iterator();
 
                                 //assuming no byzantine failures plox
-                                if (replicaRanges.size() < 2)
-                                    replicaRanges.add(req.getHashRange());
-                                else if (replicaRanges.size() >= 2) {
-                                    for (String[] replicaRange : replicaRanges) {
-                                        // wrap-around case
-                                        if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
-                                            if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
-                                                    || req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                if(!replicaRanges.contains(req.getHashRange())){
+                                    if (replicaRanges.size() < 2)
+                                        replicaRanges.add(req.getHashRange());
+                                    else if (replicaRanges.size() >= 2) {
+                                        for (String[] replicaRange : replicaRanges) {
+                                            // wrap-around case
+                                            if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
+                                                if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                                        || req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                                        || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
+                                                        || req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
+                                                    String[] startInterval = new String[2];
+                                                    startInterval[0] = metadata.MIN_MD5;
+                                                    startInterval[1] = replicaRange[0];
+                                                    Persist.deleteRangeReplica(startInterval);
+                                                    String[] endInterval = new String[2];
+                                                    endInterval[0] = replicaRange[1];
+                                                    endInterval[1] = metadata.MAX_MD5;
+                                                    Persist.deleteRangeReplica(endInterval);
+
+                                                }
+                                            } else if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                                    && req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
                                                     || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
-                                                    || req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
+                                                    && req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
                                                 Persist.deleteRangeReplica(req.getHashRange());
                                             }
-                                        } else if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
-                                                && req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
-                                                || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
-                                                && req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)) {
-                                            Persist.deleteRangeReplica(req.getHashRange());
                                         }
+                                        replicaRanges.clear();
                                     }
                                 }
-                                Persist.deleteRangeReplica(req.getHashRange());
                                 //plz
 
                                 while (it.hasNext()) {
