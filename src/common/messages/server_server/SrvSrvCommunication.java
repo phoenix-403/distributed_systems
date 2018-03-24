@@ -23,6 +23,7 @@ public class SrvSrvCommunication {
     // response
     public enum Response {
         TRANSFERE_SUCCESS("TFS"),
+        TRANSFERE_FAIL_LOCK("TFL"),
         TRANSFERE_FAIL("TFF");
 
         String value;
