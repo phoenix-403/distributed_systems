@@ -97,8 +97,11 @@ public class Cache {
         String value = Persist.read(key);
         if (isCacheSetup && value != null) {
             updateCache(key, value);
+        } else {
+            value = Persist.readReplica(key);
+            if (isCacheSetup && value != null)
+                updateCache(key, value);
         }
-
         return value;
     }
 

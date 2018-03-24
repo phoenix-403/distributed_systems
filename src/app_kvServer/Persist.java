@@ -214,6 +214,25 @@ public class Persist {
         return valuePairs;
     }
 
+    public static synchronized String readReplica(String key) throws IOException {
+
+        ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
+        ArrayList<String> keys = new ArrayList<>();
+
+        for (String keyValue : fileLines) {
+            keys.add(keyValue.split(DELIMITER_PATTERN)[0]);
+        }
+
+        int index = keys.indexOf(key);
+        if (index != -1) {
+            logger.info("Found key " + key + " in database!");
+            return fileLines.get(index).split(DELIMITER_PATTERN)[1];
+        }
+
+        logger.info("key \"" + key + "\" not found in database!");
+        return null;
+    }
+
     public static synchronized boolean writeReplica(String key, String value) throws IOException {
         ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
         ArrayList<String> keys = new ArrayList<>();

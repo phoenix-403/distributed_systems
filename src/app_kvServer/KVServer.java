@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static common.messages.server_server.SrvSrvCommunication.Request.REPLICATE_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
@@ -66,6 +67,8 @@ public class KVServer implements IKVServer, Runnable {
     private List<ClientConnection> clientConnections;
 
     Future<?> replicationCancelButton;
+
+    private ReentrantLock replicaDBLock = new ReentrantLock();
 
     /**
      * Start KV Server with selected name
@@ -250,7 +253,6 @@ public class KVServer implements IKVServer, Runnable {
 
                         if (success) {
                             logger.info("Moved data successfully");
-                            deleteReplicatedData();
                             responseState = ZkServerCommunication.Response.REMOVE_NODES_SUCCESS;
                             respond(request.getId(), responseState);
                             Thread.sleep(2000);
@@ -316,9 +318,9 @@ public class KVServer implements IKVServer, Runnable {
             SrvSrvRequest req = gson.fromJson(reqJson, SrvSrvRequest.class);
             if (req.getTargetServer().equals(name)) {
 
-                lockWrite();
                 switch (req.getRequest()) {
                     case TRANSFERE_DATA: {
+                        lockWrite();
                         // ----------------------- nullifying req so it is not processed again
                         // ------------------------------
                         zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
@@ -341,30 +343,38 @@ public class KVServer implements IKVServer, Runnable {
                         SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                         zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                 gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                        unlockWrite();
                         break;
                     }
                     case REPLICATE_DATA: {
-                        // ----------------------- nullifying req so it is not processed again
-                        // ------------------------------
-                        zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
-                                EMPTY_SRV_SRV_REQ.getBytes());
-                        // --------------------------------------------------------------------------------------------------
-                        HashMap<String, String> newDataPairs = req.getKvToImport();
-                        Iterator it = newDataPairs.entrySet().iterator();
+                        try {
+                            //locking to prevent data being written while a backup data transfer is happening
+                            replicaDBLock.lock();
+                            // ----------------------- nullifying req so it is not processed again
+                            // ------------------------------
+                            zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
+                                    EMPTY_SRV_SRV_REQ.getBytes());
+                            // --------------------------------------------------------------------------------------------------
+                            HashMap<String, String> newDataPairs = req.getKvToImport();
+                            Iterator it = newDataPairs.entrySet().iterator();
 
-                        //assuming no byzantine failures plox
-                        Persist.deleteRangeReplica(req.getHashRange());
-                        //plz
+                            //assuming no byzantine failures plox
+                            Persist.deleteRangeReplica(req.getHashRange());
+                            //plz
 
-                        while (it.hasNext()) {
-                            Map.Entry next = (Map.Entry) it.next();
-                            if (!Persist.writeReplica((String) next.getKey(), (String) next.getValue())) {
-                                logger.error("Write Replica Not Successful!");
-                                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
-                                zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
-                                        gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                                unlockWrite();
+                            while (it.hasNext()) {
+                                Map.Entry next = (Map.Entry) it.next();
+                                if (!Persist.writeReplica((String) next.getKey(), (String) next.getValue())) {
+                                    logger.error("Write Replica Not Successful!");
+                                    SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                                    zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                                            gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                }
                             }
+                        } catch (Exception e) {
+                            logger.error("Write Replica Not Successful!");
+                        } finally {
+                            replicaDBLock.unlock();
                         }
 
                         logger.info("Write Replica Successful!");
@@ -374,7 +384,6 @@ public class KVServer implements IKVServer, Runnable {
                         break;
                     }
                 }
-                unlockWrite();
 
             }
         }
@@ -636,31 +645,6 @@ public class KVServer implements IKVServer, Runnable {
         // --------------------------------------------------------------------------------------------------
     }
 
-    public void deleteReplicatedData() throws KeeperException, InterruptedException {
-        HashMap<String, String> emptyKeyValues = new HashMap<String, String>();
-        cleanseOldResponses();
-        ECSNode nextNode = metadata.getNextServer(name);
-        cleanseOldResponses();
-        int i = 0;
-        while (nextNode != null && !nextNode.getNodeName().equals(name) && i < 2) {
-            final String nextName = nextNode.getNodeName();
-            final String[] finalRange = serverRange;
-            logger.info("Replicating to " + nextName + " on iteration " + i);
-
-            Executors.newSingleThreadExecutor().execute(() -> {
-                try {
-                    sendServerReq(nextName, emptyKeyValues, finalRange,
-                            REPLICATE_DATA);
-                } catch (Exception e) {
-                    logger.error("Replicate Data Failed with Error: " + e.getMessage());
-                }
-            });
-            i++;
-            nextNode = metadata.getNextServer(nextNode.getNodeName());
-        }
-
-    }
-
     public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
             InterruptedException {
         if (hashRange == null)
@@ -714,21 +698,26 @@ public class KVServer implements IKVServer, Runnable {
         return myKeyValues;
     }
 
-    public boolean moveReplicatedData(String[] hashRange, String targetName) throws IOException, KeeperException,
-            InterruptedException {
+    public boolean moveReplicatedData(String[] hashRange, String targetName) {
         logger.info("locking server!");
+        try {
+            replicaDBLock.lock();
+            cleanseOldResponses();
+            HashMap<String, String> myKeyValues = getReplicatedKeyValues(hashRange);
 
-        cleanseOldResponses();
+            if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
+                logger.info("got a srv-srv response for replicated data");
 
-        HashMap<String, String> myKeyValues = getReplicatedKeyValues(hashRange);
+                logger.info("unlock write and return success");
+                return true;
+            } else
+                logger.info("unlock write and return fail");
+        } catch (Exception e) {
+            logger.error("Move Replicated Data Failed with Error: " + e.getMessage());
+        } finally {
+            replicaDBLock.unlock();
+        }
 
-        if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
-            logger.info("got a srv-srv response for replicated data");
-
-            logger.info("unlock write and return success");
-            return true;
-        } else
-            logger.info("unlock write and return fail");
         return false;
     }
 
