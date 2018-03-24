@@ -59,6 +59,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private Metadata metadata;
     private String serverRange[] = null;
+    private List<String[]> replicaRanges = new ArrayList<String[]>();
 
     private String EMPTY_SRV_SRV_REQ;
     private String EMPTY_SRV_SRV_RES;
@@ -341,11 +342,29 @@ public class KVServer implements IKVServer, Runnable {
                         // --------------------------------------------------------------------------------------------------
                         HashMap<String, String> newDataPairs = req.getKvToImport();
                         Iterator it = newDataPairs.entrySet().iterator();
-
                         //assuming no byzantine failures plox
-                        Persist.deleteRangeReplica(req.getHashRange());
+                        if(replicaRanges.size() < 2)
+                            replicaRanges.add(req.getHashRange());
+                        else if(replicaRanges.size() >= 2){
+                            for(String[] replicaRange : replicaRanges){
+                                // wrap-around case
+                                if(replicaRange[0].compareTo(replicaRange[1]) >= 0){
+                                    if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                            || req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                            || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
+                                            || req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)){
+                                        Persist.deleteRangeReplica(req.getHashRange());
+                                    }
+                                }
+                                else if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                    && req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                    || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
+                                    && req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)){
+                                    Persist.deleteRangeReplica(req.getHashRange());
+                                }
+                            }
+                        }
                         //plz
-
                         while (it.hasNext()) {
                             Map.Entry next = (Map.Entry) it.next();
                             if (!Persist.writeReplica((String) next.getKey(), (String) next.getValue())) {
@@ -630,21 +649,12 @@ public class KVServer implements IKVServer, Runnable {
         HashMap<String, String> emptyKeyValues = new HashMap<String, String>();
         cleanseOldResponses();
         ECSNode nextNode = metadata.getNextServer(name);
-        cleanseOldResponses();
         int i = 0;
         while (nextNode != null && !nextNode.getNodeName().equals(name) && i < 2) {
             final String nextName = nextNode.getNodeName();
             final String[] finalRange = serverRange;
             logger.info("Replicating to " + nextName + " on iteration " + i);
 
-            Executors.newSingleThreadExecutor().execute(() -> {
-                try {
-                    sendServerReq(nextName, emptyKeyValues, finalRange,
-                            REPLICATE_DATA);
-                } catch (Exception e) {
-                    logger.error("Replicate Data Failed with Error: " + e.getMessage());
-                }
-            });
             i++;
             nextNode = metadata.getNextServer(nextNode.getNodeName());
         }
@@ -673,7 +683,6 @@ public class KVServer implements IKVServer, Runnable {
             final String nextName = nextNode.getNodeName();
             final String[] finalRange = hashRange;
             logger.info("Replicating to " + nextName + " on iteration " + i);
-
             Executors.newSingleThreadExecutor().execute(() -> {
                 try {
                     sendServerReq(nextName, myKeyValues, finalRange,
