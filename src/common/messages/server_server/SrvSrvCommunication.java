@@ -5,7 +5,7 @@ public class SrvSrvCommunication {
     // requests
     public enum Request {
 
-        TRANSFERE_DATA("TFD"),
+        TRANSFER_DATA("TFD"),
         REPLICATE_DATA("RPD");
 
         String value;

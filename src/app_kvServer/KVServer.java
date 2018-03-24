@@ -31,7 +31,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static common.messages.server_server.SrvSrvCommunication.Request.REPLICATE_DATA;
-import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFERE_DATA;
+import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFER_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL_LOCK;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_SUCCESS;
@@ -333,7 +333,9 @@ public class KVServer implements IKVServer, Runnable {
                 // --------------------------------------------------------------------------------------------------
 
                 switch (req.getRequest()) {
-                    case TRANSFERE_DATA: {
+                    case TRANSFER_DATA: {
+                        logger.info("got a transfer data request - " + req.toString());
+                        logger.info("lock-write");
                         lockWrite();
 
                         HashMap<String, String> newDataPairs = req.getKvToImport();
@@ -353,6 +355,7 @@ public class KVServer implements IKVServer, Runnable {
                             } catch (IOException e) {
                                 logger.error("Write Not Successful! " + e.getMessage());
                             } finally {
+                                logger.info("Unlock write");
                                 unlockWrite();
                             }
                         }
@@ -361,7 +364,7 @@ public class KVServer implements IKVServer, Runnable {
                         SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                         zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                 gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                        unlockWrite();
+                        logger.info("Responding with " + response.toString());
                         break;
                     }
                     case REPLICATE_DATA: {
@@ -621,7 +624,7 @@ public class KVServer implements IKVServer, Runnable {
                             .getPort());
 
                 } catch (IOException e) {
-                    logger.error("Error! Unable to establish connection. \r\n", e);
+                    logger.error("Error! Unable to establish connection.\n", e);
                 }
             }
         }
@@ -643,6 +646,8 @@ public class KVServer implements IKVServer, Runnable {
             logger.fatal("Unable to delete HR Node");
         }
 
+        stopScheduler();
+
         logger.info("Closing client connections");
         serverRunning = false;
         for (ClientConnection connection : clientConnections) {
@@ -656,7 +661,6 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Error! " +
                     "Unable to close socket on port: " + port, e);
         }
-        stopScheduler();
     }
 
 
@@ -696,7 +700,7 @@ public class KVServer implements IKVServer, Runnable {
         // --------------------------------------------------------------------------------------------------
     }
 
-    public synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
+    private synchronized void replicateData(String[] hashRange) throws IOException, KeeperException,
             InterruptedException {
         if (hashRange == null)
             hashRange = serverRange;
@@ -724,7 +728,7 @@ public class KVServer implements IKVServer, Runnable {
         }
     }
 
-    public HashMap<String, String> getKeyValues(String[] hashRange) throws IOException {
+    private HashMap<String, String> getKeyValues(String[] hashRange) throws IOException {
         //handling wraparound case
         HashMap<String, String> myKeyValues = new HashMap<>();
         if (hashRange[0].compareTo(hashRange[1]) > 0) {
@@ -736,7 +740,7 @@ public class KVServer implements IKVServer, Runnable {
         return myKeyValues;
     }
 
-    public HashMap<String, String> getReplicatedKeyValues(String[] hashRange) throws IOException {
+    private HashMap<String, String> getReplicatedKeyValues(String[] hashRange) throws IOException {
         //handling wraparound case
         HashMap<String, String> myKeyValues = new HashMap<>();
         if (hashRange[0].compareTo(hashRange[1]) > 0) {
@@ -748,14 +752,14 @@ public class KVServer implements IKVServer, Runnable {
         return myKeyValues;
     }
 
-    public boolean moveReplicatedData(String[] hashRange, String targetName) {
+    private boolean moveReplicatedData(String[] hashRange, String targetName) {
         try {
             logger.info("locking replicated db");
             replicaDBLock.lock();
             cleanseOldResponses();
             HashMap<String, String> myKeyValues = getReplicatedKeyValues(hashRange);
 
-            if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
+            if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFER_DATA)) {
                 logger.info("got a srv-srv response for replicated data");
 
                 logger.info("unlock write and return success");
@@ -783,7 +787,7 @@ public class KVServer implements IKVServer, Runnable {
 
         cleanseOldResponses();
 
-        if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFERE_DATA)) {
+        if (sendServerReq(targetName, myKeyValues, hashRange, TRANSFER_DATA)) {
             logger.info("got a srv-srv response for move data");
 
             if (hashRange[0].compareTo(hashRange[1]) > 0) {
