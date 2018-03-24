@@ -284,7 +284,9 @@
 
         private void stopScheduler() {
             replicationCancelButton.cancel(true);
+            logger.info("Current future canceled");
             scheduler.shutdown();
+            logger.info("Scheduler Shutdown Completed");
         }
 
         private void respond(int reqId, ZkServerCommunication.Response responseState) throws KeeperException,
@@ -562,6 +564,10 @@
             return false;
         }
 
+        public List<String[]> getReplicaRanges() {
+            return replicaRanges;
+        }
+
         @Override
         public boolean inCache(String key) {
             return Cache.inCache(key);
@@ -622,6 +628,7 @@
 
         @Override
         public void close() {
+            logger.info("Entering close()");
             try {
                 zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name);
                 zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
