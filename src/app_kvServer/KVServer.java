@@ -224,8 +224,6 @@ public class KVServer implements IKVServer, Runnable {
                     logger.info("Moved backup data successfully");
                     responseState = ZkServerCommunication.Response.TRANSFER_BACKUP_DATA_SUCCESS;
                     respond(request.getId(), responseState);
-                    Thread.sleep(2000);
-                    close();
                 } else {
                     responseState = ZkServerCommunication.Response.TRANSFER_BACKUP_DATA_FAIL;
                     respond(request.getId(), responseState);
