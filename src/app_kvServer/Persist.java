@@ -55,6 +55,9 @@ public class Persist {
         // creating files if needed
         try {
             dbFile = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + DB_FILE_NAME);
+            if(dbFile.exists()){
+                dbFile.delete();
+            }
             dbFile.createNewFile();
         } catch (IOException e) {
             logger.error("Unable to create DB_FILES " + e.getMessage());
@@ -64,6 +67,9 @@ public class Persist {
         // creating replica files if needed
         try {
             dbFileReplica = new File(ROOT_PATH + serverName + DB_FILE_PATH + "/" + DB_REPLICA_FILE_NAME);
+            if(dbFileReplica.exists()){
+                dbFileReplica.delete();
+            }
             dbFileReplica.createNewFile();
         } catch (IOException e) {
             logger.error("Unable to create DB_REPLICA_FILES " + e.getMessage());

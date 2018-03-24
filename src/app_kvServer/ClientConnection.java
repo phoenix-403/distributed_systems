@@ -127,12 +127,12 @@ public class ClientConnection implements Runnable {
                 if (!kvServer.isAcceptingRequests()) {
                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
                             StatusType.SERVER_STOPPED, null);
-                } else if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName())) {
-                    return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                            StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata());
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
+                            if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName()))
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
+                                        StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata());
                             if (!kvServer.isAcceptingWriteRequests()) {
                                 return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
                                         StatusType.SERVER_WRITE_LOCK, null);
@@ -177,6 +177,14 @@ public class ClientConnection implements Runnable {
                             }
 
                         case GET:
+                            boolean isWithinReplicaDB = false;
+                            for (String[] range: kvServer.getReplicaRanges()) {
+                                if (kvServer.getMetadata().isWithinRange(request.getKey(), range))
+                                    isWithinReplicaDB = true;
+                            }
+                            if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName()) && !isWithinReplicaDB)
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
+                                        StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata());
                             try {
                                 String value = kvServer.getKV(request.getKey());
                                 if (value != null) {

@@ -54,7 +54,6 @@ public class Metadata {
         if (range[0].compareTo(range[1]) > 0) {
             if ((hashKey.compareTo(range[0]) >= 0
                     && hashKey.compareTo(MAX_MD5) <= 0) ||
-
                     (hashKey.compareTo(range[1]) <= 0
                             && hashKey.compareTo(MIN_MD5) >= 0)) {
                 return true;
