@@ -60,6 +60,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private Metadata metadata;
     private String serverRange[] = null;
+    private List<String[]> replicaRanges = new ArrayList<String[]>();
 
     private String EMPTY_SRV_SRV_REQ;
     private String EMPTY_SRV_SRV_RES;
@@ -359,6 +360,27 @@ public class KVServer implements IKVServer, Runnable {
                             Iterator it = newDataPairs.entrySet().iterator();
 
                             //assuming no byzantine failures plox
+                            if(replicaRanges.size() < 2)
+                                replicaRanges.add(req.getHashRange());
+                            else if(replicaRanges.size() >= 2){
+                                for(String[] replicaRange : replicaRanges){
+                                    // wrap-around case
+                                    if(replicaRange[0].compareTo(replicaRange[1]) >= 0){
+                                        if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                                || req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                                || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
+                                                || req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)){
+                                            Persist.deleteRangeReplica(req.getHashRange());
+                                        }
+                                    }
+                                    else if ((req.getHashRange()[0].compareTo(replicaRange[0]) >= 0
+                                            && req.getHashRange()[0].compareTo(replicaRange[1]) <= 0)
+                                            || (req.getHashRange()[1].compareTo(replicaRange[0]) >= 0
+                                            && req.getHashRange()[1].compareTo(replicaRange[1]) <= 0)){
+                                        Persist.deleteRangeReplica(req.getHashRange());
+                                    }
+                                }
+                            }
                             Persist.deleteRangeReplica(req.getHashRange());
                             //plz
 
@@ -660,7 +682,6 @@ public class KVServer implements IKVServer, Runnable {
             final String nextName = nextNode.getNodeName();
             final String[] finalRange = hashRange;
             logger.info("Replicating to " + nextName + " on iteration " + i);
-
             Executors.newSingleThreadExecutor().execute(() -> {
                 try {
                     sendServerReq(nextName, myKeyValues, finalRange,
