@@ -231,11 +231,11 @@ public class Persist {
 
         int index = keys.indexOf(key);
         if (index != -1) {
-            logger.info("Found key " + key + " in database!");
+            logger.info("Found replica key " + key + " in database!");
             return fileLines.get(index).split(DELIMITER_PATTERN)[1];
         }
 
-        logger.info("key \"" + key + "\" not found in database!");
+        logger.info("replica key \"" + key + "\" not found in database!");
         return null;
     }
 
@@ -253,13 +253,13 @@ public class Persist {
         if (index == -1) {
             //1.1 should not delete a none existent value
             if (StringUtils.isEmpty(value)) {
-                logger.warn("Trying to delete a non existing key");
+                logger.warn("Trying to delete a non existing replica key");
                 return false;
             }
             //1.2 write non existent key at end of file
             fileLines.add(key + DELIMITER + value);
             Files.write(dbFileReplica.toPath(), fileLines);
-            logger.info("added new key: " + key + " with value: " + value);
+            logger.info("added new replica key: " + key + " with value: " + value);
             Cache.updateCache(key, value);
             return true;
         }
@@ -269,14 +269,14 @@ public class Persist {
         if (StringUtils.isEmpty(value)) {
             fileLines.remove(index);
             Files.write(dbFileReplica.toPath(), fileLines);
-            logger.info("deleted key: " + key);
+            logger.info("deleted replica key: " + key);
             Cache.remove(key);
             return true;
         }
         // 2.2 modify value
         fileLines.set(index, key + DELIMITER + value);
         Files.write(dbFileReplica.toPath(), fileLines);
-        logger.info("Modified key: " + key + " with value of: " + value);
+        logger.info("Modified replica key: " + key + " with value of: " + value);
         Cache.updateCache(key, value);
         return false;
     }
@@ -290,10 +290,10 @@ public class Persist {
                 String key = keyValue.split(DELIMITER_PATTERN)[0];
                 Persist.write(key, null);
                 Cache.remove(key);
-                logger.info("Deleted key: " + key + " as it was moved to another server");
+                logger.info("Deleted replica key: " + key + " as it was moved to another server");
             }
         }
-        logger.info("Done deleting.. keys within range: " + range[0] +"-" + range[1]);
+        logger.info("Done deleting replica.. keys within range: " + range[0] +"-" + range[1]);
 
 
     }
