@@ -393,6 +393,8 @@ public class KVServer implements IKVServer, Runnable {
                                             startInterval[0] = replicaRange[0];
                                             startInterval[1] = Metadata.MAX_MD5;
                                             if (metadata.isWithinRange(req.getHashRange()[0], startInterval)
+                                                    || metadata.isWithinRange(req.getHashRange()[1], startInterval)
+                                                    || metadata.isWithinRange(req.getHashRange()[0], endInterval)
                                                     || metadata.isWithinRange(req.getHashRange()[1], endInterval)) {
                                                 Persist.deleteRangeReplica(startInterval);
                                                 Persist.deleteRangeReplica(endInterval);
