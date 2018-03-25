@@ -401,13 +401,14 @@ public class KVServer implements IKVServer, Runnable {
                                             }
                                         } else if (metadata.isWithinRange(req.getHashRange()[0], replicaRange)
                                                 || metadata.isWithinRange(req.getHashRange()[1], replicaRange)) {
-                                            Persist.deleteRangeReplica(req.getHashRange());
+                                            Persist.deleteRangeReplica(replicaRange);
                                         }
                                     }
                                     replicaRanges.clear();
                                     replicaRanges.add(req.getHashRange());
                                 }
                             }
+                            Persist.deleteRangeReplica(req.getHashRange());
                             //plz
 
                             while (it.hasNext()) {
