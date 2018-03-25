@@ -251,17 +251,11 @@ public class Persist {
         int index = keys.indexOf(key);
         // scenario1: key does not exist
         if (index == -1) {
-            //1.1 should not delete a none existent value
-            if (StringUtils.isEmpty(value)) {
-                logger.warn("Trying to delete a non existing replica key");
-                return false;
-            }
             //1.2 write non existent key at end of file
             fileLines.add(key + DELIMITER + value);
             Files.write(dbFileReplica.toPath(), fileLines);
             logger.info("added new replica key: " + key + " with value: " + value);
             Cache.updateCache(key, value);
-            return true;
         }
 
         // scenario2: key exists
@@ -271,14 +265,13 @@ public class Persist {
             Files.write(dbFileReplica.toPath(), fileLines);
             logger.info("deleted replica key: " + key);
             Cache.remove(key);
-            return true;
         }
         // 2.2 modify value
         fileLines.set(index, key + DELIMITER + value);
         Files.write(dbFileReplica.toPath(), fileLines);
         logger.info("Modified replica key: " + key + " with value of: " + value);
         Cache.updateCache(key, value);
-        return false;
+        return true;
     }
 
     public static synchronized void deleteRangeReplica(String[] range) throws IOException {

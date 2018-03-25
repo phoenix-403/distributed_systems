@@ -371,14 +371,15 @@ public class KVServer implements IKVServer, Runnable {
                         break;
                     }
                     case REPLICATE_DATA: {
-                        if (!replicaDBLock.isLocked()) {
+                        try {
+                            replicaDBLock.lock();
                             //locking to prevent data being written while a backup data transfer is happening
 
                             HashMap<String, String> newDataPairs = req.getKvToImport();
                             Iterator it = newDataPairs.entrySet().iterator();
 
                             //assuming no byzantine failures plox
-                            if (!replicaRanges.contains(req.getHashRange())) {
+                            if (!existsInReplica(req.getHashRange())) {
                                 logger.info("Replica Records do not contain this new range!");
                                 if (replicaRanges.size() < 2) {
                                     logger.info("Replica Records do not yet have 2");
@@ -411,7 +412,12 @@ public class KVServer implements IKVServer, Runnable {
                                     replicaRanges.add(req.getHashRange());
                                 }
                             }
-                            Persist.deleteRangeReplica(req.getHashRange());
+                            if (req.getHashRange()[0].compareTo(req.getHashRange()[1]) > 0) {
+                                Persist.deleteRange(new String[]{req.getHashRange()[0], Metadata.MAX_MD5});
+                                Persist.deleteRange(new String[]{Metadata.MIN_MD5, req.getHashRange()[1]});
+                            } else {
+                                Persist.deleteRange(req.getHashRange());
+                            }
                             //plz
 
                             while (it.hasNext()) {
@@ -430,13 +436,14 @@ public class KVServer implements IKVServer, Runnable {
                             SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                             zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                     gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                        } else {
+                        } catch(Exception e) {
                             SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
                                     TRANSFERE_FAIL_LOCK);
                             zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                     gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                        } finally {
+                            replicaDBLock.unlock();
                         }
-
                         break;
                     }
                 }
@@ -444,6 +451,15 @@ public class KVServer implements IKVServer, Runnable {
             }
         }
 
+    }
+
+    private boolean existsInReplica(String[] hashRange) {
+        boolean exists = false;
+        for (String[] replicaRange : replicaRanges) {
+            if (Arrays.equals(hashRange, replicaRange))
+                exists = true;
+        }
+        return exists;
     }
 
     private void addMetadataWatch() throws KeeperException, InterruptedException {
