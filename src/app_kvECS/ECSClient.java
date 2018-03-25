@@ -245,11 +245,27 @@ public class ECSClient implements IECSClient {
             for (ECSNode ecsNode : ecsNodes) {
                 if (ecsNode.getNodeName().equals(response.getServerName())) {
                     ecsNode.setReserved(false);
+                    ecsNode.setNodeHashRange(new String[2]);
                 }
             }
 
 
         }
+
+        // updating metadata
+        ConsistentHash consistentHash = new ConsistentHash(ecsNodes);
+        consistentHash.hash();
+
+        metadata = new Metadata(ecsNodes);
+        try {
+            zkNodeTransaction.write(ZkStructureNodes.METADATA.getValue(), new Gson().toJson(metadata, Metadata
+                    .class)
+                    .getBytes());
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Metadata was not updated when shutting down! " + e.getMessage());
+            return false;
+        }
+
 
         if (noActiveServers == responses.size()) {
             return true;
