@@ -376,18 +376,22 @@ public class KVServer implements IKVServer, Runnable {
 
                             //assuming no byzantine failures plox
                             if (!replicaRanges.contains(req.getHashRange())) {
-                                if (replicaRanges.size() < 2)
+                                logger.info("Replica Records do not contain this new range!");
+                                if (replicaRanges.size() < 2) {
+                                    logger.info("Replica Records do not yet have 2");
                                     replicaRanges.add(req.getHashRange());
+                                }
                                 else if (replicaRanges.size() >= 2) {
+                                    logger.info("Replica Records already has 2");
                                     for (String[] replicaRange : replicaRanges) {
                                         // wrap-around case
                                         if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
-                                            String[] startInterval = new String[2];
-                                            startInterval[0] = Metadata.MIN_MD5;
-                                            startInterval[1] = replicaRange[0];
                                             String[] endInterval = new String[2];
-                                            endInterval[0] = replicaRange[1];
-                                            endInterval[1] = Metadata.MAX_MD5;
+                                            endInterval[0] = Metadata.MIN_MD5;
+                                            endInterval[1] = replicaRange[1];
+                                            String[] startInterval = new String[2];
+                                            startInterval[0] = replicaRange[0];
+                                            startInterval[1] = Metadata.MAX_MD5;
                                             if (metadata.isWithinRange(req.getHashRange()[0], startInterval)
                                                     || metadata.isWithinRange(req.getHashRange()[1], endInterval)) {
                                                 Persist.deleteRangeReplica(startInterval);
@@ -399,6 +403,7 @@ public class KVServer implements IKVServer, Runnable {
                                         }
                                     }
                                     replicaRanges.clear();
+                                    replicaRanges.add(req.getHashRange());
                                 }
                             }
                             //plz

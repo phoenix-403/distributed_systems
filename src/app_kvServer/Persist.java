@@ -282,7 +282,7 @@ public class Persist {
     }
 
     public static synchronized void deleteRangeReplica(String[] range) throws IOException {
-        logger.info("Deleting keys within range: " + range[0] +"-" + range[1] + "...");
+        logger.info("Deleting replica keys within range: " + range[0] +"-" + range[1] + "...");
         ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFileReplica.toPath());
         for (String keyValue : fileLines) {
             if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
