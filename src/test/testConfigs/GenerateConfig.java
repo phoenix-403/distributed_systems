@@ -4,7 +4,7 @@ import java.io.*;
 
 public class GenerateConfig {
     public static void main(String[] args) throws IOException {
-        File file = new File("./src/test/testConfigs/ecsTest"+ args[0] + ".config");
+        File file = new File("./src/test/testConfigs/" + args[2] + args[0] + ".config");
         file.getParentFile().mkdirs();
         FileWriter writer = new FileWriter(file);
 
