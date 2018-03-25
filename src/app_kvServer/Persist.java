@@ -261,6 +261,7 @@ public class Persist {
             Files.write(dbFileReplica.toPath(), fileLines);
             logger.info("added new replica key: " + key + " with value: " + value);
             Cache.updateCache(key, value);
+            return true;
         }
 
         // scenario2: key exists

@@ -60,7 +60,7 @@ public class KVServer implements IKVServer, Runnable {
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
 
-    private int TIMEOUT = 15000;
+    private int TIMEOUT = 10000;
 
     private Metadata metadata;
     private String serverRange[] = null;
@@ -203,12 +203,12 @@ public class KVServer implements IKVServer, Runnable {
                 scheduler = Executors.newSingleThreadScheduledExecutor();
 
                 int initialDelay = 15;
-                int periodicDelay = 20;
+                int periodicDelay = 15;
 
                 replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                             try {
                                 for (String[] replicaRange : replicaRanges) {
-                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[2]) > 40000) {
+                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[2]) > 30000) {
                                         logger.info("range has expired: " + replicaRange[0] + " | " + replicaRange[1]
                                                 + " | " + replicaRange[2]);
                                         cleanOldReplicatedData(new String[]{replicaRange[0], replicaRange[1]});
@@ -344,7 +344,6 @@ public class KVServer implements IKVServer, Runnable {
                 zkNodeTransaction.write(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue() + "/" + reqNode,
                         EMPTY_SRV_SRV_REQ.getBytes());
                 // --------------------------------------------------------------------------------------------------
-
                 switch (req.getRequest()) {
                     case TRANSFER_DATA: {
                         logger.info("got a transfer data request - " + req.toString());
@@ -355,28 +354,20 @@ public class KVServer implements IKVServer, Runnable {
                         Iterator it = newDataPairs.entrySet().iterator();
                         while (it.hasNext()) {
                             Map.Entry next = (Map.Entry) it.next();
-                            try {
-                                if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
-                                    logger.error("Write Not Successful!");
-                                    SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
-                                            TRANSFERE_FAIL);
-                                    zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE
-                                                    .getValue(),
-                                            gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                                }
-                            } catch (IOException e) {
-                                logger.error("Write Not Successful! " + e.getMessage());
-                            } finally {
-                                logger.info("Unlock write");
+                            if (!Persist.write((String) next.getKey(), (String) next.getValue())) {
+                                logger.error("Write Not Successful!");
+                                SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_FAIL);
+                                zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
+                                        gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
                                 unlockWrite();
                             }
                         }
-
                         logger.info("Write Successful!");
                         SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                         zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                 gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
                         logger.info("Responding with " + response.toString());
+                        unlockWrite();
                         break;
                     }
                     case REPLICATE_DATA: {
@@ -384,6 +375,7 @@ public class KVServer implements IKVServer, Runnable {
                             replicaDBLock.lock();
                             //locking to prevent data being written while a backup data transfer is happening
 
+                            logger.info("got a replicate data request - " + req.toString());
                             HashMap<String, String> newDataPairs = req.getKvToImport();
                             Iterator it = newDataPairs.entrySet().iterator();
 
@@ -410,20 +402,27 @@ public class KVServer implements IKVServer, Runnable {
 
                             while (it.hasNext()) {
                                 Map.Entry next = (Map.Entry) it.next();
-                                if (!Persist.writeReplica((String) next.getKey(), (String) next.getValue())) {
-                                    logger.error("Write Replica Not Successful!");
-                                    SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
-                                            TRANSFERE_FAIL);
-                                    zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE
-                                                    .getValue(),
-                                            gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                try {
+                                    if (!Persist.writeReplica((String) next.getKey(), (String) next.getValue())) {
+                                        logger.error("Write Replica Not Successful!");
+                                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
+                                                TRANSFERE_FAIL);
+                                        zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE
+                                                        .getValue(),
+                                                gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                    } else {
+                                        logger.info("Write Replica Successful!");
+                                        SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
+
+                                        zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE
+                                                        .getValue(),
+                                                gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+                                    }
+                                }catch (Exception e){
+                                    logger.error(e.getMessage());
                                 }
                             }
 
-                            logger.info("Write Replica Successful!");
-                            SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
-                            zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
-                                    gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
                         } catch (Exception e) {
                             SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
                                     TRANSFERE_FAIL_LOCK);
@@ -558,9 +557,10 @@ public class KVServer implements IKVServer, Runnable {
                         if (metadata.isWithinRange(key, this.getName())) {
                             Persist.write(key, value);
                             zkNodeTransaction.delete(path);
+                            logger.info("writing backup: " + key + ":" + value);
                         }
                     }
-                } catch (KeeperException | InterruptedException e) {
+                } catch (KeeperException | InterruptedException|IOException e) {
                     logger.error("failed to import key from backup!");
                 }
             }
@@ -588,7 +588,6 @@ public class KVServer implements IKVServer, Runnable {
                 clearCache();
             }
         }
-        replicateData(oldRange);
     }
 
     public boolean isAcceptingRequests() {

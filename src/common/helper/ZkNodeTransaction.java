@@ -49,7 +49,7 @@ public class ZkNodeTransaction {
 
     public void delete(String path) throws KeeperException, InterruptedException {
 
-        if (!path.equals("/zookeeper")) {
+        if (!path.equals("/zookeeper") && !path.equals(ZkStructureNodes.BACKUP_DATA.getValue())) {
             List<String> children = zooKeeper.getChildren(path, false);
             if (children.size() > 0) {
                 for (String child : children) {
@@ -60,7 +60,7 @@ public class ZkNodeTransaction {
                     }
                 }
             }
-            if (!path.equals(ZkStructureNodes.ROOT.getValue()) && !path.contains(ZkStructureNodes.BACKUP_DATA.getValue())) {
+            if (!path.equals(ZkStructureNodes.ROOT.getValue())) {
                 zooKeeper.delete(path, zooKeeper.exists(path, true).getVersion());
                 logger.info("deleted: " + path);
             }
