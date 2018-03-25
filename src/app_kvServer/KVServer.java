@@ -655,6 +655,14 @@ public class KVServer implements IKVServer, Runnable {
 
         stopScheduler();
 
+        logger.info("Closing zookeeper");
+        try {
+            zooKeeper.close();
+        } catch (InterruptedException e) {
+            logger.error("Unable to close zookeeper");
+            zooKeeper = null;
+        }
+
         logger.info("Closing client connections");
         serverRunning = false;
         for (ClientConnection connection : clientConnections) {
