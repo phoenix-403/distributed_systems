@@ -69,7 +69,7 @@ public class KVServer implements IKVServer, Runnable {
     private List<ClientConnection> clientConnections;
 
     ScheduledExecutorService scheduler = null;
-    private Future<?> replicationCancelButton;
+    private Future<?> replicationCancelButton = null;
 
     private ReentrantLock replicaDBLock = new ReentrantLock();
 
@@ -281,12 +281,16 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void stopScheduler() {
-        boolean cancelled = replicationCancelButton.cancel(true);
-        if (cancelled) {
-            logger.info("Current future canceled");
+        if(replicationCancelButton != null) {
+            boolean cancelled = replicationCancelButton.cancel(true);
+            if (cancelled) {
+                logger.info("Current future canceled");
+            }
         }
-        scheduler.shutdown();
-        logger.info("Scheduler Shutdown Completed");
+        if(scheduler != null) {
+            scheduler.shutdown();
+            logger.info("Scheduler Shutdown Completed");
+        }
     }
 
     private void respond(int reqId, ZkServerCommunication.Response responseState) throws KeeperException,
@@ -676,6 +680,8 @@ public class KVServer implements IKVServer, Runnable {
             logger.error("Error! " +
                     "Unable to close socket on port: " + port, e);
         }
+
+        System.exit(0);
     }
 
 
