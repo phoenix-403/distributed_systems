@@ -204,6 +204,10 @@ public class KVServer implements IKVServer, Runnable {
 
                 replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                             try {
+                                for (String[] replicaRange : replicaRanges) {
+                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[0]) > 40000)
+                                        cleanOldReplicatedData(new String[]{replicaRange[0], replicaRange[1]});
+                                }
                                 replicateData(null);
                             } catch (IOException | InterruptedException | KeeperException e) {
                                 logger.error("Replicate Data Failed with Error: " + e.getMessage());
@@ -383,34 +387,14 @@ public class KVServer implements IKVServer, Runnable {
                                 logger.info("Replica Records do not contain this new range!");
                                 if (replicaRanges.size() < 2) {
                                     logger.info("Replica Records do not yet have 2");
-                                    replicaRanges.add(req.getHashRange());
                                 }
                                 else if (replicaRanges.size() >= 2) {
                                     logger.info("Replica Records already has 2");
-                                    for (String[] replicaRange : replicaRanges) {
-                                        // wrap-around case
-                                        if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
-                                            String[] endInterval = new String[2];
-                                            endInterval[0] = Metadata.MIN_MD5;
-                                            endInterval[1] = replicaRange[1];
-                                            String[] startInterval = new String[2];
-                                            startInterval[0] = replicaRange[0];
-                                            startInterval[1] = Metadata.MAX_MD5;
-                                            if (metadata.isWithinRange(req.getHashRange()[0], startInterval)
-                                                    || metadata.isWithinRange(req.getHashRange()[1], startInterval)
-                                                    || metadata.isWithinRange(req.getHashRange()[0], endInterval)
-                                                    || metadata.isWithinRange(req.getHashRange()[1], endInterval)) {
-                                                Persist.deleteRangeReplica(startInterval);
-                                                Persist.deleteRangeReplica(endInterval);
-                                            }
-                                        } else if (metadata.isWithinRange(req.getHashRange()[0], replicaRange)
-                                                || metadata.isWithinRange(req.getHashRange()[1], replicaRange)) {
-                                            Persist.deleteRangeReplica(replicaRange);
-                                        }
-                                    }
-                                    replicaRanges.clear();
-                                    replicaRanges.add(req.getHashRange());
+                                    cleanOldReplicatedData(req.getHashRange());
                                 }
+                                String[] insert = new String[]{req.getHashRange()[0], req.getHashRange()[1],
+                                        "" + System.currentTimeMillis()};
+                                replicaRanges.add(insert);
                             }
                             if (req.getHashRange()[0].compareTo(req.getHashRange()[1]) > 0) {
                                 Persist.deleteRange(new String[]{req.getHashRange()[0], Metadata.MAX_MD5});
@@ -453,9 +437,37 @@ public class KVServer implements IKVServer, Runnable {
 
     }
 
+    private void cleanOldReplicatedData(String[] newRange) throws IOException {
+        logger.info("Replica Records already has 2");
+        for (String[] replicaRange : replicaRanges) {
+            // wrap-around case
+            if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
+                String[] endInterval = new String[2];
+                endInterval[0] = Metadata.MIN_MD5;
+                endInterval[1] = replicaRange[1];
+                String[] startInterval = new String[2];
+                startInterval[0] = replicaRange[0];
+                startInterval[1] = Metadata.MAX_MD5;
+                if (metadata.isWithinRange(newRange[0], startInterval)
+                        || metadata.isWithinRange(newRange[1], startInterval)
+                        || metadata.isWithinRange(newRange[0], endInterval)
+                        || metadata.isWithinRange(newRange[1], endInterval)) {
+                    Persist.deleteRangeReplica(startInterval);
+                    Persist.deleteRangeReplica(endInterval);
+                    replicaRanges.remove(replicaRange);
+                }
+            } else if (metadata.isWithinRange(newRange[0], replicaRange)
+                    || metadata.isWithinRange(newRange[1], replicaRange)) {
+                Persist.deleteRangeReplica(replicaRange);
+                replicaRanges.remove(replicaRange);
+            }            
+        }
+    }
+
     private boolean existsInReplica(String[] hashRange) {
         boolean exists = false;
         for (String[] replicaRange : replicaRanges) {
+            logger.info("Comparing replica ranges: " + hashRange + " | " + replicaRange);
             if (Arrays.equals(hashRange, replicaRange))
                 exists = true;
         }
