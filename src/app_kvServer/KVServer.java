@@ -26,10 +26,13 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static app_kvServer.Persist.DELIMITER_PATTERN;
+import static app_kvServer.Persist.dbFile;
 import static common.messages.server_server.SrvSrvCommunication.Request.REPLICATE_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Request.TRANSFER_DATA;
 import static common.messages.server_server.SrvSrvCommunication.Response.TRANSFERE_FAIL;
@@ -285,13 +288,13 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void stopScheduler() {
-        if(replicationCancelButton != null) {
+        if (replicationCancelButton != null) {
             boolean cancelled = replicationCancelButton.cancel(true);
             if (cancelled) {
                 logger.info("Current future canceled");
             }
         }
-        if(scheduler != null) {
+        if (scheduler != null) {
             scheduler.shutdown();
             logger.info("Scheduler Shutdown Completed");
         }
@@ -387,8 +390,7 @@ public class KVServer implements IKVServer, Runnable {
                                 logger.info("Replica Records do not contain this new range!");
                                 if (replicaRanges.size() < 2) {
                                     logger.info("Replica Records do not yet have 2");
-                                }
-                                else if (replicaRanges.size() >= 2) {
+                                } else if (replicaRanges.size() >= 2) {
                                     logger.info("Replica Records already has 2");
                                     cleanOldReplicatedData(req.getHashRange());
                                 }
@@ -420,7 +422,7 @@ public class KVServer implements IKVServer, Runnable {
                             SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(), TRANSFERE_SUCCESS);
                             zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
                                     gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-                        } catch(Exception e) {
+                        } catch (Exception e) {
                             SrvSrvResponse response = new SrvSrvResponse(name, req.getServerName(),
                                     TRANSFERE_FAIL_LOCK);
                             zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE.getValue(),
@@ -460,7 +462,7 @@ public class KVServer implements IKVServer, Runnable {
                     || metadata.isWithinRange(newRange[1], replicaRange)) {
                 Persist.deleteRangeReplica(replicaRange);
                 replicaRanges.remove(replicaRange);
-            }            
+            }
         }
     }
 
@@ -539,6 +541,25 @@ public class KVServer implements IKVServer, Runnable {
                 // second run which is when it receives its official metadata for the first time
                 // therefore no moving data from this server
                 serverRange = new String[]{newRange[0], newRange[1]};
+
+                //attempting to read backup data
+                logger.info("attempting to load backup data");
+                try {
+                    List<String> backupNodes = zooKeeper.getChildren(ZkStructureNodes.BACKUP_DATA.getValue(), false);
+                    String path, key, value, kv;
+                    for (String backupNode : backupNodes) {
+                        path = ZkStructureNodes.BACKUP_DATA.getValue() + "/" + backupNode;
+                        kv = new String(zkNodeTransaction.read(path));
+                        key = kv.split(DELIMITER_PATTERN)[0];
+                        value = kv.split(DELIMITER_PATTERN)[1];
+                        if (metadata.isWithinRange(key, this.getName())) {
+                            Persist.write(key, value);
+                            zkNodeTransaction.delete(path);
+                        }
+                    }
+                } catch (KeeperException | InterruptedException e) {
+                    logger.error("failed to import key from backup!");
+                }
             }
         }
     }
@@ -686,6 +707,18 @@ public class KVServer implements IKVServer, Runnable {
         }
 
         stopScheduler();
+
+        // backing up data onto zookeeper
+        try {
+            ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
+            logger.info("Adding keys to backup: " + fileLines.toString());
+            for (String fileLine : fileLines) {
+                zkNodeTransaction.createZNode(ZkStructureNodes.BACKUP_DATA.getValue()
+                        + ZkStructureNodes.NODE.getValue(), fileLine.getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+            }
+        } catch (IOException | InterruptedException | KeeperException e) {
+            logger.error("failed to create a copy of the data on zookeeper b4 shutdown!");
+        }
 
         logger.info("Closing zookeeper");
         try {

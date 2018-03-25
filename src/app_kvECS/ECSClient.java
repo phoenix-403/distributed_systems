@@ -118,10 +118,11 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
 
-        //todo
-//        try {
-//            zkNodeTransaction.createZNode(ZkStructureNodes.BACKUP_DATA.getValue(),null, CreateMode.PERSISTENT);
-//        }catch ()
+        try {
+            zkNodeTransaction.createZNode(ZkStructureNodes.BACKUP_DATA.getValue(),null, CreateMode.PERSISTENT);
+        }catch (KeeperException e){
+            logger.info("backup_data node already exists in zookeeper :)");
+        }
 
 
         // writing an empty metadata
@@ -332,7 +333,6 @@ public class ECSClient implements IECSClient {
         ArrayList<IECSNode> newEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
 
         // Launch the server processes
-        // todo uncomment
         createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
 
         // call await nodes to wait for processes to start

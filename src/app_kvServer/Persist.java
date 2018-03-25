@@ -24,11 +24,11 @@ public class Persist {
     private static final String DB_FILE_NAME = "data.db";
     private static final String DB_REPLICA_FILE_NAME = "dataREP.db";
     private static final String DELIMITER = "~*~*";
-    private static final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
+    protected static final String DELIMITER_PATTERN = Pattern.quote(DELIMITER);
     // logger
     private static Logger logger = LogManager.getLogger(Persist.class);
-    private static volatile File dbFile;
-    private static volatile File dbFileReplica;
+    protected static volatile File dbFile;
+    protected static volatile File dbFileReplica;
 
 
     private Persist() {
