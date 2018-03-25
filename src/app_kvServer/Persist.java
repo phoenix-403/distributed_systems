@@ -281,7 +281,7 @@ public class Persist {
             if (ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[1]) <= 0
                     && ConsistentHash.getMD5(keyValue.split(DELIMITER_PATTERN)[0]).compareTo(range[0]) >= 0) {
                 String key = keyValue.split(DELIMITER_PATTERN)[0];
-                Persist.write(key, null);
+                Persist.writeReplica(key, null);
                 Cache.remove(key);
                 logger.info("Deleted replica key: " + key + " as it was moved to another server");
             }

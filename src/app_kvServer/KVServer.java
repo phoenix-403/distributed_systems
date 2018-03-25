@@ -57,7 +57,7 @@ public class KVServer implements IKVServer, Runnable {
     private ZooKeeper zooKeeper;
     private ZkNodeTransaction zkNodeTransaction;
 
-    private int TIMEOUT = 25000;
+    private int TIMEOUT = 15000;
 
     private Metadata metadata;
     private String serverRange[] = null;
@@ -200,13 +200,16 @@ public class KVServer implements IKVServer, Runnable {
                 scheduler = Executors.newSingleThreadScheduledExecutor();
 
                 int initialDelay = 15;
-                int periodicDelay = 30;
+                int periodicDelay = 20;
 
                 replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                             try {
                                 for (String[] replicaRange : replicaRanges) {
-                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[0]) > 40000)
+                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[2]) > TIMEOUT * 3) {
+                                        logger.info("range has expired: " + replicaRange[0] + " | " + replicaRange[1]
+                                                + " | " + replicaRange[2]);
                                         cleanOldReplicatedData(new String[]{replicaRange[0], replicaRange[1]});
+                                    }
                                 }
                                 replicateData(null);
                             } catch (IOException | InterruptedException | KeeperException e) {
@@ -357,7 +360,6 @@ public class KVServer implements IKVServer, Runnable {
                                     zkNodeTransaction.createZNode(SERVER_SERVER_RESPONSE.getValue() + RESPONSE
                                                     .getValue(),
                                             gson.toJson(response).getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
-
                                 }
                             } catch (IOException e) {
                                 logger.error("Write Not Successful! " + e.getMessage());
@@ -393,7 +395,7 @@ public class KVServer implements IKVServer, Runnable {
                                     cleanOldReplicatedData(req.getHashRange());
                                 }
                                 String[] insert = new String[]{req.getHashRange()[0], req.getHashRange()[1],
-                                        "" + System.currentTimeMillis()};
+                                        Long.toString(System.currentTimeMillis())};
                                 replicaRanges.add(insert);
                             }
                             if (req.getHashRange()[0].compareTo(req.getHashRange()[1]) > 0) {
@@ -438,7 +440,6 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     private void cleanOldReplicatedData(String[] newRange) throws IOException {
-        logger.info("Replica Records already has 2");
         for (String[] replicaRange : replicaRanges) {
             // wrap-around case
             if (replicaRange[0].compareTo(replicaRange[1]) >= 0) {
@@ -460,7 +461,7 @@ public class KVServer implements IKVServer, Runnable {
                     || metadata.isWithinRange(newRange[1], replicaRange)) {
                 Persist.deleteRangeReplica(replicaRange);
                 replicaRanges.remove(replicaRange);
-            }            
+            }
         }
     }
 
@@ -468,8 +469,10 @@ public class KVServer implements IKVServer, Runnable {
         boolean exists = false;
         for (String[] replicaRange : replicaRanges) {
             logger.info("Comparing replica ranges: " + hashRange + " | " + replicaRange);
-            if (Arrays.equals(hashRange, replicaRange))
+            if (hashRange[0].equals(replicaRange[0]) && hashRange[1].equals(replicaRange[1])) {
                 exists = true;
+                replicaRange[2] = Long.toString(System.currentTimeMillis());
+            }
         }
         return exists;
     }
