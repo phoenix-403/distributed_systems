@@ -1,5 +1,6 @@
 package common.helper;
 
+import ecs.ZkStructureNodes;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -59,7 +60,7 @@ public class ZkNodeTransaction {
                     }
                 }
             }
-            if (!path.equals("/")) {
+            if (!path.equals(ZkStructureNodes.ROOT.getValue()) && !path.contains(ZkStructureNodes.BACKUP_DATA.getValue())) {
                 zooKeeper.delete(path, zooKeeper.exists(path, true).getVersion());
                 logger.info("deleted: " + path);
             }

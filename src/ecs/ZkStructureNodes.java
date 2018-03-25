@@ -11,7 +11,8 @@ public enum ZkStructureNodes {
     METADATA("/MD"),
     REQUEST("/REQ"),
     RESPONSE("/RES"),
-    BACKUP_DATA("/BCK");
+    BACKUP_DATA("/BCK"),
+    NODE("/N");
 
     String value;
 
