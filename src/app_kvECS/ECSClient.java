@@ -71,6 +71,21 @@ public class ECSClient implements IECSClient {
 
     }
 
+    // for performance testing purposes
+    public ECSClient(String zkHostname, int zkPort, String configFile) throws IOException, EcsException {
+        try {
+            new LogSetup("logs/ecs/ecs_client.log", Level.ALL);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.zkAddress = zkHostname;
+        this.zkPort = zkPort;
+
+        File file = new File("src/tests/testConfigs/" + "ecs.config");
+        configureAvailableNodes(file);
+
+    }
+
     private void configureAvailableNodes(File configFile) throws EcsException, IOException {
         if (!configFile.exists()) {
             throw new EcsException("Config file does not exist!");
