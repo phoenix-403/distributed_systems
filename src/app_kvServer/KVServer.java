@@ -208,7 +208,7 @@ public class KVServer implements IKVServer, Runnable {
                 replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
                             try {
                                 for (String[] replicaRange : replicaRanges) {
-                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[2]) > TIMEOUT * 3) {
+                                    if (System.currentTimeMillis() - Long.parseLong(replicaRange[2]) > 40000) {
                                         logger.info("range has expired: " + replicaRange[0] + " | " + replicaRange[1]
                                                 + " | " + replicaRange[2]);
                                         cleanOldReplicatedData(new String[]{replicaRange[0], replicaRange[1]});
@@ -400,11 +400,11 @@ public class KVServer implements IKVServer, Runnable {
                                         Long.toString(System.currentTimeMillis())};
                                 replicaRanges.add(insert);
                             }
-                            if (req.getHashRange()[0].compareTo(req.getHashRange()[1]) > 0) {
-                                Persist.deleteRange(new String[]{req.getHashRange()[0], Metadata.MAX_MD5});
-                                Persist.deleteRange(new String[]{Metadata.MIN_MD5, req.getHashRange()[1]});
+                            if (req.getHashRange()[0].compareTo(req.getHashRange()[1]) >= 0) {
+                                Persist.deleteRangeReplica(new String[]{req.getHashRange()[0], Metadata.MAX_MD5});
+                                Persist.deleteRangeReplica(new String[]{Metadata.MIN_MD5, req.getHashRange()[1]});
                             } else {
-                                Persist.deleteRange(req.getHashRange());
+                                Persist.deleteRangeReplica(req.getHashRange());
                             }
                             //plz
 
@@ -470,7 +470,7 @@ public class KVServer implements IKVServer, Runnable {
     private boolean existsInReplica(String[] hashRange) {
         boolean exists = false;
         for (String[] replicaRange : replicaRanges) {
-            logger.info("Comparing replica ranges: " + hashRange + " | " + replicaRange);
+            logger.info("Comparing replica ranges: " + hashRange[0]  + "-" + " | " + replicaRange);
             if (hashRange[0].equals(replicaRange[0]) && hashRange[1].equals(replicaRange[1])) {
                 exists = true;
                 replicaRange[2] = Long.toString(System.currentTimeMillis());
