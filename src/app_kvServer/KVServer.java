@@ -236,7 +236,6 @@ public class KVServer implements IKVServer, Runnable {
                 // for shutdown, i have to respond before closing the server
                 responseState = ZkServerCommunication.Response.SHUTDOWN_SUCCESS;
                 respond(request.getId(), responseState);
-                Thread.sleep(2000);
                 close();
                 break;
             case REMOVE_NODES:
