@@ -11,10 +11,8 @@ import org.junit.runners.Suite;
 import java.io.IOException;
 
 @RunWith(Suite.class)
-
-//@Suite.SuiteClasses({AdditionalTest.class, ConnectionTest.class, InteractionTest.class, ConsistentHashTest.class,
-//        ECSClientTest.class, MetadataTest.class, ReplicaTest.class})
-@Suite.SuiteClasses({ReplicaTest.class})
+@Suite.SuiteClasses({AdditionalTest.class, ConnectionTest.class, InteractionTest.class, ConsistentHashTest.class,
+        ECSClientTest.class, MetadataTest.class,ReplicaTest.class})
 public class DSTestSuite {
 
 
