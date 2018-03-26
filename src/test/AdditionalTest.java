@@ -4,22 +4,21 @@ import app_kvClient.KVClient;
 import app_kvECS.EcsException;
 import client.KVStore;
 import common.KVMessage;
-import junit.framework.TestCase;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
-public class AdditionalTest extends TestCase {
+public class AdditionalTest {
 
 
     private KVStore kvClient;
     private int CLIENT_CONNECTIONS = 10;
 
-    @BeforeClass
+    @Before
     public void setUp() {
         KVClient client = new KVClient();
         kvClient = new KVStore(client, "localhost", 50009);
@@ -50,7 +49,7 @@ public class AdditionalTest extends TestCase {
             ex = e;
         }
 
-        assertNull(ex);
+        Assert.assertNull(ex);
     }
 
     @Test
@@ -67,7 +66,7 @@ public class AdditionalTest extends TestCase {
             ex = e;
         }
 
-        assertNull(ex);
+        Assert.assertNull(ex);
     }
 
     @Test

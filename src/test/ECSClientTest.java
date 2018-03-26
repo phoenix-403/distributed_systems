@@ -6,7 +6,6 @@ import app_kvServer.IKVServer;
 import client.KVStore;
 import common.KVMessage;
 import ecs.IECSNode;
-import junit.framework.TestCase;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
@@ -21,12 +20,12 @@ import java.util.Map;
 import static test.DSTestSuite.ecsClient;
 
 
-public class ECSClientTest extends TestCase {
+public class ECSClientTest {
 
     private KVStore kvClient;
 
     @Before
-    protected void setUp() {
+    public void setUp() {
         KVClient client = new KVClient();
         kvClient = new KVStore(client, "localhost", 50009);
         try {
@@ -37,8 +36,7 @@ public class ECSClientTest extends TestCase {
     }
 
     @After
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    public void tearDown() throws Exception {
         kvClient.disconnect();
     }
 

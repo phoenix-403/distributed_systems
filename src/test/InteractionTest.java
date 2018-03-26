@@ -5,21 +5,20 @@ import app_kvECS.EcsException;
 import client.KVStore;
 import common.KVMessage;
 import common.KVMessage.StatusType;
-import junit.framework.TestCase;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
 
-public class InteractionTest extends TestCase {
+public class InteractionTest {
 
     private KVStore kvClient;
 
-    @BeforeClass
+    @Before
     public void setUp() {
         KVClient client = new KVClient();
         kvClient = new KVStore(client, "localhost", 50009);

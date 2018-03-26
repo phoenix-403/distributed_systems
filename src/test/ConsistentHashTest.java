@@ -3,7 +3,6 @@ package test;
 import common.helper.ConsistentHash;
 import common.messages.Metadata;
 import ecs.ECSNode;
-import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ConsistentHashTest extends TestCase {
+public class ConsistentHashTest {
 
     private List<ECSNode> ecsNodeList;
     private ConsistentHash consistentHash;
@@ -28,7 +27,7 @@ public class ConsistentHashTest extends TestCase {
     private ECSNode serv9;
 
     @Before
-    protected void setUp() {
+    public void setUp() {
         serv0 = new ECSNode("server0", "localhost", 50000, null, true);
         serv1 = new ECSNode("server1", "localhost", 50002, null, true);
         serv2 = new ECSNode("server2", "localhost", 50004, null, true);

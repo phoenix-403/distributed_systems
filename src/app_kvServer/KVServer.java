@@ -107,7 +107,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port, int cacheSize, String strategy) throws Exception {
+    public void initKVServer(int port, int cacheSize, String strategy) throws Exception {
 
         try {
             new LogSetup("ds_data/" + name + "/logs/server.log", Level.ALL);
@@ -745,6 +745,53 @@ public class KVServer implements IKVServer, Runnable {
         }
 
         System.exit(0);
+    }
+
+    // special function only used for testing so it does not kill junit process (removed system.exit)
+    public void closeTest() {
+        logger.info("Entering close()");
+        try {
+            zkNodeTransaction.delete(ZkStructureNodes.NONE_HEART_BEAT.getValue() + "/" + name);
+            zkNodeTransaction.delete(ZkStructureNodes.HEART_BEAT.getValue() + "/" + name);
+        } catch (KeeperException | InterruptedException e) {
+            logger.fatal("Unable to delete HR Node");
+        }
+
+        stopScheduler();
+
+        // backing up data onto zookeeper
+        try {
+            ArrayList<String> fileLines = (ArrayList<String>) Files.readAllLines(dbFile.toPath());
+            logger.info("Adding keys to backup: " + fileLines.toString());
+            for (String fileLine : fileLines) {
+                zkNodeTransaction.createZNode(ZkStructureNodes.BACKUP_DATA.getValue()
+                        + ZkStructureNodes.NODE.getValue(), fileLine.getBytes(), CreateMode.PERSISTENT_SEQUENTIAL);
+            }
+        } catch (IOException | InterruptedException | KeeperException e) {
+            logger.error("failed to create a copy of the data on zookeeper b4 shutdown!");
+        }
+
+        logger.info("Closing zookeeper");
+        try {
+            zooKeeper.close();
+        } catch (InterruptedException e) {
+            logger.error("Unable to close zookeeper");
+            zooKeeper = null;
+        }
+
+        logger.info("Closing client connections");
+        serverRunning = false;
+        for (ClientConnection connection : clientConnections) {
+            connection.close();
+        }
+
+        logger.info("Closing server socket");
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            logger.error("Error! " +
+                    "Unable to close socket on port: " + port, e);
+        }
     }
 
 

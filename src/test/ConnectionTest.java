@@ -3,19 +3,22 @@ package test;
 import app_kvClient.KVClient;
 import app_kvECS.EcsException;
 import client.KVStore;
-import junit.framework.TestCase;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
-import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.net.UnknownHostException;
 
+import static junit.framework.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-public class ConnectionTest extends TestCase {
+
+public class ConnectionTest {
 
     private KVStore kvClient;
 
-    @BeforeClass
+    @Before
     public void setUp() {
         KVClient client = new KVClient();
         kvClient = new KVStore(client, "localhost", 50009);
@@ -31,7 +34,7 @@ public class ConnectionTest extends TestCase {
         kvClient.disconnect();
     }
 
-	
+	@Test
 	public void testConnectionSuccess() {
 		
 		Exception ex = null;
@@ -45,8 +48,8 @@ public class ConnectionTest extends TestCase {
 		
 		assertNull(ex);
 	}
-	
-	
+
+	@Test
 	public void testUnknownHost() {
 		Exception ex = null;
 		KVStore kvClient = new KVStore(null, "unknown", 50000);
@@ -59,8 +62,8 @@ public class ConnectionTest extends TestCase {
 		
 		assertTrue(ex instanceof UnknownHostException);
 	}
-	
-	
+
+	@Test
 	public void testIllegalPort() {
 		Exception ex = null;
 		KVStore kvClient = new KVStore(null, "localhost", 123456789);

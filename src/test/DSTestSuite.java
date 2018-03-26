@@ -11,8 +11,10 @@ import org.junit.runners.Suite;
 import java.io.IOException;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({AdditionalTest.class, ConnectionTest.class, InteractionTest.class, ConsistentHashTest.class,
-        ECSClientTest.class, MetadataTest.class})
+
+//@Suite.SuiteClasses({AdditionalTest.class, ConnectionTest.class, InteractionTest.class, ConsistentHashTest.class,
+//        ECSClientTest.class, MetadataTest.class, ReplicaTest.class})
+@Suite.SuiteClasses({ReplicaTest.class})
 public class DSTestSuite {
 
 
@@ -20,11 +22,13 @@ public class DSTestSuite {
 
     @BeforeClass
     public static void doYourOneTimeSetup() throws IOException, EcsException, KeeperException, InterruptedException {
+        // creating an instance of ecs client that starts 10 servers
         ecsClient = new ECSClient("localhost", 2181);
         ecsClient.startZK();
         ecsClient.addNodes(10, "LRU", 10);
+        Thread.sleep(5000);
         ecsClient.start();
-        Thread.sleep(1000);
+        Thread.sleep(2000);
     }
 
     @AfterClass
