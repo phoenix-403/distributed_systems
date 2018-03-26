@@ -107,7 +107,7 @@ public class KVServer implements IKVServer, Runnable {
      *                  currently not contained in the cache. Options are "FIFO", "LRU",
      *                  and "LFU".
      */
-    private void initKVServer(int port, int cacheSize, String strategy) throws Exception {
+    public void initKVServer(int port, int cacheSize, String strategy) throws Exception {
 
         try {
             new LogSetup("ds_data/" + name + "/logs/server.log", Level.ALL);
