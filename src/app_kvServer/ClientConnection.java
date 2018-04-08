@@ -146,7 +146,7 @@ public class ClientConnection implements Runnable {
                                 if (StringUtils.isEmpty(request.getValue())) {
                                     if (writeModifyDeleteStatus) {
                                         logger.info("delete success");
-                                        notifyAll();
+                                        kvServer.notifyAllKey(request.getKey(), "deleted key: " + request.getKey());
                                         return new ClientServerRequestResponse(request.getId(), request.getKey(),
                                                 null, StatusType
                                                 .DELETE_SUCCESS, null, null);
@@ -161,13 +161,13 @@ public class ClientConnection implements Runnable {
                                 // when write
                                 if (writeModifyDeleteStatus) {
                                     logger.info("write success");
-                                    notifyAll();
+                                    kvServer.notifyAllKey(request.getKey(), "wrote key: " + request.getKey());
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request
                                             .getValue(),
                                             StatusType.PUT_SUCCESS, null, null);
                                 } else {
                                     logger.info("modify success");
-                                    notifyAll();
+                                    kvServer.notifyAllKey(request.getKey(), "modified key: " + request.getKey());
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request
                                             .getValue(),
                                             StatusType.PUT_UPDATE, null, null);
