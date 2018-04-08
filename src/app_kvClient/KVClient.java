@@ -6,6 +6,7 @@ import client.KVCommInterface;
 import client.KVStore;
 import common.KVMessage;
 import common.messages.Metadata;
+import common.messages.server_client.ClientMetadata;
 import logger.LogSetup;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
@@ -37,6 +38,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
     private long testTime;
 
     private ServerSocket clientServerSocket;
+    private ClientMetadata clientMetadata = new ClientMetadata();
+
     private String serverAddress;
     private int serverPort;
 
@@ -81,19 +84,18 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
         // starting listening server for incoming notification
         Thread notificationThread = new Thread(() -> {
-            while (!stop) {
-                try {
-                    Socket client = clientServerSocket.accept();
+            try {
+                clientServerSocket = new ServerSocket(0);
+                clientMetadata.setHost(clientServerSocket.getInetAddress().getHostName());
+                clientMetadata.setPort(clientServerSocket.getLocalPort());
+                while (!stop) {
+                    Socket socket = clientServerSocket.accept();
                     new Thread(
-
+                            // todo use socket to receive notification once a connection is accepted
                     ).start();
-
-                    logger.info("Connected to " + client.getInetAddress().getHostName() + " on port " + client
-                            .getPort());
-
-                } catch (IOException e) {
-                    logger.error("Error! Unable to establish connection. \r\n", e);
                 }
+            } catch (IOException e) {
+                logger.error("Error! Unable to establish connection. \r\n", e);
             }
         });
         notificationThread.start();
@@ -235,6 +237,116 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                                     kvStore.connect();
                                                 }
                                                 if (!kvStore.put(tokens[1], arg).getStatus().equals(KVMessage.StatusType
+                                                        .TIME_OUT)) {
+                                                    foundServer = true;
+                                                }
+                                                allKVStores.remove(respServer);
+                                            }
+                                        }
+                                        if (!foundServer) {
+                                            printTerminal("No active server was found! Disconnecting....");
+                                            disconnect();
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                if (e instanceof NullPointerException) {
+                                    errM.printUnableToConnectError("Unable to connect to the required KV_store!");
+                                } else {
+                                    errM.printUnableToConnectError(e.getMessage());
+                                    logger.warn("Connection lost!");
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case "watch":
+                    if (defaultKvStoreInstance == null) {
+                        errM.printNotConnectedError();
+                        logger.warn("Not Connected");
+                    } else {
+                        // same error validation as get
+                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                            try {
+                                if (metadata == null) {
+                                    defaultKvStoreInstance.get(tokens[1]);
+                                } else {
+                                    String respServer = metadata.getResponsibleServer(tokens[1])
+                                            .getNodeName();
+                                    KVStore kvStore = allKVStores.get(respServer);
+                                    if (!kvStore.isConnected()) {
+                                        kvStore.connect();
+                                    }
+                                    if (kvStore.get(tokens[1]).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                                        allKVStores.remove(respServer);
+                                        boolean foundServer = false;
+                                        for (String key : allKVStores.keySet()) {
+                                            if (foundServer) {
+                                                break;
+                                            }
+                                            if (!key.equals(respServer)) {
+                                                printTerminal("Trying another server.. " + key);
+                                                kvStore = allKVStores.get(key);
+                                                if (!kvStore.isConnected()) {
+                                                    kvStore.connect();
+                                                }
+                                                if (!kvStore.watch(clientMetadata, tokens[1]).getStatus().equals
+                                                        (KVMessage.StatusType
+                                                        .TIME_OUT)) {
+                                                    foundServer = true;
+                                                }
+                                                allKVStores.remove(respServer);
+                                            }
+                                        }
+                                        if (!foundServer) {
+                                            printTerminal("No active server was found! Disconnecting....");
+                                            disconnect();
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                if (e instanceof NullPointerException) {
+                                    errM.printUnableToConnectError("Unable to connect to the required KV_store!");
+                                } else {
+                                    errM.printUnableToConnectError(e.getMessage());
+                                    logger.warn("Connection lost!");
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case "unwatch":
+                    if (defaultKvStoreInstance == null) {
+                        errM.printNotConnectedError();
+                        logger.warn("Not Connected");
+                    } else {
+                        // same error validation as get
+                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                            try {
+                                if (metadata == null) {
+                                    defaultKvStoreInstance.get(tokens[1]);
+                                } else {
+                                    String respServer = metadata.getResponsibleServer(tokens[1])
+                                            .getNodeName();
+                                    KVStore kvStore = allKVStores.get(respServer);
+                                    if (!kvStore.isConnected()) {
+                                        kvStore.connect();
+                                    }
+                                    if (kvStore.get(tokens[1]).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                                        allKVStores.remove(respServer);
+                                        boolean foundServer = false;
+                                        for (String key : allKVStores.keySet()) {
+                                            if (foundServer) {
+                                                break;
+                                            }
+                                            if (!key.equals(respServer)) {
+                                                printTerminal("Trying another server.. " + key);
+                                                kvStore = allKVStores.get(key);
+                                                if (!kvStore.isConnected()) {
+                                                    kvStore.connect();
+                                                }
+                                                if (!kvStore.unwatch(clientMetadata, tokens[1]).getStatus().equals
+                                                        (KVMessage.StatusType
                                                         .TIME_OUT)) {
                                                     foundServer = true;
                                                 }

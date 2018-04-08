@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import common.ClientServerRequestResponse;
 import common.KVMessage;
 import common.messages.Metadata;
+import common.messages.server_client.ClientMetadata;
 import ecs.ECSNode;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -117,6 +118,14 @@ public class KVStore implements KVCommInterface {
         }
     }
 
+    public KVMessage watch(ClientMetadata clientMetadata, String token) {
+//        return null;
+    }
+
+    public KVMessage unwatch(ClientMetadata clientMetadata, String token) {
+//        return null;
+    }
+
     private boolean sendRequest(ClientServerRequestResponse req) {
         try {
             outputStreamWriter.write(new Gson().toJson(req, ClientServerRequestResponse.class) + "\r\n");
@@ -203,4 +212,5 @@ public class KVStore implements KVCommInterface {
     public void set(IClientSocketListener listener) {
         clientSocketListener = listener;
     }
+
 }
