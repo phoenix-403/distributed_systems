@@ -501,9 +501,32 @@ public class KVServer implements IKVServer, Runnable {
         return true;
     }
 
-    public void removeKeyWatch(ClientMetadata client, String key){
+    public boolean removeKeyWatch(ClientMetadata client, String key){
         // todo - remove watch from zookeeper
+        try {
+            // get list of all keys
+            List<String> watchedKeys =
+                    zooKeeper.getChildren(ZkStructureNodes.CLIENT_KEY_WATCH.getValue(), false);
 
+            // if the key node already exists
+            if (watchedKeys.contains(key)) {
+                // we get the arraylist and remove the client from the keywatch
+                TypeToken<ArrayList<ClientMetadata>> token = new TypeToken<ArrayList<ClientMetadata>>() {};
+                List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
+                        ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), token.getType());
+                clientMetadataList.remove(client);
+
+                // if we just removed the last one, we also remove the node
+                if (clientMetadataList.size() == 0)
+                    zkNodeTransaction.delete(CLIENT_KEY_WATCH.getValue() + '/' + key);
+            } else {
+                return false;
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e.getMessage());
+            return false;
+        }
+        return true;
     }
 
     public void sendNotification(ClientMetadata clientMetadata, String msg) throws IOException {
