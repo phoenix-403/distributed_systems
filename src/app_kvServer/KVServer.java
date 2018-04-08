@@ -1,6 +1,7 @@
 package app_kvServer;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
@@ -462,17 +463,47 @@ public class KVServer implements IKVServer, Runnable {
         return Persist.write(key, value);
     }
 
-    public void addKeyWatch(ClientMetadata client, String key){
+    public synchronized boolean addKeyWatch(ClientMetadata client, String key){
         // todo - create a client-server request object (under common/messages/server_client) and handle it so addkeywatch can be called
         // todo - create an object and write it to a node under clientKeyWatch
         // todo - respond with success or fail
         // todo - whenever put (responsible for add delete and modify) is called, check these nodes under clientkeywatch and send a message using socket to client
         // todo - me (Abdel) will write a function that will send messages to client which you can utilize to finish previous point
         // todo - I will also handle client sending these requests
+        try {
+            // get list of all keys
+            List<String> watchedKeys =
+                    zooKeeper.getChildren(ZkStructureNodes.CLIENT_KEY_WATCH.getValue(), false);
+
+            // if the key node already exists
+            if (watchedKeys.contains(key)) {
+                // we get the arraylist and we append the new client metadata if it does not exist
+                TypeToken<ArrayList<ClientMetadata>> token = new TypeToken<ArrayList<ClientMetadata>>() {};
+                List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
+                        ZkStructureNodes.ZK_SERVER_REQUEST.getValue() + "/" + key)), token.getType());
+
+                if (clientMetadataList.contains(client))
+                    return true;
+                zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + '/' + key,
+                        new Gson().toJson(clientMetadataList.add(client)).getBytes());
+            } else {
+                // else we make the node
+                zkNodeTransaction.createZNode(ZkStructureNodes.CLIENT_KEY_WATCH.getValue()
+                                + '/' + key,
+                        new Gson().toJson(new ArrayList<ClientMetadata>().add(client)).getBytes(),
+                        CreateMode.PERSISTENT_SEQUENTIAL);
+            }
+
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e.getMessage());
+            return false;
+        }
+        return true;
     }
 
     public void removeKeyWatch(ClientMetadata client, String key){
         // todo - remove watch from zookeeper
+
     }
 
     public void sendNotification(ClientMetadata clientMetadata, String msg) throws IOException {
