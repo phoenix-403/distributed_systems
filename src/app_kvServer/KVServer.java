@@ -480,11 +480,11 @@ public class KVServer implements IKVServer, Runnable {
                 // we get the arraylist and we append the new client metadata if it does not exist
                 TypeToken<ArrayList<ClientMetadata>> token = new TypeToken<ArrayList<ClientMetadata>>() {};
                 List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
-                        ZkStructureNodes.ZK_SERVER_REQUEST.getValue() + "/" + key)), token.getType());
+                        ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), token.getType());
 
                 if (clientMetadataList.contains(client))
                     return true;
-                zkNodeTransaction.write(SERVER_SERVER_REQUEST.getValue() + '/' + key,
+                zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + '/' + key,
                         new Gson().toJson(clientMetadataList.add(client)).getBytes());
             } else {
                 // else we make the node
