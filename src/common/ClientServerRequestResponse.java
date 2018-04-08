@@ -1,6 +1,7 @@
 package common;
 
 import common.messages.Metadata;
+import common.messages.server_client.ClientMetadata;
 import ecs.IECSNode;
 import org.apache.commons.lang3.StringUtils;
 
@@ -12,13 +13,16 @@ public class ClientServerRequestResponse implements KVMessage {
     private String value;
     private StatusType statusType;
     private Metadata metadata;
+    private ClientMetadata clientMetadata;
 
-    public ClientServerRequestResponse(long id, String key, String value, StatusType statusType, Metadata metadata) {
+    public ClientServerRequestResponse(long id, String key, String value, StatusType statusType, Metadata metadata,
+                                       ClientMetadata clientMetadata) {
         this.id = id;
         this.key = key;
         this.value = value;
         this.statusType = statusType;
         this.metadata = metadata;
+        this.clientMetadata = clientMetadata;
     }
 
     public long getId() {
@@ -89,6 +93,14 @@ public class ClientServerRequestResponse implements KVMessage {
                 }
             case SERVER_WRITE_LOCK:
                 return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + "," + getValue() + ">";
+
+
+            case WATCH_SUCCESS:
+            case WATCH_FAIL:
+            case UNWATCH_SUCCESS:
+            case UNWATCH_FAIL:
+                return "(" + getId() + ")-" + getStatus().toString() + "<" + getKey() + ">";
+
 
         }
 

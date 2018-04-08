@@ -90,7 +90,7 @@ public class KVStore implements KVCommInterface {
     @Override
     public KVMessage put(String key, String value) throws IOException {
         ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, value, KVMessage
-                .StatusType.PUT, null);
+                .StatusType.PUT, null, null);
         boolean status = sendRequest(req);
         if (status) {
             ClientServerRequestResponse response = getResponse();
@@ -106,7 +106,7 @@ public class KVStore implements KVCommInterface {
     @Override
     public KVMessage get(String key) throws IOException {
         ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage
-                .StatusType.GET, null);
+                .StatusType.GET, null, null);
         boolean status = sendRequest(req);
         if (status) {
             ClientServerRequestResponse response = getResponse();
@@ -118,12 +118,32 @@ public class KVStore implements KVCommInterface {
         }
     }
 
-    public KVMessage watch(ClientMetadata clientMetadata, String token) {
-//        return null;
+    public KVMessage watch(ClientMetadata clientMetadata, String key) throws IOException {
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage
+                .StatusType.WATCH, null, clientMetadata);
+        boolean status = sendRequest(req);
+        if (status) {
+            ClientServerRequestResponse response = getResponse();
+            if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
+                throw new IOException("Connection Dropped");
+            return response;
+        } else {
+            throw new IOException("Not Connected");
+        }
     }
 
-    public KVMessage unwatch(ClientMetadata clientMetadata, String token) {
-//        return null;
+    public KVMessage unwatch(ClientMetadata clientMetadata, String key) throws IOException {
+        ClientServerRequestResponse req = new ClientServerRequestResponse(requestId++, key, null, KVMessage
+                .StatusType.UNWATCH, null, clientMetadata);
+        boolean status = sendRequest(req);
+        if (status) {
+            ClientServerRequestResponse response = getResponse();
+            if (KVMessage.StatusType.CONNECTION_DROPPED.equals(response.getStatus()))
+                throw new IOException("Connection Dropped");
+            return response;
+        } else {
+            throw new IOException("Not Connected");
+        }
     }
 
     private boolean sendRequest(ClientServerRequestResponse req) {
@@ -162,7 +182,7 @@ public class KVStore implements KVCommInterface {
 
             }
 
-            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT, null);
+            response = new ClientServerRequestResponse(-1, null, null, KVMessage.StatusType.TIME_OUT, null, null);
             if (clientSocketListener != null) {
                 clientSocketListener.printTerminal(response.toString());
                 logResponse(response);
@@ -203,7 +223,7 @@ public class KVStore implements KVCommInterface {
 
     private ClientServerRequestResponse connectionDropped() {
         ClientServerRequestResponse response = new ClientServerRequestResponse(-1, null, null,
-                KVMessage.StatusType.CONNECTION_DROPPED, null);
+                KVMessage.StatusType.CONNECTION_DROPPED, null, null);
         if (clientSocketListener != null)
             clientSocketListener.printTerminal(response.toString());
         return response;

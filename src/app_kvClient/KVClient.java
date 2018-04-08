@@ -91,7 +91,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 while (!stop) {
                     Socket socket = clientServerSocket.accept();
                     new Thread(
-                            // todo use socket to receive notification once a connection is accepted
+                            // todo use socket to receive notification once a connection is accepted and get a simple string print it
                     ).start();
                 }
             } catch (IOException e) {
@@ -269,7 +269,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
                             try {
                                 if (metadata == null) {
-                                    defaultKvStoreInstance.get(tokens[1]);
+                                    defaultKvStoreInstance.watch(clientMetadata, tokens[1]);
                                 } else {
                                     String respServer = metadata.getResponsibleServer(tokens[1])
                                             .getNodeName();
@@ -277,7 +277,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                     if (!kvStore.isConnected()) {
                                         kvStore.connect();
                                     }
-                                    if (kvStore.get(tokens[1]).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                                    if (kvStore.watch(clientMetadata, tokens[1]).getStatus().equals(KVMessage
+                                            .StatusType.TIME_OUT)) {
                                         allKVStores.remove(respServer);
                                         boolean foundServer = false;
                                         for (String key : allKVStores.keySet()) {
@@ -292,7 +293,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                                 }
                                                 if (!kvStore.watch(clientMetadata, tokens[1]).getStatus().equals
                                                         (KVMessage.StatusType
-                                                        .TIME_OUT)) {
+                                                                .TIME_OUT)) {
                                                     foundServer = true;
                                                 }
                                                 allKVStores.remove(respServer);
@@ -324,7 +325,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
                             try {
                                 if (metadata == null) {
-                                    defaultKvStoreInstance.get(tokens[1]);
+                                    defaultKvStoreInstance.unwatch(clientMetadata, tokens[1]);
                                 } else {
                                     String respServer = metadata.getResponsibleServer(tokens[1])
                                             .getNodeName();
@@ -332,7 +333,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                     if (!kvStore.isConnected()) {
                                         kvStore.connect();
                                     }
-                                    if (kvStore.get(tokens[1]).getStatus().equals(KVMessage.StatusType.TIME_OUT)) {
+                                    if (kvStore.unwatch(clientMetadata, tokens[1]).getStatus().equals(KVMessage
+                                            .StatusType.TIME_OUT)) {
                                         allKVStores.remove(respServer);
                                         boolean foundServer = false;
                                         for (String key : allKVStores.keySet()) {
@@ -347,7 +349,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
                                                 }
                                                 if (!kvStore.unwatch(clientMetadata, tokens[1]).getStatus().equals
                                                         (KVMessage.StatusType
-                                                        .TIME_OUT)) {
+                                                                .TIME_OUT)) {
                                                     foundServer = true;
                                                 }
                                                 allKVStores.remove(respServer);

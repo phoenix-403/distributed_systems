@@ -126,16 +126,16 @@ public class ClientConnection implements Runnable {
             if (validateRequest(request)) {
                 if (!kvServer.isAcceptingRequests()) {
                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                            StatusType.SERVER_STOPPED, null);
+                            StatusType.SERVER_STOPPED, null, null);
                 } else if (!kvServer.getMetadata().isWithinRange(request.getKey(), kvServer.getName())) {
                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                            StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata());
+                            StatusType.SERVER_NOT_RESPONSIBLE, kvServer.getMetadata(), null);
                 } else {
                     switch (request.getStatus()) {
                         case PUT:
                             if (!kvServer.isAcceptingWriteRequests()) {
                                 return new ClientServerRequestResponse(request.getId(), request.getKey(), request.getValue(),
-                                        StatusType.SERVER_WRITE_LOCK, null);
+                                        StatusType.SERVER_WRITE_LOCK, null, null);
                             }
                             try {
                                 boolean keyExistInStorage = kvServer.inStorage(request.getKey());
@@ -148,12 +148,12 @@ public class ClientConnection implements Runnable {
                                         logger.info("delete success");
                                         return new ClientServerRequestResponse(request.getId(), request.getKey(),
                                                 null, StatusType
-                                                .DELETE_SUCCESS, null);
+                                                .DELETE_SUCCESS, null, null);
                                     } else {
                                         logger.info("delete error");
                                         return new ClientServerRequestResponse(request.getId(), request.getKey(),
                                                 null, StatusType
-                                                .DELETE_ERROR, null);
+                                                .DELETE_ERROR, null, null);
                                     }
                                 }
                                 // if user is trying to modify or write new -/- status is true when new field or false
@@ -162,18 +162,19 @@ public class ClientConnection implements Runnable {
                                     logger.info("write success");
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request
                                             .getValue(),
-                                            StatusType.PUT_SUCCESS, null);
+                                            StatusType.PUT_SUCCESS, null, null);
                                 } else {
                                     logger.info("modify success");
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), request
                                             .getValue(),
-                                            StatusType.PUT_UPDATE, null);
+                                            StatusType.PUT_UPDATE, null, null);
                                 }
 
 
                             } catch (IOException e) {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null);
+                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null,
+                                        null);
                             }
 
                         case GET:
@@ -182,17 +183,17 @@ public class ClientConnection implements Runnable {
                                 if (value != null) {
                                     logger.info("get success");
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), value,
-                                            StatusType.GET_SUCCESS, null);
+                                            StatusType.GET_SUCCESS, null, null);
 
                                 } else {
                                     logger.info("get error");
                                     return new ClientServerRequestResponse(request.getId(), request.getKey(), value,
                                             StatusType
-                                                    .GET_ERROR, null);
+                                                    .GET_ERROR, null, null);
                                 }
                             } catch (IOException e) {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
-                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null);
+                                return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null, null);
                             }
                     }
                 }
@@ -200,7 +201,7 @@ public class ClientConnection implements Runnable {
         } catch (JsonSyntaxException jsonException) {
             logger.error("Unable to parse JSON Request");
         } finally {
-            response = new ClientServerRequestResponse(-1, null, null, StatusType.INVALID_REQUEST, null);
+            response = new ClientServerRequestResponse(-1, null, null, StatusType.INVALID_REQUEST, null, null);
         }
 
         return response;
