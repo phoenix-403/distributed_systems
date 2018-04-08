@@ -53,6 +53,7 @@ public class KVServer implements IKVServer, Runnable {
 
     private ZkConnector zkConnector;
     private ZooKeeper zooKeeper;
+
     private ZkNodeTransaction zkNodeTransaction;
 
     private int TIMEOUT = 20000;
@@ -529,6 +530,22 @@ public class KVServer implements IKVServer, Runnable {
             logger.error(e.getMessage());
             return false;
         }
+        return true;
+    }
+
+    public synchronized boolean notifyAllKey(String key, String msg) {
+        TypeToken<ArrayList<ClientMetadata>> token = new TypeToken<ArrayList<ClientMetadata>>() {};
+        try {
+            List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
+                    ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), token.getType());
+            for (ClientMetadata clientMetadata : clientMetadataList) {
+                sendNotification(clientMetadata, msg);
+            }
+        } catch (KeeperException | InterruptedException | IOException e) {
+            logger.error(e.getMessage());
+            return false;
+        }
+
         return true;
     }
 
