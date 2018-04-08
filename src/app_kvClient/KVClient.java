@@ -16,6 +16,8 @@ import test.PerformanceTest;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,6 +36,7 @@ public class KVClient implements IKVClient, IClientSocketListener {
 
     private long testTime;
 
+    private ServerSocket clientServerSocket;
     private String serverAddress;
     private int serverPort;
 
@@ -75,6 +78,26 @@ public class KVClient implements IKVClient, IClientSocketListener {
             e.printStackTrace();
             System.exit(-1);
         }
+
+        // starting listening server for incoming notification
+        Thread notificationThread = new Thread(() -> {
+            while (!stop) {
+                try {
+                    Socket client = clientServerSocket.accept();
+                    new Thread(
+
+                    ).start();
+
+                    logger.info("Connected to " + client.getInetAddress().getHostName() + " on port " + client
+                            .getPort());
+
+                } catch (IOException e) {
+                    logger.error("Error! Unable to establish connection. \r\n", e);
+                }
+            }
+        });
+        notificationThread.start();
+
         while (!stop) {
             stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -342,8 +365,8 @@ public class KVClient implements IKVClient, IClientSocketListener {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Average test time: " + testTime/(map.size() * 2));
-            testInstance.updateAverage(testTime/(map.size() * 2));
+            System.out.println("Average test time: " + testTime / (map.size() * 2));
+            testInstance.updateAverage(testTime / (map.size() * 2));
         });
     }
 
