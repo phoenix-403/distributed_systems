@@ -90,9 +90,20 @@ public class KVClient implements IKVClient, IClientSocketListener {
                 clientMetadata.setPort(clientServerSocket.getLocalPort());
                 while (!stop) {
                     Socket socket = clientServerSocket.accept();
-                    new Thread(
-                            // todo use socket to receive notification once a connection is accepted and get a simple string print it
-                    ).start();
+                    new Thread(() -> {
+                        try {
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                            String notification;
+                            while ((notification = reader.readLine()) != null) {
+                                printTerminal("Notification received:\n" + notification);
+                                // todo comment the next line if it doesn't work
+                                // everytime you need to connect to this client and run notification only once
+                                break;
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
                 }
             } catch (IOException e) {
                 logger.error("Error! Unable to establish connection. \r\n", e);

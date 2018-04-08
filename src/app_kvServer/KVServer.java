@@ -22,6 +22,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -465,7 +466,7 @@ public class KVServer implements IKVServer, Runnable {
         // todo - create a client-server request object (under common/messages/server_client) and handle it so addkeywatch can be called
         // todo - create an object and write it to a node under clientKeyWatch
         // todo - respond with success or fail
-        // todo - whenever put (responsible for add delete and modify) is called, check these nodes under clientkeywatch and send a request (response) to client
+        // todo - whenever put (responsible for add delete and modify) is called, check these nodes under clientkeywatch and send a message using socket to client
         // todo - me (Abdel) will write a function that will send messages to client which you can utilize to finish previous point
         // todo - I will also handle client sending these requests
     }
@@ -474,6 +475,14 @@ public class KVServer implements IKVServer, Runnable {
         // todo - remove watch from zookeeper
     }
 
+    public void sendNotification(ClientMetadata clientMetadata, String msg) throws IOException {
+        Socket socket = new Socket(clientMetadata.getHost(), clientMetadata.getPort());
+        OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream());
+        writer.write(msg);
+        writer.flush();
+        writer.close();
+        socket.close();
+    }
 
     @Override
     public void clearCache() {
