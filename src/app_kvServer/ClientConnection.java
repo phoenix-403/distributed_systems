@@ -2,18 +2,13 @@ package app_kvServer;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 import common.ClientServerRequestResponse;
-import common.messages.server_client.ClientMetadata;
-import ecs.ZkStructureNodes;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 import static common.KVMessage.StatusType;
 
@@ -200,6 +195,32 @@ public class ClientConnection implements Runnable {
                                 logger.error("Unable to get value from cache/disk - " + e.getMessage());
                                 return new ClientServerRequestResponse(-1, null, null, StatusType.SERVER_ERROR, null, null);
                             }
+                        case WATCH:
+                            boolean isWatched = kvServer.addKeyWatch(request.getClientMetadata(),request.getKey());
+                            if (isWatched) {
+                                logger.info("watch success");
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isWatched),
+                                        StatusType.WATCH_SUCCESS, null, request.getClientMetadata());
+
+                            } else {
+                                logger.info("watch error");
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isWatched),
+                                        StatusType
+                                                .WATCH_FAIL, null, request.getClientMetadata());
+                            }
+                        case UNWATCH:
+                            boolean isUnwatched = kvServer.removeKeyWatch(request.getClientMetadata(),request.getKey());
+                            if (isUnwatched) {
+                                logger.info("unwatch success");
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isUnwatched),
+                                        StatusType.UNWATCH_SUCCESS, null, request.getClientMetadata());
+
+                            } else {
+                                logger.info("unwatch error");
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isUnwatched),
+                                        StatusType
+                                                .UNWATCH_FAIL, null, request.getClientMetadata());
+                            }
                     }
                 }
             }
@@ -239,6 +260,22 @@ public class ClientConnection implements Runnable {
                 return false;
             }
         }
+        // check if status is WATCH and key isn't empty & client metadata isn't
+        // sanity check for watch
+        if (request.getStatus() == StatusType.WATCH) {
+            if (StringUtils.isEmpty(request.getKey()) || request.getClientMetadata() == null) {
+                logger.error("Invalid watch request");
+                return false;
+            }
+        }
+
+        if (request.getStatus() == StatusType.UNWATCH) {
+            if (StringUtils.isEmpty(request.getKey()) || request.getClientMetadata() == null) {
+                logger.error("Invalid unwatch request");
+                return false;
+            }
+        }
+
 
         return true;
     }

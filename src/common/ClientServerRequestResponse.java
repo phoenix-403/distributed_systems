@@ -53,6 +53,10 @@ public class ClientServerRequestResponse implements KVMessage {
         return metadata;
     }
 
+    public ClientMetadata getClientMetadata() {
+        return clientMetadata;
+    }
+
     @Override
     public String toString() {
 
