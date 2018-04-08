@@ -135,6 +135,7 @@ public class ECSClient implements IECSClient {
         zkNodeTransaction.createZNode(ZkStructureNodes.ZK_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_REQUEST.getValue(), null, CreateMode.PERSISTENT);
         zkNodeTransaction.createZNode(ZkStructureNodes.SERVER_SERVER_RESPONSE.getValue(), null, CreateMode.PERSISTENT);
+        zkNodeTransaction.createZNode(ZkStructureNodes.CLIENT_KEY_WATCH.getValue(),null,CreateMode.PERSISTENT);
 
         // writing an empty metadata
         metadata = new Metadata(new ArrayList<>());

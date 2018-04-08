@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import common.helper.ZkConnector;
 import common.helper.ZkNodeTransaction;
 import common.messages.Metadata;
+import common.messages.server_client.ClientMetadata;
 import common.messages.server_server.SrvSrvRequest;
 import common.messages.server_server.SrvSrvResponse;
 import common.messages.zk_server.ZkServerCommunication;
@@ -459,6 +460,20 @@ public class KVServer implements IKVServer, Runnable {
     public boolean putKVWithError(String key, String value) throws IOException {
         return Persist.write(key, value);
     }
+
+    public void addKeyWatch(ClientMetadata client, String key){
+        // todo - create a client-server request object (under common/messages/server_client) and handle it so addkeywatch can be called
+        // todo - create an object and write it to a node under clientKeyWatch
+        // todo - respond with success or fail
+        // todo - whenever put (responsible for add delete and modify) is called, check these nodes under clientkeywatch and send a request (response) to client
+        // todo - me (Abdel) will write a function that will send messages to client which you can utilize to finish previous point
+        // todo - I will also handle client sending these requests
+    }
+
+    public void removeKeyWatch(ClientMetadata client, String key){
+        // todo - remove watch from zookeeper
+    }
+
 
     @Override
     public void clearCache() {
