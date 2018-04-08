@@ -516,9 +516,12 @@ public class KVServer implements IKVServer, Runnable {
                         ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), token.getType());
                 clientMetadataList.remove(client);
 
-                // if we just removed the last one, we also remove the node
+                // if we just removed the last one, we remove the node
                 if (clientMetadataList.size() == 0)
                     zkNodeTransaction.delete(CLIENT_KEY_WATCH.getValue() + '/' + key);
+                else //otherwise just update the new list
+                    zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + '/' + key,
+                            new Gson().toJson(clientMetadataList).getBytes());
             } else {
                 return false;
             }
