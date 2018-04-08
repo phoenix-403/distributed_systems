@@ -215,12 +215,12 @@ public class ClientConnection implements Runnable {
                             boolean isUnwatched = kvServer.removeKeyWatch(request.getClientMetadata(),request.getKey());
                             if (isUnwatched) {
                                 logger.info("unwatch success");
-                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isUnwatched),
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isUnwatched: " + Boolean.toString(isUnwatched),
                                         StatusType.UNWATCH_SUCCESS, null, request.getClientMetadata());
 
                             } else {
                                 logger.info("unwatch error");
-                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isWatched: " + Boolean.toString(isUnwatched),
+                                return new ClientServerRequestResponse(request.getId(), request.getKey(), "isUnwatched: " + Boolean.toString(isUnwatched),
                                         StatusType
                                                 .UNWATCH_FAIL, null, request.getClientMetadata());
                             }
