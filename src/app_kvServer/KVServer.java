@@ -545,6 +545,8 @@ public class KVServer implements IKVServer, Runnable {
             List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
                     ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), listType);
             for (ClientMetadata clientMetadata : clientMetadataList) {
+                Email email = new Email();
+                email.send(logger, clientMetadata.getEmail(), msg);
                 sendNotification(clientMetadata, msg);
             }
         } catch (KeeperException | InterruptedException | IOException e) {
