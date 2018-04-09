@@ -325,7 +325,7 @@ public class ECSClient implements IECSClient {
         ArrayList<IECSNode> newEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
 
         // Launch the server processes
-        //createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
+        createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
 
         // call await nodes to wait for processes to start
         boolean success = awaitNodes(count, TIME_OUT);

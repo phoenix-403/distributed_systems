@@ -480,13 +480,16 @@ public class KVServer implements IKVServer, Runnable {
 
                 if (clientMetadataList.contains(client))
                     return true;
+                clientMetadataList.add(client);
                 zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + "/" + key,
-                        new Gson().toJson(clientMetadataList.add(client)).getBytes());
+                        new Gson().toJson(clientMetadataList).getBytes());
             } else {
                 // else we make the node
+                List<ClientMetadata>  clientMetadataList = new ArrayList<>();
+                clientMetadataList.add(client);
                 zkNodeTransaction.createZNode(ZkStructureNodes.CLIENT_KEY_WATCH.getValue()
                                 + "/" + key,
-                        new Gson().toJson(new ArrayList<ClientMetadata>().add(client)).getBytes(),
+                        new Gson().toJson(clientMetadataList).getBytes(),
                         CreateMode.PERSISTENT);
             }
 
