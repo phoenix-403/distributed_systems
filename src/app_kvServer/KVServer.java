@@ -22,6 +22,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
+import javax.mail.MessagingException;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
@@ -549,7 +550,7 @@ public class KVServer implements IKVServer, Runnable {
                 email.send(logger, clientMetadata.getEmail(), msg);
                 sendNotification(clientMetadata, msg);
             }
-        } catch (KeeperException | InterruptedException | IOException e) {
+        } catch (KeeperException | InterruptedException | IOException | MessagingException  e) {
             logger.error(e.getMessage());
             return false;
         }
