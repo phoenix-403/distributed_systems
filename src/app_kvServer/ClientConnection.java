@@ -145,7 +145,7 @@ public class ClientConnection implements Runnable {
                                 if (StringUtils.isEmpty(request.getValue())) {
                                     if (writeModifyDeleteStatus) {
                                         logger.info("delete success");
-                                        kvServer.notifyAllKey(request.getKey(), "deleted key: " + request.getKey() + "-> " + request.getValue());
+                                        kvServer.notifyAllKey(request.getKey(), "deleted key: " + request.getKey());
                                         return new ClientServerRequestResponse(request.getId(), request.getKey(),
                                                 null, StatusType
                                                 .DELETE_SUCCESS, null, null);

@@ -24,6 +24,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -528,10 +529,18 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     public synchronized boolean notifyAllKey(String key, String msg) {
-        TypeToken<ArrayList<ClientMetadata>> token = new TypeToken<ArrayList<ClientMetadata>>() {};
         try {
+            // get list of all keys
+            List<String> watchedKeys =
+                    zooKeeper.getChildren(ZkStructureNodes.CLIENT_KEY_WATCH.getValue(), false);
+
+            // if the key node already exists
+            if (!watchedKeys.contains(key))
+                return true;
+
+            Type listType = new TypeToken<ArrayList<ClientMetadata>>(){}.getType();
             List<ClientMetadata>  clientMetadataList = new Gson().fromJson(new String(zkNodeTransaction.read(
-                    ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), token.getType());
+                    ZkStructureNodes.CLIENT_KEY_WATCH.getValue() + "/" + key)), listType);
             for (ClientMetadata clientMetadata : clientMetadataList) {
                 sendNotification(clientMetadata, msg);
             }
