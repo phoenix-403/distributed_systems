@@ -277,8 +277,9 @@ public class KVClient implements IKVClient, IClientSocketListener {
                         logger.warn("Not Connected");
                     } else {
                         // same error validation as get
-                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.GET)) {
+                        if (errM.validateServerCommand(tokens, KVMessage.StatusType.WATCH)) {
                             try {
+                                clientMetadata.setEmail(tokens[2]);
                                 if (metadata == null) {
                                     defaultKvStoreInstance.watch(clientMetadata, tokens[1]);
                                 } else {

@@ -88,6 +88,9 @@ public class ErrorMessage {
                         && checkLength(tokens[0].length(), VALUE_SIZE))
                     return true;
                 break;
+            case WATCH:
+                return true;
+//                break;
         }
 
         return false;
