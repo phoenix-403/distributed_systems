@@ -465,12 +465,6 @@ public class KVServer implements IKVServer, Runnable {
     }
 
     public synchronized boolean addKeyWatch(ClientMetadata client, String key){
-        // todo - create a client-server request object (under common/messages/server_client) and handle it so addkeywatch can be called
-        // todo - create an object and write it to a node under clientKeyWatch
-        // todo - respond with success or fail
-        // todo - whenever put (responsible for add delete and modify) is called, check these nodes under clientkeywatch and send a message using socket to client
-        // todo - me (Abdel) will write a function that will send messages to client which you can utilize to finish previous point
-        // todo - I will also handle client sending these requests
         try {
             // get list of all keys
             List<String> watchedKeys =
@@ -485,14 +479,14 @@ public class KVServer implements IKVServer, Runnable {
 
                 if (clientMetadataList.contains(client))
                     return true;
-                zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + '/' + key,
+                zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + "/" + key,
                         new Gson().toJson(clientMetadataList.add(client)).getBytes());
             } else {
                 // else we make the node
                 zkNodeTransaction.createZNode(ZkStructureNodes.CLIENT_KEY_WATCH.getValue()
-                                + '/' + key,
+                                + "/" + key,
                         new Gson().toJson(new ArrayList<ClientMetadata>().add(client)).getBytes(),
-                        CreateMode.PERSISTENT_SEQUENTIAL);
+                        CreateMode.PERSISTENT);
             }
 
         } catch (KeeperException | InterruptedException e) {
@@ -519,9 +513,9 @@ public class KVServer implements IKVServer, Runnable {
 
                 // if we just removed the last one, we remove the node
                 if (clientMetadataList.size() == 0)
-                    zkNodeTransaction.delete(CLIENT_KEY_WATCH.getValue() + '/' + key);
+                    zkNodeTransaction.delete(CLIENT_KEY_WATCH.getValue() + "/" + key);
                 else //otherwise just update the new list
-                    zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + '/' + key,
+                    zkNodeTransaction.write(CLIENT_KEY_WATCH.getValue() + "/" + key,
                             new Gson().toJson(clientMetadataList).getBytes());
             } else {
                 return false;

@@ -138,7 +138,6 @@ public class ClientConnection implements Runnable {
                                         StatusType.SERVER_WRITE_LOCK, null, null);
                             }
                             try {
-                                boolean keyExistInStorage = kvServer.inStorage(request.getKey());
                                 boolean writeModifyDeleteStatus = kvServer.putKVWithError(request.getKey(), request
                                         .getValue());
 
@@ -228,7 +227,7 @@ public class ClientConnection implements Runnable {
                 }
             }
         } catch (JsonSyntaxException jsonException) {
-            logger.error("Unable to parse JSON Request");
+            logger.error("Unable to parse JSON Request/Response");
         } finally {
             response = new ClientServerRequestResponse(-1, null, null, StatusType.INVALID_REQUEST, null, null);
         }
@@ -243,7 +242,8 @@ public class ClientConnection implements Runnable {
      */
     private boolean validateRequest(ClientServerRequestResponse request) {
         // if status is not get or put, send invalid request
-        if (request.getStatus() != StatusType.GET && request.getStatus() != StatusType.PUT) {
+        if (request.getStatus() != StatusType.GET && request.getStatus() != StatusType.PUT
+                && request.getStatus() != StatusType.WATCH && request.getStatus() != StatusType.UNWATCH) {
             logger.error("Unknown request");
             return false;
         }

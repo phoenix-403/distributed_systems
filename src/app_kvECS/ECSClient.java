@@ -64,7 +64,7 @@ public class ECSClient implements IECSClient {
         this.zkAddress = zkHostname;
         this.zkPort = zkPort;
 
-        File file = new File("ecs.config");
+        File file = new File("src/app_kvECS/ecs.config");
         configureAvailableNodes(file);
 
     }
@@ -325,7 +325,7 @@ public class ECSClient implements IECSClient {
         ArrayList<IECSNode> newEcsNodes = (ArrayList<IECSNode>) setupNodes(count, cacheStrategy, cacheSize);
 
         // Launch the server processes
-        createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
+        //createRunSshScript(newEcsNodes, cacheStrategy, cacheSize);
 
         // call await nodes to wait for processes to start
         boolean success = awaitNodes(count, TIME_OUT);
@@ -581,11 +581,16 @@ public class ECSClient implements IECSClient {
      * @param args config file
      */
     public static void main(String[] args) throws EcsException, IOException, InterruptedException, KeeperException {
-        if (args.length != 1) {
+        if (!(args.length == 1 || args.length == 2)) {
             throw new EcsException("Incorrect # of arguments for ECS Client!");
         }
 
-        ECSClient app = new ECSClient(args[0]);
+        ECSClient app;
+        if(args.length == 2){
+            app = new ECSClient(args[0], Integer.parseInt(args[1]));
+        }else {
+            app = new ECSClient(args[0]);
+        }
         app.startZK();
         app.run();
         app.stopZK();
