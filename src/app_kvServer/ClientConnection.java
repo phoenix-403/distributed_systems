@@ -50,6 +50,10 @@ public class ClientConnection implements Runnable {
         this.clientSocketOpen = true;
     }
 
+    public Socket getClientSocket() {
+        return clientSocket;
+    }
+
     /**
      * Initializes and starts the client connection.
      * Loops until the connection is closed or aborted by the client.

@@ -3,6 +3,7 @@ package app_kvECS;
 import com.google.gson.Gson;
 import common.helper.*;
 import common.messages.Metadata;
+import common.messages.zk_server.ClientInfo;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -24,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -192,6 +194,24 @@ public class ECSClient implements IECSClient {
             return false;
         }
 
+    }
+
+    private List<ClientInfo> getClientInfo() throws KeeperException, InterruptedException, EcsException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.CLIENT_CONNECTIONS, null);
+        List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
+
+        if (noActiveServers == responses.size()) {
+            for (ZkToServerResponse response : responses) {
+                if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.SUCCESS)) {
+                    logger.info(new Gson().toJson(response.getClientInfo()));
+                }
+            }
+            return null;
+        }
+        return null;
     }
 
     @Override
@@ -629,6 +649,10 @@ public class ECSClient implements IECSClient {
                 }
                 case "shutdown": {
                     System.out.println(PROMPT + shutdown());
+                    break;
+                }
+                case "test": {
+                    getClientInfo();
                     break;
                 }
                 case "addNode": {

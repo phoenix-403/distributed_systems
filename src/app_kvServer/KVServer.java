@@ -8,6 +8,7 @@ import common.messages.Metadata;
 import common.messages.server_client.ClientMetadata;
 import common.messages.server_server.SrvSrvRequest;
 import common.messages.server_server.SrvSrvResponse;
+import common.messages.zk_server.ClientInfo;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -204,6 +205,11 @@ public class KVServer implements IKVServer, Runnable {
                 Thread.sleep(2000);
                 close();
                 break;
+            case CLIENT_CONNECTIONS:
+                logger.info("Got Client list req");
+                responseState = ZkServerCommunication.Response.SUCCESS;
+                ClientInfo clientInfo = new ClientInfo(clientConnections, request.getId(), serverSocket, responseState);
+                respondClient(request.getId(), responseState, clientInfo);
             case REMOVE_NODES:
                 logger.info("Received removeNode request");
                 boolean success;
@@ -243,6 +249,15 @@ public class KVServer implements IKVServer, Runnable {
                 // will never reach here unless enum is updated
                 logger.error("Unknown ECS request!!");
         }
+    }
+
+    private void respondClient(int reqId, ZkServerCommunication.Response responseState, ClientInfo clientInfo) throws KeeperException,
+            InterruptedException {
+        ZkToServerResponse response = new ZkToServerResponse(reqId, name, responseState, clientInfo);
+        zkNodeTransaction.createZNode(
+                ZkStructureNodes.ZK_SERVER_RESPONSE.getValue() + ZkStructureNodes.RESPONSE.getValue(),
+                new Gson().toJson(response, ZkToServerResponse.class).getBytes(), CreateMode
+                        .PERSISTENT_SEQUENTIAL);
     }
 
     private void respond(int reqId, ZkServerCommunication.Response responseState) throws KeeperException,
