@@ -1,11 +1,14 @@
 package common.messages.zk_server;
 
+import java.net.Socket;
+import java.util.List;
+
 public class ZkToServerResponse {
 
     private int id;
     private String serverName;
     private ZkServerCommunication.Response zkSvrResponse;
-    private ClientInfo clientInfo=null;
+    private List<String> clientInfo=null;
 
     public ZkToServerResponse(int id, String serverName, ZkServerCommunication.Response zkSvrResponse) {
         this.id = id;
@@ -13,7 +16,7 @@ public class ZkToServerResponse {
         this.zkSvrResponse = zkSvrResponse;
     }
 
-    public ZkToServerResponse(int id, String serverName, ZkServerCommunication.Response zkSvrResponse, ClientInfo clientInfo) {
+    public ZkToServerResponse(int id, String serverName, ZkServerCommunication.Response zkSvrResponse, List<String> clientInfo) {
         this.id = id;
         this.serverName = serverName;
         this.zkSvrResponse = zkSvrResponse;
@@ -32,7 +35,7 @@ public class ZkToServerResponse {
         return zkSvrResponse;
     }
 
-    public ClientInfo getClientInfo() {
+    public List<String> getClientInfo() {
         return clientInfo;
     }
 }

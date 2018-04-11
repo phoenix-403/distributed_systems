@@ -8,7 +8,6 @@ import common.messages.Metadata;
 import common.messages.server_client.ClientMetadata;
 import common.messages.server_server.SrvSrvRequest;
 import common.messages.server_server.SrvSrvResponse;
-import common.messages.zk_server.ClientInfo;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -208,8 +207,12 @@ public class KVServer implements IKVServer, Runnable {
             case CLIENT_CONNECTIONS:
                 logger.info("Got Client list req");
                 responseState = ZkServerCommunication.Response.SUCCESS;
-                ClientInfo clientInfo = new ClientInfo(clientConnections, request.getId(), serverSocket, responseState);
-                respondClient(request.getId(), responseState, clientInfo);
+                List<String> clientSockets = new ArrayList<>();
+                for (ClientConnection clientConnection : clientConnections) {
+                    clientSockets.add(clientConnection.getClientSocket().getRemoteSocketAddress().toString());
+                }
+                respondClient(request.getId(), responseState, clientSockets);
+                break;
             case REMOVE_NODES:
                 logger.info("Received removeNode request");
                 boolean success;
@@ -251,7 +254,7 @@ public class KVServer implements IKVServer, Runnable {
         }
     }
 
-    private void respondClient(int reqId, ZkServerCommunication.Response responseState, ClientInfo clientInfo) throws KeeperException,
+    private void respondClient(int reqId, ZkServerCommunication.Response responseState, List<String> clientInfo) throws KeeperException,
             InterruptedException {
         ZkToServerResponse response = new ZkToServerResponse(reqId, name, responseState, clientInfo);
         zkNodeTransaction.createZNode(

@@ -3,7 +3,6 @@ package app_kvECS;
 import com.google.gson.Gson;
 import common.helper.*;
 import common.messages.Metadata;
-import common.messages.zk_server.ClientInfo;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
@@ -25,7 +24,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -196,7 +194,7 @@ public class ECSClient implements IECSClient {
 
     }
 
-    private List<ClientInfo> getClientInfo() throws KeeperException, InterruptedException, EcsException {
+    private List<String> getClientInfo() throws KeeperException, InterruptedException, EcsException {
         int noActiveServers = getNodesWithStatus(true).size();
 
         int reqId = reqResId++;
@@ -206,6 +204,7 @@ public class ECSClient implements IECSClient {
         if (noActiveServers == responses.size()) {
             for (ZkToServerResponse response : responses) {
                 if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.SUCCESS)) {
+                    logger.info(new Gson().toJson(response.getServerName()));
                     logger.info(new Gson().toJson(response.getClientInfo()));
                 }
             }
