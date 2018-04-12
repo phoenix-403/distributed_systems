@@ -12,11 +12,8 @@ public class ECSGui extends Frame implements WindowListener, ActionListener{
 
     int width;
     int height;
-    JButton refreshButton;
-    JPanel topPanel;
-    int count = 0;
-    ArrayList<Node> nodes;
-    ArrayList<edge> edges;
+    volatile ArrayList<Node> nodes;
+    volatile ArrayList<edge> edges;
     int currentServerCount;
     int nodesCount;
 
@@ -74,7 +71,7 @@ public class ECSGui extends Frame implements WindowListener, ActionListener{
         this.repaint();
     }
 
-    public void paint(Graphics g) { // draw the nodes and edges
+    public synchronized void paint(Graphics g) { // draw the nodes and edges
         FontMetrics f = g.getFontMetrics();
         int nodeHeight = Math.max(height, f.getHeight());
         nodeHeight = nodeHeight + 10;
@@ -104,7 +101,10 @@ public class ECSGui extends Frame implements WindowListener, ActionListener{
     public void refresh(){
         //clear screen
         getGraphics().clearRect(0,0, getWidth(), getHeight());
-
+        this.currentServerCount = 0;
+        this.nodesCount = 0;
+        this.nodes.clear();
+        this.edges.clear();
         //perform the redraw action here (i.e. call drawServerNode)
     }
 
@@ -126,7 +126,7 @@ public class ECSGui extends Frame implements WindowListener, ActionListener{
         int serverNodeCount = nodesCount;
         nodesCount++;
 
-        if(serverClients != null) {
+        if(serverClients.size() > 0) {
             // client stuff
             int radius = 200;
             float position = 0;

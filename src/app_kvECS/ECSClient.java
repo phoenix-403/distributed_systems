@@ -6,6 +6,7 @@ import common.messages.Metadata;
 import common.messages.zk_server.ZkServerCommunication;
 import common.messages.zk_server.ZkToServerRequest;
 import common.messages.zk_server.ZkToServerResponse;
+import ecs.ECSGui;
 import ecs.ECSNode;
 import ecs.IECSNode;
 import ecs.ZkStructureNodes;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -47,12 +49,18 @@ public class ECSClient implements IECSClient {
     private ZkConnector zkConnector;
     private ZkNodeTransaction zkNodeTransaction;
 
+    private ECSGui gui;
+
     //zookeeper communication timeout
     private int reqResId = 0;
     private static final int TIME_OUT = 20000;
 
     private List<ECSNode> ecsNodes = new ArrayList<>();
     private Metadata metadata;
+
+    ScheduledExecutorService scheduler = null;
+    private Future<?> replicationCancelButton = null;
+
 
 
     public ECSClient(String zkHostname, int zkPort) throws IOException, EcsException {
@@ -63,6 +71,27 @@ public class ECSClient implements IECSClient {
         }
         this.zkAddress = zkHostname;
         this.zkPort = zkPort;
+//
+//        this.gui = new ECSGui("Server Overview");
+//        this.gui.initialize();
+//        this.gui.setVisible(true);
+//
+//        scheduler = Executors.newSingleThreadScheduledExecutor();
+//
+//        int initialDelay = 10;
+//        int periodicDelay = 10;
+//
+//        replicationCancelButton = scheduler.scheduleAtFixedRate(() -> {
+//                    try {
+//                        getClientInfo();
+//                    } catch (InterruptedException | KeeperException e) {
+//                        logger.error("Replicate Data Failed with Error: " + e.getMessage());
+//                    } catch (EcsException e) {
+//                        e.printStackTrace();
+//                    }
+//                }, initialDelay, periodicDelay,
+//                TimeUnit.SECONDS);
+
 
         File file = new File("src/app_kvECS/ecs.config");
         configureAvailableNodes(file);
@@ -202,10 +231,10 @@ public class ECSClient implements IECSClient {
         List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
 
         if (noActiveServers == responses.size()) {
+            this.gui.refresh();
             for (ZkToServerResponse response : responses) {
                 if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.SUCCESS)) {
-                    logger.info(new Gson().toJson(response.getServerName()));
-                    logger.info(new Gson().toJson(response.getClientInfo()));
+                    this.gui.drawServerNode(response.getServerName(), (ArrayList) response.getClientInfo());
                 }
             }
             return null;
