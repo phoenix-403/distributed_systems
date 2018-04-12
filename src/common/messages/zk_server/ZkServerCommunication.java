@@ -8,6 +8,7 @@ public class ZkServerCommunication {
         START("STR"),
         STOP("STP"),
         SHUTDOWN("SHD"),
+        CLIENT_CONNECTIONS("CC"),
         REMOVE_NODES("RMS");
 
         String value;
@@ -28,7 +29,8 @@ public class ZkServerCommunication {
         STOP_SUCCESS("SPS"),
         SHUTDOWN_SUCCESS("SDS"),
         REMOVE_NODES_SUCCESS("RNS"),
-        REMOVE_NODES_FAIL("RNF");
+        REMOVE_NODES_FAIL("RNF"),
+        SUCCESS("S");
 
         String value;
 

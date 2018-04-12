@@ -194,6 +194,25 @@ public class ECSClient implements IECSClient {
 
     }
 
+    private List<String> getClientInfo() throws KeeperException, InterruptedException, EcsException {
+        int noActiveServers = getNodesWithStatus(true).size();
+
+        int reqId = reqResId++;
+        ZkToServerRequest request = new ZkToServerRequest(reqId, ZkServerCommunication.Request.CLIENT_CONNECTIONS, null);
+        List<ZkToServerResponse> responses = processReqResp(noActiveServers, request);
+
+        if (noActiveServers == responses.size()) {
+            for (ZkToServerResponse response : responses) {
+                if (response.getZkSvrResponse().equals(ZkServerCommunication.Response.SUCCESS)) {
+                    logger.info(new Gson().toJson(response.getServerName()));
+                    logger.info(new Gson().toJson(response.getClientInfo()));
+                }
+            }
+            return null;
+        }
+        return null;
+    }
+
     @Override
     public boolean stop() throws KeeperException, InterruptedException, EcsException {
         int noActiveServers = getNodesWithStatus(true).size();
@@ -629,6 +648,10 @@ public class ECSClient implements IECSClient {
                 }
                 case "shutdown": {
                     System.out.println(PROMPT + shutdown());
+                    break;
+                }
+                case "test": {
+                    getClientInfo();
                     break;
                 }
                 case "addNode": {
